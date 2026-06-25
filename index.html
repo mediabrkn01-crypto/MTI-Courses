@@ -31,163 +31,116 @@
   :root{
     --brand:#E8341A;
     --brand-2:#FF7100;
-    --bg:#000000; /* Deeper macOS dark-mode canvas baseline */
-    --glass-fill:rgba(255, 255, 255, 0.06); /* True thin iOS acrylic sheet */
-    --glass-border:rgba(255, 255, 255, 0.08); /* Crisp Apple hairline rim */
-    --glass-top:rgba(255, 255, 255, 0.18); /* Specular highlight rim reflection */
-    --glass-shadow:0 4px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+    --brand-grad:linear-gradient(135deg,#E8341A,#FF7100);
+    /* Pure black/white glass tokens */
+    --g-fill:rgba(255,255,255,0.10);
+    --g-border:rgba(255,255,255,0.28);
+    --g-top:rgba(255,255,255,0.75);
+    --g-shadow:0 8px 32px rgba(0,0,0,0.35),0 2px 8px rgba(0,0,0,0.2),0 0 0 0.5px rgba(255,255,255,0.14);
   }
 
-  /* ── CASUAL MAC OS DYNAMIC LIGHTING CANVAS ── */
-  body::before {
-    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background: 
-      radial-gradient(circle at 80% 10%, rgba(232, 52, 26, 0.18) 0%, transparent 50%),
-      radial-gradient(circle at 20% 80%, rgba(255, 113, 0, 0.12) 0%, transparent 50%);
+  /* ── BODY ── pure black, glass visible against dark */
+  body{
+    background:#111;
+    min-height:100vh;
+    font-family:'Inter',sans-serif;
+    color:#fff;
+    overflow-x:hidden;
   }
-
-  /* Subtle ambient light from top-centre */
+  /* Soft white ambient from top — the "light source" for glass */
   body::before{
-    content:'';position:fixed;top:0;left:0;right:0;height:60vh;pointer-events:none;z-index:0;
-    background:radial-gradient(ellipse 100% 60% at 50% 0%, rgba(255,255,255,0.055) 0%, transparent 70%);
+    content:'';position:fixed;top:0;left:0;right:0;height:50vh;
+    background:radial-gradient(ellipse 100% 55% at 50% 0%,rgba(255,255,255,0.055) 0%,transparent 70%);
+    pointer-events:none;z-index:0;
   }
 
-  /* ── LIQUID GLASS SYSTEM ──────────────────────────────────────────────
-     The 3 authentic properties from reference images:
-     1. Low-opacity clear fill  2. Bright top specular rim  3. Face sheen
-  ─────────────────────────────────────────────────────────────────────── */
+  /* ══════════════════════════════════════════════
+     LIQUID GLASS — black/white only
+     Brand color ONLY for: active elements, borders on focus/active, brand buttons
+  ══════════════════════════════════════════════ */
 
+  /* Standard glass panel */
   .lg{
-    background:var(--glass-fill);
-    backdrop-filter:blur(28px) saturate(180%);
-    -webkit-backdrop-filter:blur(28px) saturate(180%);
-    border-radius:20px;
-    border:1px solid var(--glass-border);
-    box-shadow:
-      inset 0 2px 0 var(--glass-top),
-      inset 1px 0 0 rgba(255,255,255,0.22),
-      inset 0 -1.5px 0 rgba(0,0,0,0.14),
-      var(--glass-shadow);
-    position:relative;overflow:hidden;
-  }
-  /* ── MAC OS LIQUID GLASS SPECULAR SYSTEM ── */
-  .lg {
-    background: var(--glass-fill);
-    backdrop-filter: blur(30px) saturate(210%);
-    -webkit-backdrop-filter: blur(30px) saturate(210%);
-    border-radius: 20px;
-    border: 1px solid var(--glass-border);
-    box-shadow: 
-      inset 0 1px 0 0 var(--glass-top), /* Top specular glare edge */
-      0 20px 50px rgba(0, 0, 0, 0.3);
-    position: relative;
-    overflow: hidden;
-  }
-  
-  /* Adds the Apple translucent sheen reflection layer across the face */
-  .lg::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%;
-    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%);
-    pointer-events: none; z-index: 0;
-  }
-  .lg > * { position: relative; z-index: 1; }
-
-  .lg-dark {
-    background: rgba(14, 14, 20, 0.55);
-    backdrop-filter: blur(40px) saturate(200%);
-    -webkit-backdrop-filter: blur(40px) saturate(200%);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: 
-      inset 0 1px 0 rgba(255,255,255,0.12),
-      0 30px 60px rgba(0, 0, 0, 0.5);
-    position: relative; overflow: hidden;
-  }
-  .lg-dark::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%;
-    background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
-    pointer-events: none; z-index: 0;
-  }
-  .lg-dark > * { position: relative; z-index: 1; }
-
-  /* Premium White Apple Glass Card Style */
-  .lg-white {
-    background: rgba(255, 255, 255, 0.65);
-    backdrop-filter: blur(35px) saturate(190%);
-    -webkit-backdrop-filter: blur(35px) saturate(190%);
-    border-radius: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.6),
-      0 20px 40px rgba(0, 0, 0, 0.08);
-    color: #1c1c1e; position: relative; overflow: hidden;
-  }
-  .lg-white > * { position: relative; z-index: 1; }
-  
-  /* ── FIX PANEL CARD CONTRAST ── */
-  .panel-card {
-    background: rgba(10, 10, 15, 0.06);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 16px;
-    padding: 12px;
-    color: #1e1e2a; /* Forces dark charcoal readable text */
-    position: relative;
-    overflow: hidden;
-  }
-  .panel-card p {
-    color: #00000f !important; /* Overrides hidden headings */
-  }
-  .panel-card li {
-    color: #ffffff !important; /* Overrides hidden bullet lines */
-  }
-
-  /* White glass — admin content, tables */
-  .lg-white{
-    background:rgba(255,255,255,0.82);
+    background:var(--g-fill);
     backdrop-filter:blur(28px) saturate(160%);
     -webkit-backdrop-filter:blur(28px) saturate(160%);
     border-radius:20px;
-    border:1px solid rgba(255,255,255,0.9);
+    border:1px solid var(--g-border);
     box-shadow:
-      inset 0 2px 0 #fff,
-      inset 1px 0 0 rgba(255,255,255,0.8),
-      inset 0 -1.5px 0 rgba(0,0,0,0.06),
-      0 12px 40px rgba(0,0,0,0.18), 0 3px 10px rgba(0,0,0,0.1), 0 0 0 0.5px rgba(255,255,255,0.6);
-    color:000000;position:relative;overflow:hidden;
+      inset 0 2px 0 var(--g-top),
+      inset 1px 0 0 rgba(255,255,255,0.18),
+      inset 0 -1.5px 0 rgba(0,0,0,0.15),
+      var(--g-shadow);
+    position:relative;overflow:hidden;
   }
-  .lg-white::before{
+  .lg::before{
     content:'';position:absolute;top:0;left:0;right:0;height:50%;
-    background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.12) 55%,transparent 100%);
+    background:linear-gradient(180deg,rgba(255,255,255,0.16) 0%,rgba(255,255,255,0.04) 50%,transparent 100%);
     border-radius:inherit;pointer-events:none;z-index:0;
   }
-  .lg-white > *{position:relative;z-index:1;}
+  .lg>*{position:relative;z-index:1;}
 
-  .card{background:rgba(255,255,255,0.82);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-radius:20px;border:1px solid rgba(255,255,255,0.9);box-shadow:inset 0 2px 0 #fff,inset 0 -1.5px 0 rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.18),0 3px 10px rgba(0,0,0,0.1);color:#1c1c1e;position:relative;overflow:hidden;}
-  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,transparent 100%);border-radius:inherit;pointer-events:none;z-index:0;}
-  .card > *{position:relative;z-index:1;}
+  /* Dark glass — sidebar */
+  .lg-dark{
+    background:rgba(14,14,14,0.82);
+    backdrop-filter:blur(40px) saturate(160%);
+    -webkit-backdrop-filter:blur(40px) saturate(160%);
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,0.12);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,0.16),
+      inset 0 -1px 0 rgba(0,0,0,0.3),
+      0 16px 48px rgba(0,0,0,0.6),0 4px 12px rgba(0,0,0,0.3);
+    position:relative;overflow:hidden;
+  }
+  .lg-dark::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:45%;
+    background:linear-gradient(180deg,rgba(255,255,255,0.08) 0%,transparent 100%);
+    border-radius:inherit;pointer-events:none;z-index:0;
+  }
+  .lg-dark>*{position:relative;z-index:1;}
+
+  /* Card (same as lg, alias) */
+  .card{background:var(--g-fill);backdrop-filter:blur(28px) saturate(160%);-webkit-backdrop-filter:blur(28px) saturate(160%);border-radius:20px;border:1px solid var(--g-border);box-shadow:inset 0 2px 0 var(--g-top),inset 0 -1.5px 0 rgba(0,0,0,0.15),var(--g-shadow);position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.16) 0%,transparent 100%);border-radius:inherit;pointer-events:none;z-index:0;}
+  .card>*{position:relative;z-index:1;}
 
   /* ── SIDEBAR ── */
   #sidebar{
     width:240px;display:flex;flex-direction:column;
     position:fixed;top:0;left:0;bottom:0;z-index:50;
-    background:rgba(16,16,22,0.85);
-    backdrop-filter:blur(40px) saturate(200%);
-    -webkit-backdrop-filter:blur(40px) saturate(200%);
-    border-right:1px solid rgba(255,255,255,0.1);
-    box-shadow:inset -1px 0 0 rgba(255,255,255,0.04),4px 0 20px rgba(0,0,0,0.4);
+    background:rgba(10,10,10,0.92);
+    backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+    border-right:1px solid rgba(255,255,255,0.08);
+    box-shadow:4px 0 20px rgba(0,0,0,0.5);
     transition:transform .3s cubic-bezier(.4,0,.2,1);
     overflow-y:auto;
   }
   @media(max-width:767px){#sidebar{transform:translateX(-100%);}#sidebar.open{transform:translateX(0);}}
   @media(min-width:768px){#sidebar{transform:translateX(0)!important;}}
-  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:49;backdrop-filter:blur(6px);}
-  @media(max-width:767px){#sidebar.open ~ #sidebar-overlay,#sidebar-overlay.open{display:block;}}
+  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:49;}
+  @media(max-width:767px){#sidebar.open~#sidebar-overlay,#sidebar-overlay.open{display:block;}}
 
-  .nav-link{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:14px;margin:2px 10px;font-size:14px;font-weight:500;color:rgba(255,255,255,0.5);transition:all .2s;cursor:pointer;border:1px solid transparent;}
-  .nav-link:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.18);box-shadow:inset 0 2px 0 rgba(255,255,255,0.2),inset 0 -1px 0 rgba(0,0,0,0.1),0 3px 10px rgba(0,0,0,0.2);color:rgba(255,255,255,0.9);}
-  .nav-link.active{background:linear-gradient(135deg,#E8341A,#FF7100);border-color:rgba(255,255,255,0.22);box-shadow:inset 0 2px 0 rgba(255,255,255,0.3),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 6px 20px rgba(232,52,26,0.5);color:#fff;}
+  /* Nav links — white glass, brand ONLY when active */
+  .nav-link{
+    display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:14px;
+    margin:2px 10px;font-size:14px;font-weight:500;
+    color:rgba(255,255,255,0.5);transition:all .2s;cursor:pointer;
+    border:1px solid transparent;
+  }
+  .nav-link:hover{
+    background:rgba(255,255,255,0.08);
+    border-color:rgba(255,255,255,0.15);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.18),0 2px 8px rgba(0,0,0,0.2);
+    color:rgba(255,255,255,0.85);
+  }
+  /* ★ Brand color: active nav only */
+  .nav-link.active{
+    background:var(--brand-grad);
+    border-color:rgba(255,255,255,0.18);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,0.25),0 4px 16px rgba(232,52,26,0.4);
+    color:#fff;
+  }
   .nav-link svg{width:18px;height:18px;flex-shrink:0;}
 
   #main-content{min-height:100vh;display:flex;flex-direction:column;position:relative;z-index:1;}
@@ -195,127 +148,174 @@
 
   /* ── TOP BAR ── */
   .top-bar{
-    background:rgba(16,16,22,0.75);
-    backdrop-filter:blur(40px) saturate(180%);
-    -webkit-backdrop-filter:blur(40px) saturate(180%);
-    border-bottom:1px solid rgba(255,255,255,0.1);
-    box-shadow:inset 0 -1px 0 rgba(0,0,0,0.2),0 4px 20px rgba(0,0,0,0.25);
+    background:rgba(10,10,10,0.82);
+    backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 2px 12px rgba(0,0,0,0.3);
     position:sticky;top:0;z-index:30;
   }
-
-  /* Admin top bar */
   .admin-top-bar{
-    background:rgba(16,16,22,0.85);
+    background:rgba(10,10,10,0.92);
     backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
-    border-bottom:1px solid rgba(255,255,255,0.1);
-    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+    box-shadow:0 2px 12px rgba(0,0,0,0.3);
     position:sticky;top:0;z-index:30;
     padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
   }
+  .stats-strip{background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06);}
 
-  .stats-strip{background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.07);}
-
-  /* ── PROGRESS ── */
-  .prog-bar{height:6px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 3px rgba(0,0,0,0.25);}
-  .prog-fill{height:100%;border-radius:99px;background:linear-gradient(to right,#E8341A,#FF7100);box-shadow:0 0 10px rgba(232,52,26,0.5);transition:width .6s ease;}
+  /* ── PROGRESS BAR ── */
+  .prog-bar{height:5px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,0.1);}
+  /* ★ Brand color: progress fill */
+  .prog-fill{height:100%;border-radius:99px;background:var(--brand-grad);transition:width .6s ease;}
 
   /* ── DASHBOARD ── */
   .dashboard-layout{display:flex;flex:1;min-height:0;}
   .courses-col{flex:1;min-width:0;overflow-y:auto;padding:16px;}
-  .lesson-panel-wrap{width:340px;flex-shrink:0;overflow-y:auto;padding:16px;border-left:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);}
-  @media(max-width:1023px){.dashboard-layout{flex-direction:column;}.lesson-panel-wrap{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,0.08);}}
+  .lesson-panel-wrap{width:340px;flex-shrink:0;overflow-y:auto;padding:16px;border-left:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.02);}
+  @media(max-width:1023px){.dashboard-layout{flex-direction:column;}.lesson-panel-wrap{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,0.07);}}
 
-  /* ── MODULE BANNERS ── */
-  .module-list-container{background:var(--glass-fill);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid var(--glass-border);border-radius:22px;overflow:visible;box-shadow:inset 0 2px 0 var(--glass-top),inset 0 -1.5px 0 rgba(0,0,0,0.14),var(--glass-shadow);position:relative;}
-  .module-list-container::before{content:'';position:absolute;top:0;left:0;right:0;height:45%;background:linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%);border-radius:22px 22px 0 0;pointer-events:none;z-index:0;}
-  .module-list-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+  /* ── MODULE LIST ── */
+  .module-list-container{
+    background:var(--g-fill);
+    backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+    border:1px solid var(--g-border);border-radius:22px;overflow:visible;
+    box-shadow:inset 0 2px 0 var(--g-top),inset 0 -1.5px 0 rgba(0,0,0,0.15),var(--g-shadow);
+    position:relative;
+  }
+  .module-list-container::before{content:'';position:absolute;top:0;left:0;right:0;height:40%;background:linear-gradient(180deg,rgba(255,255,255,0.14) 0%,transparent 100%);border-radius:22px 22px 0 0;pointer-events:none;z-index:0;}
+  .module-list-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
 
-  .module-banner{position:relative;overflow:hidden;border-radius:16px;height:80px;cursor:pointer;margin-bottom:7px;border:1px solid rgba(255,255,255,0.25);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.38),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 5px 18px rgba(0,0,0,0.4),0 1px 4px rgba(0,0,0,0.22),0 0 0 0.5px rgba(255,255,255,0.12);transition:transform .22s cubic-bezier(.34,1.2,.64,1),box-shadow .22s;}
-  .module-banner:hover{transform:scale(1.022) translateY(-2px);box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 14px 40px rgba(0,0,0,0.52),0 4px 12px rgba(0,0,0,0.28),0 0 0 0.5px rgba(255,255,255,0.2);}
+  /* ── MODULE BANNER ── */
+  .module-banner{
+    position:relative;overflow:hidden;border-radius:16px;height:80px;cursor:pointer;margin-bottom:7px;
+    border:1px solid rgba(255,255,255,0.2);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.35),inset 0 -1.5px 0 rgba(0,0,0,0.2),0 4px 16px rgba(0,0,0,0.4),0 1px 4px rgba(0,0,0,0.2);
+    transition:transform .22s cubic-bezier(.34,1.2,.64,1),box-shadow .22s;
+  }
+  .module-banner:hover{transform:scale(1.022) translateY(-2px);box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),inset 0 -1.5px 0 rgba(0,0,0,0.2),0 14px 40px rgba(0,0,0,0.55),0 4px 12px rgba(0,0,0,0.3);}
   .module-banner.locked{cursor:not-allowed;opacity:.35;}
   .module-banner.locked:hover{transform:none;}
-  .module-banner.active-banner{border-color:#E8341A!important;box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 0 0 2px #E8341A,0 0 0 5px rgba(232,52,26,0.2),0 12px 36px rgba(0,0,0,0.5)!important;}
+  /* ★ Brand color: active banner border */
+  .module-banner.active-banner{border-color:var(--brand)!important;box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),0 0 0 2px var(--brand),0 0 0 5px rgba(232,52,26,0.15),0 12px 36px rgba(0,0,0,0.5)!important;}
   .module-banner-bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform .4s ease;}
   .module-banner:hover .module-banner-bg{transform:scale(1.04);}
-  .module-banner-overlay{position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.55) 55%,rgba(0,0,0,0.2) 100%);}
-  .module-banner::after{content:'';position:absolute;top:0;left:0;right:0;height:48%;background:linear-gradient(180deg,rgba(255,255,255,0.16) 0%,rgba(255,255,255,0.05) 50%,transparent 100%);pointer-events:none;z-index:3;border-radius:16px 16px 0 0;}
+  .module-banner-overlay{position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.55) 55%,rgba(0,0,0,0.18) 100%);}
+  .module-banner::after{content:'';position:absolute;top:0;left:0;right:0;height:48%;background:linear-gradient(180deg,rgba(255,255,255,0.14) 0%,transparent 100%);pointer-events:none;z-index:3;border-radius:16px 16px 0 0;}
   .module-banner-content{position:relative;z-index:4;height:100%;display:flex;align-items:center;padding:0 16px;gap:12px;}
-  .module-banner-icon{width:36px;height:36px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.13);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.3);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.5),inset 0 -1px 0 rgba(0,0,0,0.12);}
+  .module-banner-icon{width:36px;height:36px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.28);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.45);}
   .module-banner-text{flex:1;min-width:0;}
+  /* ★ Brand color: DAY label */
   .module-banner-day{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-2);line-height:1;}
   .module-banner-title{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
   .module-banner-status{font-size:10px;font-weight:600;margin-top:3px;}
 
-  /* ── PANEL CARD (lesson preview) ── */
-  .panel-card{background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.28);border-radius:16px;box-shadow:inset 0 2px 0 rgba(255,255,255,0.45),inset 0 -1px 0 rgba(0,0,0,0.1),0 5px 18px rgba(0,0,0,0.2);color:#fff;position:relative;overflow:hidden;}
-  .panel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%);pointer-events:none;}
-  .panel-card > *{position:relative;z-index:1;}
+  /* ── PANEL CARD ── */
+  .panel-card{background:rgba(255,255,255,0.09);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.22);border-radius:16px;box-shadow:inset 0 2px 0 rgba(255,255,255,0.4),inset 0 -1px 0 rgba(0,0,0,0.12),0 4px 16px rgba(0,0,0,0.2);color:#fff;position:relative;overflow:hidden;}
+  .panel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:48%;background:linear-gradient(180deg,rgba(255,255,255,0.16) 0%,transparent 100%);pointer-events:none;}
+  .panel-card>*{position:relative;z-index:1;}
 
-  /* ── BUTTONS ── */
-  .btn-primary{background:linear-gradient(135deg,#E8341A,#FF7100);border:1px solid rgba(255,255,255,0.25);border-radius:14px;padding:14px 20px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:100%;box-shadow:inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 8px 28px rgba(232,52,26,0.45),0 3px 8px rgba(0,0,0,0.2);transition:all .18s;position:relative;overflow:hidden;}
-  .btn-primary::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.22) 0%,transparent 100%);pointer-events:none;}
-  .btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 14px 36px rgba(232,52,26,0.55),0 4px 10px rgba(0,0,0,0.22);}
+  /* ── BUTTONS ──
+     Primary: brand gradient — the main CTA
+     Ghost: pure white glass — no brand color
+  */
+  .btn-primary{
+    background:var(--brand-grad);
+    border:1px solid rgba(255,255,255,0.2);border-radius:14px;padding:14px 20px;
+    font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:100%;
+    box-shadow:inset 0 2px 0 rgba(255,255,255,0.25),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 6px 24px rgba(232,52,26,0.4);
+    transition:all .18s;position:relative;overflow:hidden;
+  }
+  .btn-primary::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.2) 0%,transparent 100%);pointer-events:none;}
+  .btn-primary:hover{opacity:.9;transform:translateY(-1px);}
   .btn-primary:active{transform:translateY(0);}
 
-  .btn-ghost{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.28);border-radius:14px;padding:12px 20px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;backdrop-filter:blur(12px);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.38),inset 0 -1px 0 rgba(0,0,0,0.1),0 3px 10px rgba(0,0,0,0.18);transition:all .18s;}
-  .btn-ghost:hover{background:rgba(255,255,255,0.17);color:#fff;border-color:rgba(255,255,255,0.4);}
+  .btn-ghost{
+    background:rgba(255,255,255,0.09);
+    border:1px solid rgba(255,255,255,0.25);border-radius:14px;padding:12px 20px;
+    font-size:14px;font-weight:600;color:rgba(255,255,255,0.82);
+    cursor:pointer;backdrop-filter:blur(12px);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.18);
+    transition:all .18s;
+  }
+  .btn-ghost:hover{background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.38);}
 
-  /* ── TABS ── */
-  .tab-glass{border-radius:12px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.26);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.38),inset 0 -1px 0 rgba(0,0,0,0.1),0 2px 8px rgba(0,0,0,0.16);color:rgba(255,255,255,0.6);backdrop-filter:blur(12px);}
-  .tab-glass.active{background:linear-gradient(135deg,#E8341A,#FF7100);color:#fff;border-color:rgba(255,255,255,0.22);box-shadow:inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -1.5px 0 rgba(0,0,0,0.15),0 5px 18px rgba(232,52,26,0.42);}
-  .tab-glass:not(.active):hover{background:rgba(255,255,255,0.17);color:#fff;}
+  /* ── TABS — white glass, brand only when active ── */
+  .tab-glass{
+    border-radius:12px;padding:8px 18px;font-size:13px;font-weight:600;
+    cursor:pointer;white-space:nowrap;transition:all .2s;
+    background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.22);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3),0 2px 8px rgba(0,0,0,0.15);
+    color:rgba(255,255,255,0.55);backdrop-filter:blur(12px);
+  }
+  /* ★ Brand color: active tab */
+  .tab-glass.active{background:var(--brand-grad);color:#fff;border-color:rgba(255,255,255,0.18);box-shadow:inset 0 2px 0 rgba(255,255,255,0.25),0 4px 16px rgba(232,52,26,0.35);}
+  .tab-glass:not(.active):hover{background:rgba(255,255,255,0.14);color:rgba(255,255,255,0.9);}
 
-  /* ── QUIZ OPTIONS ── */
-  .quiz-opt{width:100%;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.26);box-shadow:inset 0 2px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,0,0,0.1),0 3px 10px rgba(0,0,0,0.16);text-align:left;font-size:14px;color:rgba(255,255,255,0.9);transition:all .18s;cursor:pointer;backdrop-filter:blur(12px);position:relative;overflow:hidden;}
-  .quiz-opt::before{content:'';position:absolute;top:0;left:0;right:0;height:48%;background:linear-gradient(180deg,rgba(255,255,255,0.14) 0%,transparent 100%);pointer-events:none;}
-  .quiz-opt > *{position:relative;z-index:1;}
-  .quiz-opt:hover{background:rgba(255,255,255,0.17);border-color:rgba(255,255,255,0.4);transform:translateX(3px);box-shadow:inset 0 2.5px 0 rgba(255,255,255,0.45),inset 0 -1px 0 rgba(0,0,0,0.1),0 5px 16px rgba(0,0,0,0.25);}
-  .quiz-opt.correct{background:rgba(34,197,94,0.16);border-color:rgba(34,197,94,0.4);color:#86efac;box-shadow:inset 0 2px 0 rgba(34,197,94,0.3),0 3px 12px rgba(34,197,94,0.18);}
-  .quiz-opt.wrong{background:rgba(239,68,68,0.16);border-color:rgba(239,68,68,0.4);color:#fca5a5;box-shadow:inset 0 2px 0 rgba(239,68,68,0.3),0 3px 12px rgba(239,68,68,0.18);}
+  /* ── QUIZ OPTIONS — white glass ── */
+  .quiz-opt{
+    width:100%;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:14px;
+    background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.22);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3),0 2px 8px rgba(0,0,0,0.15);
+    text-align:left;font-size:14px;color:rgba(255,255,255,0.88);
+    transition:all .18s;cursor:pointer;backdrop-filter:blur(12px);
+  }
+  .quiz-opt:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.38);transform:translateX(3px);}
+  .quiz-opt.correct{background:rgba(255,255,255,0.12);border-color:rgba(255,255,255,0.5);color:#fff;}
+  .quiz-opt.wrong{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.45);}
   .quiz-opt.dim{opacity:.28;}
 
   /* ── INPUTS ── */
-  .glass-input{width:100%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.28);border-radius:13px;padding:13px 16px;font-size:14px;color:#fff;outline:none;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.16),inset 0 -1px 0 rgba(0,0,0,0.15),0 2px 6px rgba(0,0,0,0.12);transition:all .18s;}
-  .glass-input:focus{border-color:var(--brand);background:rgba(255,255,255,0.14);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.2),inset 0 -1px 0 rgba(0,0,0,0.15),0 0 0 3px rgba(232,52,26,0.22),0 2px 6px rgba(0,0,0,0.12);}
-  .glass-input::placeholder{color:rgba(255,255,255,0.3);}
+  .glass-input{
+    width:100%;background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.22);border-radius:13px;padding:13px 16px;
+    font-size:14px;color:#fff;outline:none;
+    backdrop-filter:blur(16px);
+    box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.12),inset 0 -1px 0 rgba(0,0,0,0.15);
+    transition:all .18s;
+  }
+  /* ★ Brand color: focus border on inputs */
+  .glass-input:focus{border-color:var(--brand);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.14),0 0 0 3px rgba(232,52,26,0.18);}
+  .glass-input::placeholder{color:rgba(255,255,255,0.28);}
 
-  .glass-input-white{width:100%;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 16px;font-size:14px;color:#1c1c1e;outline:none;box-shadow:inset 0 2px 0 #fff,inset 0 -1px 0 rgba(0,0,0,0.05),0 2px 6px rgba(0,0,0,0.08);transition:all .18s;}
-  .glass-input-white:focus{border-color:var(--brand);box-shadow:inset 0 2px 0 #fff,inset 0 -1px 0 rgba(0,0,0,0.05),0 0 0 3px rgba(232,52,26,0.15);}
+  .glass-input-white{width:100%;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 16px;font-size:14px;color:#1c1c1e;outline:none;box-shadow:inset 0 2px 0 #fff,inset 0 -1px 0 rgba(0,0,0,0.05);transition:all .18s;}
+  .glass-input-white:focus{border-color:var(--brand);box-shadow:inset 0 2px 0 #fff,0 0 0 3px rgba(232,52,26,0.14);}
   .glass-input-white::placeholder{color:rgba(0,0,0,0.3);}
 
-  /* ── ADMIN TABLE GLASS ── */
+  /* ── ADMIN TABLE ── */
   .admin-table{width:100%;border-collapse:collapse;}
-  .admin-table thead tr{background:rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.12);}
-  .admin-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);}
-  .admin-table th.center{text-align:center;}
-  .admin-table th.right{text-align:right;}
-  .admin-table tbody tr{border-bottom:1px solid rgba(255,255,255,0.07);transition:background .15s;}
-  .admin-table tbody tr:hover{background:rgba(255,255,255,0.05);}
-  .admin-table td{padding:14px 16px;font-size:14px;color:rgba(255,255,255,0.85);}
-  .admin-table td.center{text-align:center;}
-  .admin-table td.right{text-align:right;}
+  .admin-table thead tr{background:rgba(255,255,255,0.05);border-bottom:1px solid rgba(255,255,255,0.1);}
+  .admin-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.38);}
+  .admin-table th.center{text-align:center;}.admin-table th.right{text-align:right;}
+  .admin-table tbody tr{border-bottom:1px solid rgba(255,255,255,0.06);transition:background .15s;}
+  .admin-table tbody tr:hover{background:rgba(255,255,255,0.04);}
+  .admin-table td{padding:14px 16px;font-size:14px;color:rgba(255,255,255,0.82);}
+  .admin-table td.center{text-align:center;}.admin-table td.right{text-align:right;}
 
-  /* ── GLASS PILL BADGES ── */
+  /* ── PILLS — white glass only, brand only for orange accent pills ── */
   .pill{display:inline-flex;align-items:center;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;backdrop-filter:blur(8px);}
-  .pill-orange{background:rgba(255,113,0,0.15);border:1px solid rgba(255,113,0,0.28);color:#FF7100;}
-  .pill-green{background:rgba(34,197,94,0.14);border:1px solid rgba(34,197,94,0.28);color:#4ade80;}
+  .pill-white{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.22);color:rgba(255,255,255,0.75);}
+  .pill-green{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;}
+  .pill-grey{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.38);}
+  /* ★ Brand color: orange accent pill (unlocked count, quiz ready) */
+  .pill-orange{background:rgba(232,52,26,0.14);border:1px solid rgba(232,52,26,0.28);color:var(--brand-2);}
   .pill-red{background:rgba(232,52,26,0.14);border:1px solid rgba(232,52,26,0.25);color:#ff8070;}
-  .pill-yellow{background:rgba(234,179,8,0.14);border:1px solid rgba(234,179,8,0.25);color:#facc15;}
-  .pill-grey{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.45);}
-  .pill-white{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.8);}
+  .pill-yellow{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);color:rgba(255,255,255,0.65);}
 
-  /* ── ADMIN GRID CARDS (manage student) ── */
-  .class-card{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3),inset 0 -1px 0 rgba(0,0,0,0.12),0 4px 14px rgba(0,0,0,0.2);}
-  .class-card::before{content:'';position:absolute;top:0;left:0;right:0;height:45%;background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 100%);pointer-events:none;}
-  .class-card > *{position:relative;z-index:1;}
-  .class-card.unlocked{border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.08);}
-  .class-card.vid-locked{border-color:rgba(234,179,8,0.35);background:rgba(234,179,8,0.08);}
-  .class-card.quiz-locked{border-color:rgba(139,92,246,0.35);background:rgba(139,92,246,0.08);}
+  /* ── ADMIN GRID CARDS ── */
+  .class-card{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.16);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.28),0 3px 12px rgba(0,0,0,0.2);}
+  .class-card::before{content:'';position:absolute;top:0;left:0;right:0;height:45%;background:linear-gradient(180deg,rgba(255,255,255,0.1) 0%,transparent 100%);pointer-events:none;}
+  .class-card>*{position:relative;z-index:1;}
+  /* ★ Brand color: unlocked card border */
+  .class-card.unlocked{border-color:rgba(232,52,26,0.3);background:rgba(232,52,26,0.06);}
+  .class-card.vid-locked{border-color:rgba(255,255,255,0.2);background:rgba(255,255,255,0.05);}
+  .class-card.quiz-locked{border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.04);}
 
-  /* ── ADMIN TOGGLE ── */
-  .adm-track{width:40px;height:22px;border-radius:99px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.22);position:relative;transition:all .2s;cursor:pointer;flex-shrink:0;box-shadow:inset 0 1px 3px rgba(0,0,0,0.2);}
-  .adm-track.on{background:linear-gradient(to right,#E8341A,#FF7100);border-color:rgba(255,255,255,0.18);box-shadow:0 2px 10px rgba(232,52,26,0.4);}
-  .adm-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.9);}
+  /* ── TOGGLE ── */
+  .adm-track{width:40px;height:22px;border-radius:99px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);position:relative;transition:all .2s;cursor:pointer;flex-shrink:0;box-shadow:inset 0 1px 3px rgba(0,0,0,0.2);}
+  /* ★ Brand color: toggle ON state */
+  .adm-track.on{background:var(--brand-grad);border-color:rgba(255,255,255,0.15);box-shadow:0 2px 10px rgba(232,52,26,0.35);}
+  .adm-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
   .adm-track.on .adm-thumb{transform:translateX(18px);}
 
   /* ── MISC ── */
@@ -327,7 +327,7 @@
   .avatar-overlay{position:absolute;inset:0;border-radius:1rem;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;}
   ::-webkit-scrollbar{width:3px;height:3px;}
   ::-webkit-scrollbar-track{background:transparent;}
-  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.16);border-radius:99px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.14);border-radius:99px;}
 </style>
 </head>
 <body>
@@ -339,30 +339,114 @@ function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);d
 const today=new Date();today.setHours(0,0,0,0);
 const courseStart=addDays(today,-2);
 
-// ─── MASTER MEDIA ASSET CONFIGURATION (DYNAMIC INTERCEPT PATTERN) ────────────
-// Add your image URLs or specific gradient style rules cleanly right here.
-const MASTER_MEDIA_CONFIG = {
-  1: {
-    thumbnailUrl: "WhatsApp Image 2026-06-25 at 12.12.54 PM (1).jpeg",
-    gradientOverride: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
-  },
-  2: {
-    thumbnailUrl: "WhatsApp Image 2026-06-25 at 12.12.54 PM (1).jpeg",
-    gradientOverride: "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)"
-  },
-  3: {
-    thumbnailUrl: "WhatsApp Image 2026-06-25 at 12.12.54 PM (1).jpeg",
-    gradientOverride: null
-  }
+// ╔═══════════════════════════════════════════════════════════════════════════╗
+// ║                         ★  MASTER CONFIG  ★                            ║
+// ║  Edit ONLY this section to customise your portal.                       ║
+// ║  No need to touch anything else in the file.                            ║
+// ╚═══════════════════════════════════════════════════════════════════════════╝
+
+// ── 1. SITE BRANDING ──────────────────────────────────────────────────────────
+const SITE_NAME     = "Broken English";        // shown in sidebar & browser tab
+const SITE_TAGLINE  = "Speak Better. Live Better."; // shown under logo
+
+// ── 2. ADMIN LOGIN ────────────────────────────────────────────────────────────
+const ADMIN_EMAIL    = "admin@brokenenglish.com"; // ← your admin email
+const ADMIN_PASSWORD = "admin1234";               // ← your admin password
+
+// ── 3. COURSE DRIP SETTING ───────────────────────────────────────────────────
+const DAILY_UNLOCK_LIMIT = 3; // new classes unlocked per student per day
+
+// ── 4. BRAND COLORS ──────────────────────────────────────────────────────────
+// These update EVERY button, border, highlight and accent across the site.
+// Use any valid CSS color (hex, rgb, hsl…)
+const COLOR_BRAND   = "#E8341A";   // ← primary brand color (red-orange)
+const COLOR_BRAND2  = "#FF7100";   // ← secondary brand color (orange)
+// Gradient direction: "135deg" = diagonal, "to right" = horizontal
+const COLOR_GRAD_DIR = "135deg";
+
+// ── 5. MODULE BANNER IMAGES ──────────────────────────────────────────────────
+// Paste any image URL (from Imgur, Google Drive, Dropbox, etc.) next to the day.
+// Leave as "" to show the default dark gradient placeholder.
+//
+// HOW TO GET A FREE IMAGE URL:
+//   • Go to https://imgur.com → upload your image → right-click → Copy image address
+//   • Use that URL (ending in .jpg or .png) below
+//
+const MODULE_IMAGES = {
+   1: "",    // Day 1  — Foundational Phonetics
+   2: "",    // Day 2  — ED Endings
+   3: "",    // Day 3  — Pluralization
+   4: "",    // Day 4  — Age Endings
+   5: "",    // Day 5  — Short Vowels
+   6: "",    // Day 6  — Short /ɪ/ vs Long /iː/
+   7: "",    // Day 7  — Consonant Clusters
+   8: "",    // Day 8  — Word Stress
+   9: "",    // Day 9  — Verb vs Noun Stress
+  10: "",    // Day 10 — TH Sound Mechanics
+  11: "",    // Day 11 — Silent Letters
+  12: "",    // Day 12 — The 3 O Sounds
+  13: "",    // Day 13 — R and L Sounds
+  14: "",    // Day 14 — Consonant Sounds
+  15: "",    // Day 15 — British vs American
+  16: "",    // Day 16 — Diphthongs
+  17: "",    // Day 17 — Strong & Weak Forms
+  18: "",    // Day 18 — Schwa & Connected Speech
+  19: "",    // Day 19 — Sentence Rhythm
+  20: "",    // Day 20 — Advanced Shadowing
+  21: "",    // Day 21 — Pronunciation Fix 1
+  22: "",    // Day 22 — Pronunciation Fix 2
+  23: "",    // Day 23 — Pronunciation Fix 3
+  24: "",    // Day 24 — Pronunciation Fix 4
+  25: "",    // Day 25 — Pronunciation Fix 5
+  26: "",    // Day 26 — Pronunciation Fix 6
+  27: "",    // Day 27 — Pronunciation Fix 7
+  28: "",    // Day 28 — Pronunciation Fix 8
+  29: "",    // Day 29 — Pronunciation Fix 9
+  30: "",    // Day 30 — Pronunciation Fix 10
 };
+
+// ── 6. FALLBACK BANNER GRADIENTS ─────────────────────────────────────────────
+// Shown when no image URL is set above. 10 styles that cycle through 30 days.
+// Change these to any CSS gradient you like.
+const BANNER_GRADIENTS = [
+  "linear-gradient(135deg,#0d1b2a 0%,#1b2838 100%)",
+  "linear-gradient(135deg,#1a0a00 0%,#3d1200 100%)",
+  "linear-gradient(135deg,#0a1628 0%,#163758 100%)",
+  "linear-gradient(135deg,#12001e 0%,#2e0050 100%)",
+  "linear-gradient(135deg,#001a10 0%,#004428 100%)",
+  "linear-gradient(135deg,#1a0008 0%,#440018 100%)",
+  "linear-gradient(135deg,#001520 0%,#003045 100%)",
+  "linear-gradient(135deg,#1a1400 0%,#443600 100%)",
+  "linear-gradient(135deg,#001818 0%,#003d3d 100%)",
+  "linear-gradient(135deg,#180018 0%,#3d003d 100%)",
+];
+
+// ── 7. SAMPLE VIDEO ───────────────────────────────────────────────────────────
+// Shown in lessons until you set real videos via Admin → Classes & Videos
+const SAMPLE_VIDEO = "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+
+// ╔═══════════════════════════════════════════════════════════════════════════╗
+// ║            END OF MASTER CONFIG — do not edit below this line            ║
+// ╚═══════════════════════════════════════════════════════════════════════════╝
+
+// Wire config into the rest of the code
+const ADMIN_CREDENTIALS = { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
+const DAILY_DRIP = DAILY_UNLOCK_LIMIT;
+const QUALITIES  = [{label:"1080p",src:SAMPLE_VIDEO},{label:"720p",src:SAMPLE_VIDEO},{label:"480p",src:SAMPLE_VIDEO}];
+
+// Inject brand colors into CSS variables at runtime
+(function applyBrandColors(){
+  const r = document.documentElement.style;
+  r.setProperty('--brand',  COLOR_BRAND);
+  r.setProperty('--brand-2', COLOR_BRAND2);
+  r.setProperty('--brand-grad', `linear-gradient(${COLOR_GRAD_DIR},${COLOR_BRAND},${COLOR_BRAND2})`);
+})();
+
 
 const LOGO_DATA_URI="data:image/png;base64,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";
 
-const SAMPLE_VIDEO="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
-const QUALITIES=[{label:"1080p",src:SAMPLE_VIDEO},{label:"720p",src:SAMPLE_VIDEO},{label:"480p",src:SAMPLE_VIDEO}];
 
 // ─── ADMIN SYSTEM ─────────────────────────────────────────────────────────────
-const ADMIN_CREDENTIALS={email:"admin@brokenenglish.com",password:"admin1234"};
 function loadStudents(){try{return JSON.parse(localStorage.getItem("be_students")||"{}");}catch{return{};}}
 function saveStudents(s){localStorage.setItem("be_students",JSON.stringify(s));}
 function genId(){return"s_"+Math.random().toString(36).slice(2,9);}
@@ -536,17 +620,14 @@ function buildLessons(sid,sectionLabel,count,start){
   for(let i=1;i<=count;i++){
     const order=start+i-1;
     const title=DAY_TITLES[order]||sectionLabel+" "+order;
-    
-    // Check config mapper at boot instantiation
-    const mediaConf = MASTER_MEDIA_CONFIG[order] || {};
-    
+    const _imgUrl = MODULE_IMAGES[order] || null;
     ls.push({
       id:sid+"-"+i,sectionId:sid,order,
       title,
       description:"Placeholder description — replace with real class notes.",
       unlockDate:addDays(courseStart,order-1),dayNumber:order,
-      thumbnailUrl: mediaConf.thumbnailUrl || null,
-      gradientOverride: mediaConf.gradientOverride || null
+      thumbnailUrl: _imgUrl,
+      gradientOverride: null
     });
   }
   return ls;
@@ -600,7 +681,6 @@ function avatarSmallHtml(student){
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 // 3-per-day drip unlock logic:
-const DAILY_DRIP=3;
 function getUnlockedSet(student){
   const explicit=new Set(student.accessList||[]);
   const done=new Set(
@@ -1150,7 +1230,7 @@ function renderAdmin(tab){
                   </td>
                   <td class="right" style="white-space:nowrap">
                     <div style="display:inline-flex;gap:6px">
-                      ${glassBtn('Manage',`Maps('admin-student',{id:'${s.id}'})`,'ghost')}
+                      ${glassBtn('Manage',`navigate('admin-student',{id:'${s.id}'})`,'ghost')}
                       ${glassBtn('Edit',`openEditStudent('${s.id}')`,'ghost')}
                       ${glassBtn('Delete',`confirmDelete('${s.id}')`,'danger')}
                     </div>
@@ -1304,7 +1384,7 @@ function renderAdminStudent(id){
       </div>`).join('')}
 
     <div style="display:flex;justify-content:flex-end;margin-top:8px">
-      ${glassBtn('Done',`Maps('admin',{tab:'students'})`,'brand')}
+      ${glassBtn('Done',`navigate('admin',{tab:'students'})`,'brand')}
     </div>
   </div>`;
 
@@ -1516,7 +1596,7 @@ function renderMyCourses(){
               const completed=isCompleted(l.id);
               const rq=hasRealQuiz(l);
               return`<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${unlocked?'cursor:pointer':'opacity:0.4;cursor:not-allowed'};transition:background .15s"
-                onclick="${unlocked?`Maps('lesson',{id:'${l.id}'})`:''}">
+                onclick="${unlocked?`navigate('lesson',{id:'${l.id}'})`:''}">
                 <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${completed?'background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.35)':unlocked?'background:rgba(232,52,26,0.15);border:1px solid rgba(232,52,26,0.25)':'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)'}">
                   ${completed
                     ?`<svg style="width:18px;height:18px;color:#4ade80" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`
@@ -1584,7 +1664,7 @@ function renderQuizzes(){
           const quizReady=unlocked&&lessonDone&&!qAdminLocked;
           const section=SECTIONS.find(s=>s.id===l.sectionId);
           return`<div style="display:flex;align-items:center;gap:14px;padding:16px 20px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${quizReady?'cursor:pointer':'cursor:default'};transition:background .15s;${!quizReady?'opacity:0.55':''}"
-            onclick="${quizReady?`Maps('quiz',{lessonId:'${l.id}'})`:''}">
+            onclick="${quizReady?`navigate('quiz',{lessonId:'${l.id}'})`:''}">
             <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${quizReady?'background:linear-gradient(135deg,#E8341A,#FF7100);box-shadow:inset 0 2px 0 rgba(255,255,255,0.25),0 4px 12px rgba(232,52,26,0.4)':qAdminLocked&&lessonDone?'background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.25)':'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)'}">
               <svg style="width:18px;height:18px;color:${quizReady?'#fff':qAdminLocked&&lessonDone?'#facc15':'rgba(255,255,255,0.4)'}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
@@ -1885,25 +1965,15 @@ function renderModuleList(){
 
   const listEl=document.getElementById("module-list");
 
-  const BG_GRADIENTS=[
-    "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
-    "linear-gradient(135deg,#0d0d0d 0%,#1a0a00 50%,#3d1500 100%)",
-    "linear-gradient(135deg,#0a1628 0%,#0d2137 50%,#102a42 100%)",
-    "linear-gradient(135deg,#100c1c 0%,#1a1030 50%,#251545 100%)",
-    "linear-gradient(135deg,#0e1a10 0%,#142b16 50%,#1c3b1f 100%)",
-    "linear-gradient(135deg,#1a0e0e 0%,#2d1212 50%,#3d1818 100%)",
-    "linear-gradient(135deg,#0e1520 0%,#131e2d 50%,#19283d 100%)",
-    "linear-gradient(135deg,#1a1500 0%,#2e2400 50%,#3d3000 100%)",
-    "linear-gradient(135deg,#001a1a 0%,#002d2d 50%,#003d3d 100%)",
-    "linear-gradient(135deg,#1a001a 0%,#2d002d 50%,#3d003d 100%)",
-  ];
+    const BG_GRADIENTS = BANNER_GRADIENTS;
 
   if(listEl) listEl.innerHTML=lessons.map((l,idx)=>{
     const unlocked=isUnlocked(l);
     const completed=isCompleted(l.id);
     const isActive=activeLesson&&activeLesson.id===l.id;
     
-    const bg=l.gradientOverride || BG_GRADIENTS[(l.order-1)%BG_GRADIENTS.length];
+    const _img=MODULE_IMAGES[l.order];
+    const bg=_img?`url('${_img}') center/cover no-repeat`:BG_GRADIENTS[(l.order-1)%BG_GRADIENTS.length];
     const inlineBgStyle = l.thumbnailUrl ? `background-image: url('${l.thumbnailUrl}');` : `background: ${bg};`;
 
     const statusColor=completed?'#22C55E':unlocked?'#FF7100':'#9CA3AF';
@@ -2017,7 +2087,7 @@ function lessonPanelHtml(lesson){
 
     <div class="relative rounded-2xl overflow-hidden aspect-video mb-4 cursor-pointer group ${unlocked?'':'opacity-50 cursor-not-allowed'}"
       style="${panelBgStyle}"
-      onclick="${unlocked?`Maps('lesson',{id:'${lesson.id}'})`:''}" >
+      onclick="${unlocked?`navigate('lesson',{id:'${lesson.id}'})`:''}" >
       
       ${!lesson.thumbnailUrl ? `
       <div class="absolute inset-0 bg-gradient-to-br from-gray-900/90 via-gray-800/50 to-gray-700/30 flex flex-col justify-end p-4">
