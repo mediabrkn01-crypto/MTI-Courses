@@ -2477,7 +2477,6 @@ function renderLesson(lessonId){
           ${(()=>{
             const ytId=getYouTubeId(videoSrc);
             if(ytId){
-              // Privacy-enhanced embed with all sharing/related disabled
               return`<div style="position:relative;width:100%;height:100%;background:#000">
                 <iframe
                   id="yt-player"
@@ -2487,21 +2486,43 @@ function renderLesson(lessonId){
                   allowfullscreen
                   referrerpolicy="strict-origin">
                 </iframe>
-                <!-- Invisible overlay blocks right-click on iframe -->
-                <div style="position:absolute;inset:0;pointer-events:none;user-select:none"></div>
               </div>`;
             }
             return`<video id="video" class="w-full h-full" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline>
               <source id="video-source" src="${videoSrc}"/>
             </video>
-            <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <div id="watermark" class="watermark-drift select-none whitespace-nowrap rounded px-3 py-1 font-mono text-[10px] text-white/20"></div>
-            </div>
             <div class="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3">
               <div id="quality-buttons" class="pointer-events-auto flex gap-1.5 rounded-full bg-black/50 px-2 py-1 backdrop-blur"></div>
               <button id="fullscreen-btn" class="pointer-events-auto rounded-full bg-black/50 px-3 py-1 text-xs text-white/70 backdrop-blur hover:text-white">⛶</button>
             </div>`;
           })()}
+
+          <!-- FORENSIC WATERMARK — floats over both YouTube and MP4, always visible on recording -->
+          <div id="wm-container" style="
+            position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:99;
+          ">
+            <!-- Primary drifting watermark -->
+            <div id="wm-1" style="
+              position:absolute;font-family:monospace;font-size:11px;font-weight:600;
+              color:rgba(255,255,255,0.18);white-space:nowrap;user-select:none;
+              text-shadow:0 1px 2px rgba(0,0,0,0.5);
+              transition:none;
+            "></div>
+            <!-- Secondary watermark at different position -->
+            <div id="wm-2" style="
+              position:absolute;font-family:monospace;font-size:11px;font-weight:600;
+              color:rgba(255,255,255,0.14);white-space:nowrap;user-select:none;
+              text-shadow:0 1px 2px rgba(0,0,0,0.5);
+              transition:none;
+            "></div>
+            <!-- Corner stamp — always present, harder to crop out -->
+            <div id="wm-corner" style="
+              position:absolute;bottom:8px;right:8px;
+              font-family:monospace;font-size:9px;font-weight:700;
+              color:rgba(255,255,255,0.12);user-select:none;text-align:right;
+              text-shadow:0 1px 2px rgba(0,0,0,0.6);
+            "></div>
+          </div>
         </div>
         <div class="px-5 py-3 flex items-center justify-between gap-3 border-t border-white/10">
           <p class="text-xs" style="color:rgba(255,255,255,.6)">${realQuiz?`<span class="inline-block rounded-full bg-red-50 border border-red-100 px-2.5 py-0.5 text-xs font-semibold text-brand mr-2">Quiz ready</span>`:''}</p>
@@ -2539,11 +2560,9 @@ function setupPlayer(lesson,student){
   const videoMeta=loadVideos()[lesson.order]||{};
   const realSrc=videoMeta.src||SAMPLE_VIDEO;
 
-  // If YouTube — iframe handles playback, add extra protection
+  // If YouTube — iframe handles playback, watermark overlay handles protection
   if(getYouTubeId(realSrc)){
-    // Block right-click on iframe area
     wrapper.addEventListener("contextmenu",e=>e.preventDefault());
-    // Disable pointer events on transparent overlay to block sharing UI
     return;
   }
 
@@ -2588,9 +2607,66 @@ function setupPlayer(lesson,student){
     document.addEventListener("fullscreenchange",()=>{fsBtn.textContent=document.fullscreenElement?"Exit ⛶":"⛶";});
   }
 
-  const wm=document.getElementById("watermark");
-  function tick(){wm.textContent=`${student.name} \u00B7 ${student.email} \u00B7 ${new Date().toLocaleString()}`;}
-  tick();setInterval(tick,1000);
+  // ── FORENSIC WATERMARK ──────────────────────────────────────────────────────
+  // Floats over entire video — visible on any screen recording or phone camera
+  const wmContainer = document.getElementById("wm-container");
+  const wm1 = document.getElementById("wm-1");
+  const wm2 = document.getElementById("wm-2");
+  const wmCorner = document.getElementById("wm-corner");
+
+  if(wm1 && wm2 && wmCorner && wmContainer){
+    const wmText = `${student.name}  •  ${student.email}`;
+    const wmShort = student.email;
+
+    // Update corner stamp every second with time
+    function updateCorner(){
+      const now = new Date();
+      wmCorner.innerHTML = `${wmShort}<br>${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+    }
+    updateCorner();
+    setInterval(updateCorner, 1000);
+
+    // Slowly drift watermarks across the screen like Hotstar/Netflix
+    let pos1 = {x:15, y:20};
+    let pos2 = {x:55, y:65};
+    let vel1 = {x:0.04, y:0.025};
+    let vel2 = {x:-0.035, y:0.04};
+
+    function moveWatermarks(){
+      const W = wmContainer.offsetWidth || 640;
+      const H = wmContainer.offsetHeight || 360;
+      const wPct = 35; // approx width % of watermark text
+      const hPct = 6;
+
+      // Move
+      pos1.x += vel1.x; pos1.y += vel1.y;
+      pos2.x += vel2.x; pos2.y += vel2.y;
+
+      // Bounce off edges
+      if(pos1.x <= 0 || pos1.x >= (100-wPct)) vel1.x *= -1;
+      if(pos1.y <= 0 || pos1.y >= (100-hPct)) vel1.y *= -1;
+      if(pos2.x <= 0 || pos2.x >= (100-wPct)) vel2.x *= -1;
+      if(pos2.y <= 0 || pos2.y >= (100-hPct)) vel2.y *= -1;
+
+      // Apply positions
+      wm1.style.left = pos1.x + '%';
+      wm1.style.top  = pos1.y + '%';
+      wm2.style.left = pos2.x + '%';
+      wm2.style.top  = pos2.y + '%';
+
+      requestAnimationFrame(moveWatermarks);
+    }
+
+    // Set text
+    wm1.textContent = wmText;
+    wm2.textContent = wmText;
+
+    // Randomise starting positions
+    pos1 = {x: 10 + Math.random()*40, y: 10 + Math.random()*30};
+    pos2 = {x: 40 + Math.random()*40, y: 50 + Math.random()*30};
+
+    moveWatermarks();
+  }
 
   const markBtn=document.getElementById("mark-complete-btn");
   markBtn.disabled=isCompleted(lesson.id);
