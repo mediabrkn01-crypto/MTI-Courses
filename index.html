@@ -1,0 +1,2335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Broken English</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          brand:  "#E8341A",
+          "brand-2": "#FF7100",
+          sidebar: "#1A1A2E",
+          "sidebar-soft": "#252540",
+        },
+        fontFamily: {
+          sans: ["'Inter'","sans-serif"],
+          display: ["'Poppins'","sans-serif"],
+        },
+      },
+    },
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+  *{-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0;}
+
+  :root{
+    --brand:#E8341A;
+    --brand-2:#FF7100;
+    --bg:#1e1e2a;
+    --glass-fill:rgba(255,255,255,0.13);
+    --glass-border:rgba(255,255,255,0.32);
+    --glass-top:rgba(255,255,255,0.80);
+    --glass-shadow:0 12px 40px rgba(0,0,0,0.35), 0 3px 10px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.18);
+  }
+
+  body{
+    background:var(--bg);
+    min-height:100vh;
+    font-family:'Inter',sans-serif;
+    color:#fff;
+    overflow-x:hidden;
+  }
+
+  /* Subtle ambient light from top-centre */
+  body::before{
+    content:'';position:fixed;top:0;left:0;right:0;height:60vh;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 100% 60% at 50% 0%, rgba(255,255,255,0.055) 0%, transparent 70%);
+  }
+
+  /* ── LIQUID GLASS SYSTEM ──────────────────────────────────────────────
+     The 3 authentic properties from reference images:
+     1. Low-opacity clear fill  2. Bright top specular rim  3. Face sheen
+  ─────────────────────────────────────────────────────────────────────── */
+
+  .lg{
+    background:var(--glass-fill);
+    backdrop-filter:blur(28px) saturate(180%);
+    -webkit-backdrop-filter:blur(28px) saturate(180%);
+    border-radius:20px;
+    border:1px solid var(--glass-border);
+    box-shadow:
+      inset 0 2px 0 var(--glass-top),
+      inset 1px 0 0 rgba(255,255,255,0.22),
+      inset 0 -1.5px 0 rgba(0,0,0,0.14),
+      var(--glass-shadow);
+    position:relative;overflow:hidden;
+  }
+  .lg::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:52%;
+    background:linear-gradient(180deg,rgba(255,255,255,0.2) 0%,rgba(255,255,255,0.06) 45%,transparent 100%);
+    border-radius:inherit;pointer-events:none;z-index:0;
+  }
+  .lg > *{position:relative;z-index:1;}
+
+  .lg-dark{
+    background:rgba(18,18,26,0.72);
+    backdrop-filter:blur(40px) saturate(180%);
+    -webkit-backdrop-filter:blur(40px) saturate(180%);
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,0.14);
+    box-shadow:
+      inset 0 1.5px 0 rgba(255,255,255,0.18),
+      inset 1px 0 0 rgba(255,255,255,0.07),
+      inset 0 -1px 0 rgba(0,0,0,0.25),
+      0 16px 48px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.08);
+    position:relative;overflow:hidden;
+  }
+  .lg-dark::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:45%;
+    background:linear-gradient(180deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.03) 55%,transparent 100%);
+    border-radius:inherit;pointer-events:none;z-index:0;
+  }
+  .lg-dark > *{position:relative;z-index:1;}
+
+  /* White glass — admin content, tables */
+  .lg-white{
+    background:rgba(255,255,255,0.82);
+    backdrop-filter:blur(28px) saturate(160%);
+    -webkit-backdrop-filter:blur(28px) saturate(160%);
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,0.9);
+    box-shadow:
+      inset 0 2px 0 #fff,
+      inset 1px 0 0 rgba(255,255,255,0.8),
+      inset 0 -1.5px 0 rgba(0,0,0,0.06),
+      0 12px 40px rgba(0,0,0,0.18), 0 3px 10px rgba(0,0,0,0.1), 0 0 0 0.5px rgba(255,255,255,0.6);
+    color:#1c1c1e;position:relative;overflow:hidden;
+  }
+  .lg-white::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:50%;
+    background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,rgba(255,255,255,0.12) 55%,transparent 100%);
+    border-radius:inherit;pointer-events:none;z-index:0;
+  }
+  .lg-white > *{position:relative;z-index:1;}
+
+  .card{background:rgba(255,255,255,0.82);backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);border-radius:20px;border:1px solid rgba(255,255,255,0.9);box-shadow:inset 0 2px 0 #fff,inset 0 -1.5px 0 rgba(0,0,0,0.06),0 12px 40px rgba(0,0,0,0.18),0 3px 10px rgba(0,0,0,0.1);color:#1c1c1e;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.5) 0%,transparent 100%);border-radius:inherit;pointer-events:none;z-index:0;}
+  .card > *{position:relative;z-index:1;}
+
+  /* ── SIDEBAR ── */
+  #sidebar{
+    width:240px;display:flex;flex-direction:column;
+    position:fixed;top:0;left:0;bottom:0;z-index:50;
+    background:rgba(16,16,22,0.85);
+    backdrop-filter:blur(40px) saturate(200%);
+    -webkit-backdrop-filter:blur(40px) saturate(200%);
+    border-right:1px solid rgba(255,255,255,0.1);
+    box-shadow:inset -1px 0 0 rgba(255,255,255,0.04),4px 0 20px rgba(0,0,0,0.4);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+    overflow-y:auto;
+  }
+  @media(max-width:767px){#sidebar{transform:translateX(-100%);}#sidebar.open{transform:translateX(0);}}
+  @media(min-width:768px){#sidebar{transform:translateX(0)!important;}}
+  #sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:49;backdrop-filter:blur(6px);}
+  @media(max-width:767px){#sidebar.open ~ #sidebar-overlay,#sidebar-overlay.open{display:block;}}
+
+  .nav-link{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:14px;margin:2px 10px;font-size:14px;font-weight:500;color:rgba(255,255,255,0.5);transition:all .2s;cursor:pointer;border:1px solid transparent;}
+  .nav-link:hover{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.18);box-shadow:inset 0 2px 0 rgba(255,255,255,0.2),inset 0 -1px 0 rgba(0,0,0,0.1),0 3px 10px rgba(0,0,0,0.2);color:rgba(255,255,255,0.9);}
+  .nav-link.active{background:linear-gradient(135deg,#E8341A,#FF7100);border-color:rgba(255,255,255,0.22);box-shadow:inset 0 2px 0 rgba(255,255,255,0.3),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 6px 20px rgba(232,52,26,0.5);color:#fff;}
+  .nav-link svg{width:18px;height:18px;flex-shrink:0;}
+
+  #main-content{min-height:100vh;display:flex;flex-direction:column;position:relative;z-index:1;}
+  @media(min-width:768px){#main-content{margin-left:240px;}}
+
+  /* ── TOP BAR ── */
+  .top-bar{
+    background:rgba(16,16,22,0.75);
+    backdrop-filter:blur(40px) saturate(180%);
+    -webkit-backdrop-filter:blur(40px) saturate(180%);
+    border-bottom:1px solid rgba(255,255,255,0.1);
+    box-shadow:inset 0 -1px 0 rgba(0,0,0,0.2),0 4px 20px rgba(0,0,0,0.25);
+    position:sticky;top:0;z-index:30;
+  }
+
+  /* Admin top bar */
+  .admin-top-bar{
+    background:rgba(16,16,22,0.85);
+    backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);
+    border-bottom:1px solid rgba(255,255,255,0.1);
+    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    position:sticky;top:0;z-index:30;
+    padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+  }
+
+  .stats-strip{background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.07);}
+
+  /* ── PROGRESS ── */
+  .prog-bar{height:6px;border-radius:99px;overflow:hidden;background:rgba(255,255,255,0.1);box-shadow:inset 0 1px 3px rgba(0,0,0,0.25);}
+  .prog-fill{height:100%;border-radius:99px;background:linear-gradient(to right,#E8341A,#FF7100);box-shadow:0 0 10px rgba(232,52,26,0.5);transition:width .6s ease;}
+
+  /* ── DASHBOARD ── */
+  .dashboard-layout{display:flex;flex:1;min-height:0;}
+  .courses-col{flex:1;min-width:0;overflow-y:auto;padding:16px;}
+  .lesson-panel-wrap{width:340px;flex-shrink:0;overflow-y:auto;padding:16px;border-left:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);}
+  @media(max-width:1023px){.dashboard-layout{flex-direction:column;}.lesson-panel-wrap{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,0.08);}}
+
+  /* ── MODULE BANNERS ── */
+  .module-list-container{background:var(--glass-fill);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:1px solid var(--glass-border);border-radius:22px;overflow:visible;box-shadow:inset 0 2px 0 var(--glass-top),inset 0 -1.5px 0 rgba(0,0,0,0.14),var(--glass-shadow);position:relative;}
+  .module-list-container::before{content:'';position:absolute;top:0;left:0;right:0;height:45%;background:linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%);border-radius:22px 22px 0 0;pointer-events:none;z-index:0;}
+  .module-list-header{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.14);display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1;}
+
+  .module-banner{position:relative;overflow:hidden;border-radius:16px;height:80px;cursor:pointer;margin-bottom:7px;border:1px solid rgba(255,255,255,0.25);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.38),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 5px 18px rgba(0,0,0,0.4),0 1px 4px rgba(0,0,0,0.22),0 0 0 0.5px rgba(255,255,255,0.12);transition:transform .22s cubic-bezier(.34,1.2,.64,1),box-shadow .22s;}
+  .module-banner:hover{transform:scale(1.022) translateY(-2px);box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 14px 40px rgba(0,0,0,0.52),0 4px 12px rgba(0,0,0,0.28),0 0 0 0.5px rgba(255,255,255,0.2);}
+  .module-banner.locked{cursor:not-allowed;opacity:.35;}
+  .module-banner.locked:hover{transform:none;}
+  .module-banner.active-banner{border-color:#E8341A!important;box-shadow:inset 0 2px 0 rgba(255,255,255,0.5),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 0 0 2px #E8341A,0 0 0 5px rgba(232,52,26,0.2),0 12px 36px rgba(0,0,0,0.5)!important;}
+  .module-banner-bg{position:absolute;inset:0;background-size:cover;background-position:center;transition:transform .4s ease;}
+  .module-banner:hover .module-banner-bg{transform:scale(1.04);}
+  .module-banner-overlay{position:absolute;inset:0;background:linear-gradient(to right,rgba(0,0,0,0.88) 0%,rgba(0,0,0,0.55) 55%,rgba(0,0,0,0.2) 100%);}
+  .module-banner::after{content:'';position:absolute;top:0;left:0;right:0;height:48%;background:linear-gradient(180deg,rgba(255,255,255,0.16) 0%,rgba(255,255,255,0.05) 50%,transparent 100%);pointer-events:none;z-index:3;border-radius:16px 16px 0 0;}
+  .module-banner-content{position:relative;z-index:4;height:100%;display:flex;align-items:center;padding:0 16px;gap:12px;}
+  .module-banner-icon{width:36px;height:36px;border-radius:11px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.13);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.3);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.5),inset 0 -1px 0 rgba(0,0,0,0.12);}
+  .module-banner-text{flex:1;min-width:0;}
+  .module-banner-day{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-2);line-height:1;}
+  .module-banner-title{font-size:13px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
+  .module-banner-status{font-size:10px;font-weight:600;margin-top:3px;}
+
+  /* ── PANEL CARD (lesson preview) ── */
+  .panel-card{background:rgba(255,255,255,0.1);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.28);border-radius:16px;box-shadow:inset 0 2px 0 rgba(255,255,255,0.45),inset 0 -1px 0 rgba(0,0,0,0.1),0 5px 18px rgba(0,0,0,0.2);color:#fff;position:relative;overflow:hidden;}
+  .panel-card::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.18) 0%,transparent 100%);pointer-events:none;}
+  .panel-card > *{position:relative;z-index:1;}
+
+  /* ── BUTTONS ── */
+  .btn-primary{background:linear-gradient(135deg,#E8341A,#FF7100);border:1px solid rgba(255,255,255,0.25);border-radius:14px;padding:14px 20px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:100%;box-shadow:inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 8px 28px rgba(232,52,26,0.45),0 3px 8px rgba(0,0,0,0.2);transition:all .18s;position:relative;overflow:hidden;}
+  .btn-primary::before{content:'';position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,0.22) 0%,transparent 100%);pointer-events:none;}
+  .btn-primary:hover{opacity:.9;transform:translateY(-1px);box-shadow:inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -1.5px 0 rgba(0,0,0,0.18),0 14px 36px rgba(232,52,26,0.55),0 4px 10px rgba(0,0,0,0.22);}
+  .btn-primary:active{transform:translateY(0);}
+
+  .btn-ghost{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.28);border-radius:14px;padding:12px 20px;font-size:14px;font-weight:600;color:rgba(255,255,255,0.85);cursor:pointer;backdrop-filter:blur(12px);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.38),inset 0 -1px 0 rgba(0,0,0,0.1),0 3px 10px rgba(0,0,0,0.18);transition:all .18s;}
+  .btn-ghost:hover{background:rgba(255,255,255,0.17);color:#fff;border-color:rgba(255,255,255,0.4);}
+
+  /* ── TABS ── */
+  .tab-glass{border-radius:12px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .2s;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.26);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.38),inset 0 -1px 0 rgba(0,0,0,0.1),0 2px 8px rgba(0,0,0,0.16);color:rgba(255,255,255,0.6);backdrop-filter:blur(12px);}
+  .tab-glass.active{background:linear-gradient(135deg,#E8341A,#FF7100);color:#fff;border-color:rgba(255,255,255,0.22);box-shadow:inset 0 2px 0 rgba(255,255,255,0.28),inset 0 -1.5px 0 rgba(0,0,0,0.15),0 5px 18px rgba(232,52,26,0.42);}
+  .tab-glass:not(.active):hover{background:rgba(255,255,255,0.17);color:#fff;}
+
+  /* ── QUIZ OPTIONS ── */
+  .quiz-opt{width:100%;display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:14px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.26);box-shadow:inset 0 2px 0 rgba(255,255,255,0.35),inset 0 -1px 0 rgba(0,0,0,0.1),0 3px 10px rgba(0,0,0,0.16);text-align:left;font-size:14px;color:rgba(255,255,255,0.9);transition:all .18s;cursor:pointer;backdrop-filter:blur(12px);position:relative;overflow:hidden;}
+  .quiz-opt::before{content:'';position:absolute;top:0;left:0;right:0;height:48%;background:linear-gradient(180deg,rgba(255,255,255,0.14) 0%,transparent 100%);pointer-events:none;}
+  .quiz-opt > *{position:relative;z-index:1;}
+  .quiz-opt:hover{background:rgba(255,255,255,0.17);border-color:rgba(255,255,255,0.4);transform:translateX(3px);box-shadow:inset 0 2.5px 0 rgba(255,255,255,0.45),inset 0 -1px 0 rgba(0,0,0,0.1),0 5px 16px rgba(0,0,0,0.25);}
+  .quiz-opt.correct{background:rgba(34,197,94,0.16);border-color:rgba(34,197,94,0.4);color:#86efac;box-shadow:inset 0 2px 0 rgba(34,197,94,0.3),0 3px 12px rgba(34,197,94,0.18);}
+  .quiz-opt.wrong{background:rgba(239,68,68,0.16);border-color:rgba(239,68,68,0.4);color:#fca5a5;box-shadow:inset 0 2px 0 rgba(239,68,68,0.3),0 3px 12px rgba(239,68,68,0.18);}
+  .quiz-opt.dim{opacity:.28;}
+
+  /* ── INPUTS ── */
+  .glass-input{width:100%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.28);border-radius:13px;padding:13px 16px;font-size:14px;color:#fff;outline:none;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.16),inset 0 -1px 0 rgba(0,0,0,0.15),0 2px 6px rgba(0,0,0,0.12);transition:all .18s;}
+  .glass-input:focus{border-color:var(--brand);background:rgba(255,255,255,0.14);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.2),inset 0 -1px 0 rgba(0,0,0,0.15),0 0 0 3px rgba(232,52,26,0.22),0 2px 6px rgba(0,0,0,0.12);}
+  .glass-input::placeholder{color:rgba(255,255,255,0.3);}
+
+  .glass-input-white{width:100%;background:rgba(255,255,255,0.94);border:1px solid rgba(255,255,255,0.95);border-radius:13px;padding:12px 16px;font-size:14px;color:#1c1c1e;outline:none;box-shadow:inset 0 2px 0 #fff,inset 0 -1px 0 rgba(0,0,0,0.05),0 2px 6px rgba(0,0,0,0.08);transition:all .18s;}
+  .glass-input-white:focus{border-color:var(--brand);box-shadow:inset 0 2px 0 #fff,inset 0 -1px 0 rgba(0,0,0,0.05),0 0 0 3px rgba(232,52,26,0.15);}
+  .glass-input-white::placeholder{color:rgba(0,0,0,0.3);}
+
+  /* ── ADMIN TABLE GLASS ── */
+  .admin-table{width:100%;border-collapse:collapse;}
+  .admin-table thead tr{background:rgba(255,255,255,0.06);border-bottom:1px solid rgba(255,255,255,0.12);}
+  .admin-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);}
+  .admin-table th.center{text-align:center;}
+  .admin-table th.right{text-align:right;}
+  .admin-table tbody tr{border-bottom:1px solid rgba(255,255,255,0.07);transition:background .15s;}
+  .admin-table tbody tr:hover{background:rgba(255,255,255,0.05);}
+  .admin-table td{padding:14px 16px;font-size:14px;color:rgba(255,255,255,0.85);}
+  .admin-table td.center{text-align:center;}
+  .admin-table td.right{text-align:right;}
+
+  /* ── GLASS PILL BADGES ── */
+  .pill{display:inline-flex;align-items:center;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;backdrop-filter:blur(8px);}
+  .pill-orange{background:rgba(255,113,0,0.15);border:1px solid rgba(255,113,0,0.28);color:#FF7100;}
+  .pill-green{background:rgba(34,197,94,0.14);border:1px solid rgba(34,197,94,0.28);color:#4ade80;}
+  .pill-red{background:rgba(232,52,26,0.14);border:1px solid rgba(232,52,26,0.25);color:#ff8070;}
+  .pill-yellow{background:rgba(234,179,8,0.14);border:1px solid rgba(234,179,8,0.25);color:#facc15;}
+  .pill-grey{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.45);}
+  .pill-white{background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);color:rgba(255,255,255,0.8);}
+
+  /* ── ADMIN GRID CARDS (manage student) ── */
+  .class-card{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.18);border-radius:16px;padding:14px;position:relative;overflow:hidden;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3),inset 0 -1px 0 rgba(0,0,0,0.12),0 4px 14px rgba(0,0,0,0.2);}
+  .class-card::before{content:'';position:absolute;top:0;left:0;right:0;height:45%;background:linear-gradient(180deg,rgba(255,255,255,0.12) 0%,transparent 100%);pointer-events:none;}
+  .class-card > *{position:relative;z-index:1;}
+  .class-card.unlocked{border-color:rgba(34,197,94,0.35);background:rgba(34,197,94,0.08);}
+  .class-card.vid-locked{border-color:rgba(234,179,8,0.35);background:rgba(234,179,8,0.08);}
+  .class-card.quiz-locked{border-color:rgba(139,92,246,0.35);background:rgba(139,92,246,0.08);}
+
+  /* ── ADMIN TOGGLE ── */
+  .adm-track{width:40px;height:22px;border-radius:99px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.22);position:relative;transition:all .2s;cursor:pointer;flex-shrink:0;box-shadow:inset 0 1px 3px rgba(0,0,0,0.2);}
+  .adm-track.on{background:linear-gradient(to right,#E8341A,#FF7100);border-color:rgba(255,255,255,0.18);box-shadow:0 2px 10px rgba(232,52,26,0.4);}
+  .adm-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,0.3),inset 0 1px 0 rgba(255,255,255,0.9);}
+  .adm-track.on .adm-thumb{transform:translateX(18px);}
+
+  /* ── MISC ── */
+  @keyframes drift{0%{transform:translate(0,0);}25%{transform:translate(8vw,4vh);}50%{transform:translate(-4vw,10vh);}75%{transform:translate(6vw,-6vh);}100%{transform:translate(0,0);}}
+  .watermark-drift{animation:drift 30s ease-in-out infinite;}
+  .no-select{user-select:none;-webkit-user-select:none;}
+  .avatar-upload{position:relative;display:inline-block;cursor:pointer;}
+  .avatar-upload:hover .avatar-overlay{opacity:1;}
+  .avatar-overlay{position:absolute;inset:0;border-radius:1rem;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;}
+  ::-webkit-scrollbar{width:3px;height:3px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.16);border-radius:99px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────────────────
+function addDays(date,days){const d=new Date(date);d.setDate(d.getDate()+days);d.setHours(0,0,0,0);return d;}
+const today=new Date();today.setHours(0,0,0,0);
+const courseStart=addDays(today,-2);
+
+// ─── MASTER MEDIA ASSET CONFIGURATION (DYNAMIC INTERCEPT PATTERN) ────────────
+// Add your image URLs or specific gradient style rules cleanly right here.
+const MASTER_MEDIA_CONFIG = {
+  1: {
+    thumbnailUrl: "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?q=80&w=600",
+    gradientOverride: "linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)"
+  },
+  2: {
+    thumbnailUrl: "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?q=80&w=600",
+    gradientOverride: "linear-gradient(135deg, #2c3e50 0%, #3498db 100%)"
+  },
+  3: {
+    thumbnailUrl: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600",
+    gradientOverride: null
+  }
+};
+
+const LOGO_DATA_URI="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIQAAADACAYAAADFjcvdAAAUQ0lEQVR42u2da7QcVZWAv33Oqb43hADyfgQUyCCCBJk7KIhMA0qIYCKPaUUER+MyCo7D+Fg46iyaq44Owy584DCDOow85NEoBAMJiQKtAiJeYCEG5KWwQCCIIYSQe7vqnD0/qvrmJqKQ++yqrr1Wr9upVFV3nfP1Pvvss/c+UEoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWU0i0i3frgWsOysjoOz98c+y0OG+dO7Scp0d4UGMCUrVBqiBSGatVJs5nogfu+g4o7HB8HrKaAmJCeZAACGE1b6M+Oj/wLSHZu+5zh8ze6bvheI5Acea78lc8wuuE9Nr5egmJQDD0EPVvO5QlVRATdlPZxXQnDG19/LM78EINgHYhmL5P+NYx43z6edbxIdq5kx7L3pn0PwIw8Jzu2wfv2eSM/04z4f7Ph9xHWHzftzxvx2WR/pwHPh8+zBU9rHSNCKDXEy2qG2XOxXAtqEe8BWQ+EbtRZumFHv9R5f3Z8xLXyctdm73kln7PRsTYQRhVRT4/2EvMpOTd8dTSaoas0xDAMffsfjuFqVB2oIibaseGNHvDbFIhmPgXu0LyVhGr0Mar98Xb+qdZzI6I1K0zUwvGHfN2PlWqAXVUUK8ewx03Cs42z5up6ldRz9+LHc0HUFDH+7Xx/WXQe6OSEATEFg6CVinX5Dvun/tQ2DjFFlucLDMHv26zFuCehWhOAxYsdFzXcEDFwg5/nT9Uos7xo7DIUdMrRWsxkMexFFy4DtCMGD2GIMExKxjovkvPjDWsPyLoKME+WmkDA0Gl733/81uGgZsBPeFwuGQb1SvtX6R61jaIwfDIWbdo6AYReIbsYyi5B4DHZ46mZebjq40fFNnQ6OZtr5Sj4HTdgMRytcyzNDx7MPylnoaKeXhdcQSgbD7Nnbo9EyrJmF9wlSAM2QTi0dQ3oDzwzVuDJ1OI03DAC2GDBghBVB99vvVdC7HGdn45MEI25Mc/xOeJHB0KLJs4PzaNACRPo33QvZFRoihYGgr33zDLR3CdYeQJIkiLhCaIZecbT4Ba1186TBOuoTB0PugcgcuKoHHTQNl/wI695EEhcHhh5xtLiLNdHR8r+s0TpmImHINRBtGNhnn4jn9RqsqxYKhoo4En7Di8yV769epTXsRMOQWyB0eHZUM+iMq7BuToFg8FTE4fVBBv1RcsnalVrDSmNsLunCApHCUBeBwN6PX4aN5pEkcWFgiLB4fZSWnSMXrXtiMmHIHRApDDUj9Ad97UEXYV0thYGoEDA4sQT+wBBz5Hurfz/ZMOQKCAWhVjNCw+teB1+AqZxCEhcDBjIYlGcY8kfJxWse0CpusmHIDRAKQrWaOp5mHfINTOVD+LgomiFgxaI8xxBz5ZK192oVJ82pCZQ1uYGh2Ux0z0POxrqP4eMYigIDBvQFEn+0XLr6zqmEIR8aog3D7of0Y6Mz8HFSDBg0ZCssg8Q6Ty5ec5vWpxaGjgdC+/qiFIZDP4OtnJnCUIjZRMCIICS0OE4uXX2z1nGdkE9hOrfN+iIZGIj11Yf+C8Z9iRAnhVjCVjQN1UdJQk0uX7W0U2DoWCCUvkgYiPXVh34EG51LSDzpQpwUAIaAFUMrnCTff26RLiTqpEwr07Ew7Fp9PyY6P4PBkP/YjRQGJ5Y4vF+uWHWF9hHJBcSd9CVNR8Iws3oixl5I8MWBQTJfQxI+Ipf/6XvaRyQDnQUDdFCQ7QgYjsXYS9EQEC0GDKgnEkfLf1yufPZ/OhWGjtEQStVlMMwFdyWqWZigFCHEz1MxjqHwGbnyj1/TKq5TYegIIFIYmonucsThaHQ1ZFlVSP7D+5SEinG0fL80nvmPqXY6dTwQwzBsd/ibUZtmVRGKAkNMj3EM6X9K45mztIqjOflrE7mxIYZh2OnwPnDXAZujPiBFgEFjek3EkP+G/PCpT7dhkBxkCJkphWH7t+1HiJaCbIV6XwgY0JgeGzHkvy0/fOp0rWHzAsOUAKHUrNBMdNu37oWYGxDZNoOhGIk0PSZiyF8sVz+1UGvY8U6kKRQQKQwNrzscuTviloHZCU2Kk1VVMRFD2pBrnnzfRGRVFQqIYRi2PmIXvF2G2FenMJgiwJBQMRFxuJbKE+/ROoZ+VHKYVewmWTNsT+KWIWYW2irIMKHp1DL2y+jZskbjiZA5UHKZYm4mHoZ6Gva2xZytiaOliN0HTYqxcokmRNYRhyY9HEtjRUydNAA4p+ImHob+oNvMn4GPr0fsAWgrQQpRlyIhMo4k/ALz4jxpPLtuMhJpcqshlLqBftWZtWkkfjEmehNakAAXSHDGkYS7UI6Wa59dUwQYYIIWjoazqqhFbPniYkx0JAylmuEvpcVvapr+8DW88jT98SkHkBCJI4QVxOZwWf7IyqkIl8/NkJEl0gArDFsMXoVUjkSHijFMqHqccXj/EEPJHLnx8ULBMO5Dxvqsqv7AjHWXIdE8tBVDYWCwBH2UJMyRGx9/omgwjCsQG2RVTZ9/EfTUCENFCZf3WGNRfZJY58jyx35XRBjGWUNUU1/DZvPORyqnoEMxIkWC4Y945shPfjdlWVW5sSGGF6t6554B9H4EHYwxEuW+/N9wVpU+R8JcuemRe/MQ0zClGmJ4sap3/t9iorPRVlIMmyGLjoYXSPQYuenhgbT2ZbH3ojBjazME9lHlHZuB+W56NOQ/DlI1YBCEQUKYLzc9fGu7ECoFlzFqiNSIpMeegVRmZS7pvMc0pFlVRhJif5zc+PBN3QLDmBxTw86nzY7bEc9vEaYjQRCVDcr3T5TDaGIcU+1NSCCEE6T5wDXdBMMYNUTVSBo5eBpSmQEh5Hyo0Ew7GGL/Xmk+cE07t5QuEjPKlhOhmaS2g74fTZS8lzhUPM5avH5Yfv7g5dqX5pbSZTLKTqyl11Wiw5HKTPD5jpTWbBk7CZ+Xn95/QbfCMAYgVkr2q5qf7REUcgyDJ3KOJGnIz+6ra7XqGBjo2m0ORwlE0yt1g3IIBMntcKEasMaS+PuxZoHWMTSbXgqwocakAZEGvaBwz86IzCL14ObRmFREFKVF0JOkueIFVuQ39G0KNcSKtPOd7AG2BzTkMgdTCThrCeFMue2+u7RaLez6xAQDkdkPgZlZMf2QQxjSBas4voPbVpyjtZql2ex6GMbmhzBsnVtvQ9uY9Oa0NCC2QbcPFWMHAunN6bTCE1lL0Avljnt/VQ4V4waE5tWQNCRhDTaqKwjNZigxGBcgcqodrBVC+G+59a4/UK3aPOdQlECM0emAiMX7NYTk3FI7lBoi1Q6q35eB+59MC6mX2qGbgbB4HzD6X+nCd6Ps/S4GItMO3CK333sPIOXMopuBUBQREC4GoFo1Zde/tLiuwMGIw/u16NBigNKY7G4NETAGlFtk4P4n2/t8ll3frUCopsOF6pJsM5ZyuOhqIFLfg2K5WUDL4aK7gQgYIwR9nFVr7xu2KUrpViC0Pbu4Wx56aEhrNVuuanYzEO3ppsrdAKxcKWWXdzMQgqR11OXesqtLIAAxaf4QD5f+h1cmRXZMaaohwjqCPlUalKWGgDQwbhXOrSq7uuuByGYYsJqBgXXDeJTStRoi7XyRNZJt0VN2d9fPMgRg3frxo5QutyFIw+1LKYHY0LIspQSibUYUoTRiCcQ4aYbUrJyeqYnSKVVqCEB1C63VbFtflF3etUBIex1jKx54YEbZ1aWGSL0PsBXGbFsamCUQQhogYzFhVwBqtRKILtcQaYBtMHsBZTxEaVQOy/5lV5dAZAEyAdADAMoqMV2vIcQQFIR99Q1v2K5c5CqHDElLD9oZOP4uMyzLvIyutiFUQ7bqeWRpWJZAgGRxlapzy2pzJRDpM4agGLM3v3/oAAHVGrbs+m6edioeYwQNJ6bDRrUcNroaCKEdjv9uPeigaTSbvpxtdDMQ6bDhcXYmyYvzBZRqtRw2uhiI9owD0NOBMmmnBELSosOQejsQm0GxB4DHTQNAA==";
+
+const SAMPLE_VIDEO="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4";
+const QUALITIES=[{label:"1080p",src:SAMPLE_VIDEO},{label:"720p",src:SAMPLE_VIDEO},{label:"480p",src:SAMPLE_VIDEO}];
+
+// ─── ADMIN SYSTEM ─────────────────────────────────────────────────────────────
+const ADMIN_CREDENTIALS={email:"admin@brokenenglish.com",password:"admin1234"};
+function loadStudents(){try{return JSON.parse(localStorage.getItem("be_students")||"{}");}catch{return{};}}
+function saveStudents(s){localStorage.setItem("be_students",JSON.stringify(s));}
+function genId(){return"s_"+Math.random().toString(36).slice(2,9);}
+let currentSession=null;
+let adminUnlockAll=false;
+
+// ─── QUIZ BANK ────────────────────────────────────────────────────────────────
+const QUIZ_BANK={
+  // ── Day 1: Foundational Phonetics ──────────────────────────────────────────
+  1:[
+    {id:"d1q1",prompt:"What is the core definition of a syllable?",options:["A block of letters that contains a silent consonant.","A complete unit of spoken language consisting of one vowel sound.","Any combination of three letters or more.","A word that cannot be broken down into smaller pieces."],answer:1},
+    {id:"d1q2",prompt:"How many syllables are in 'communication'?",options:["4","5","6","7"],answer:1},
+    {id:"d1q3",prompt:"Why is English considered 'non-phonetic'?",options:["Because it uses the Cyrillic alphabet instead of Latin.","Letters are always pronounced exactly the same way.","There is no direct relationship between spelling and sound.","It lacks any complex vowel sounds."],answer:2},
+    {id:"d1q4",prompt:"How many letters vs. sounds does English have?",options:["44 letters; 26 sounds.","26 letters; 26 sounds.","26 letters; 44 sounds.","44 letters; 44 sounds."],answer:2},
+    {id:"d1q5",prompt:"What does throat vibration prove about a sound?",options:["The sound is unvoiced.","The sound is voiced.","The sound is an elongated nasal sound.","The mouth is fully open."],answer:1},
+    {id:"d1q6",prompt:"Which word has exactly three syllables?",options:["Communication","Beautiful","Object","Act"],answer:1},
+    {id:"d1q7",prompt:"What is the purpose of the IPA (International Phonetic Alphabet)?",options:["To dictate absolute grammatical rules globally.","To provide universal, unambiguous symbols for sounds.","To replace standard English spellings in dictionaries.","To translate English words into multiple languages."],answer:1},
+  ],
+  // ── Day 2: ED Endings ──────────────────────────────────────────────────────
+  2:[
+    {id:"d2q1",prompt:"What is the role of vocal cords in speech?",options:["They capture air from the lungs without vibrating.","They produce vibration; the mouth shapes it.","They determine the alphabetical spelling of a word.","They are only used during whispered speech."],answer:1},
+    {id:"d2q2",prompt:"What is the difference between voiced and unvoiced sounds?",options:["Unvoiced sounds involve heavy throat friction.","Voiced sounds are strictly nasal.","Voiced sounds involve vocal cord vibration.","Unvoiced sounds can only be made with lips open."],answer:2},
+    {id:"d2q3",prompt:"What category do all vowel sounds fall into?",options:["All are unvoiced.","All are voiced.","Some are voiced and some are nasal.","They do not require any vibration."],answer:1},
+    {id:"d2q4",prompt:"How do you pronounce '-ed' after an unvoiced consonant?",options:["As a weak schwa sound.","As a voiced /d/ vibration.","As a sharp /t/ sound.","It remains completely silent."],answer:2},
+    {id:"d2q5",prompt:"What is the rule for verbs ending in /t/ or /d/ when adding -ed?",options:["Drop the final letter entirely.","Add an 'id' (/ɪd/) syllable.","Pronounce it as a sharp /t/.","Elide the preceding vowel."],answer:1},
+    {id:"d2q6",prompt:"How are adjective exceptions like 'blessed' or 'learned' pronounced?",options:["Pronounced as a single consonant cluster.","Pronounced with a full 'id' suffix as a separate syllable.","Dropping the structural ending entirely.","Converting the final sound to a nasal glide."],answer:1},
+    {id:"d2q7",prompt:"How does the word 'house' differ as a noun vs. a verb in pronunciation?",options:["Noun /z/, Verb /s/.","Noun and Verb are both /s/.","Noun /s/, Verb /z/.","Noun and Verb are both /z/."],answer:2},
+  ],
+  // ── Day 3: Pluralization ───────────────────────────────────────────────────
+  3:[
+    {id:"d3q1",prompt:"How is the plural 's' pronounced after a voiced consonant?",options:["Unvoiced /s/ friction.","Voiced /z/ vibration.","Weak transitional schwa.","Completely silent glide."],answer:1},
+    {id:"d3q2",prompt:"Which word uses the unvoiced /s/ for its plural?",options:["Houses","Books","Uses","Pins"],answer:1},
+    {id:"d3q3",prompt:"How is the possessive 's' in 'cat's' pronounced?",options:["Voiced /z/ vibration.","Unvoiced /s/ friction.","Syllabic /ɪz/.","Complete elision."],answer:1},
+    {id:"d3q4",prompt:"What governs the pronunciation of a final 's'?",options:["The number of vowels inside the root stem.","The historical spelling of the prefix.","The preceding sound's voicing.","The sentence stress timing rules."],answer:2},
+    {id:"d3q5",prompt:"How is 'uses' (plural noun) pronounced?",options:["Voiced /z/.","Unvoiced /s/.","Weak schwa extension.","Silent termination."],answer:0},
+    {id:"d3q6",prompt:"How does 'close' differ as an adjective vs. a verb?",options:["Adj /s/, Verb /z/.","Adj /z/, Verb /s/.","Both are unvoiced /s/.","Both are voiced /z/."],answer:0},
+    {id:"d3q7",prompt:"Which is a correctly matched voiced/unvoiced consonant pair?",options:["/p/ and /s/.","/f/ and /v/.","/t/ and /k/.","/m/ and /n/."],answer:1},
+  ],
+  // ── Day 4: Age Endings ────────────────────────────────────────────────────
+  4:[
+    {id:"d4q1",prompt:"How is the '-age' suffix pronounced in more than 90% of English words?",options:["/eɪdʒ/ (like the standalone word 'age')","/ɪdʒ/ (with a short 'i' sound)","/ɑːʒ/ (with a French 'zh' sound)","It remains completely silent"],answer:1},
+    {id:"d4q2",prompt:"Under what specific condition is '-age' pronounced as /eɪdʒ/ (e.g. page, cage, rage)?",options:["When it comes immediately after a vowel sound","Only when the word originates from French","When it is part of a stressed syllable","When the word has three or more syllables"],answer:2},
+    {id:"d4q3",prompt:"Why does the word 'enrage' maintain the /eɪdʒ/ pronunciation at the end?",options:["Because the stress falls on the second syllable ('-rage')","Because the stress falls on the first syllable ('en-')","Because it is a direct French loanword","Because it ends with a silent consonant"],answer:0},
+    {id:"d4q4",prompt:"Which word is an unstressed '-age' exception pronounced with the short /ɪdʒ/ sound?",options:["Camouflage","Mirage","Manage","Stage"],answer:2},
+    {id:"d4q5",prompt:"How is '-age' typically pronounced in French loanwords such as 'mirage' or 'collage'?",options:["/ɪdʒ/","/ɑːʒ/ (a long 'a' sound followed by a 'zh' sound)","/æɡ/","/eɪɡ/"],answer:1},
+    {id:"d4q6",prompt:"What is the meaning of the French-derived word 'sillage'?",options:["The design or ability to blend into surroundings","The act of using spies to extract information","The trail of scent a perfume leaves behind in a room after a person has left","A deliberate act intended to destroy something"],answer:2},
+    {id:"d4q7",prompt:"How does 'voyage' change when used in 'bon voyage' vs. standalone English?",options:["It stays exactly the same in both contexts","In English it ends with /ɪdʒ/ ('voy-ij'), but in the French expression it ends with /ʒ/ ('bon voy-ahzh')","In English it ends with /ɑːʒ/, but in the French expression it ends with /ɪdʒ/","It becomes completely silent in the expression"],answer:1},
+  ],
+  // ── Day 5: Short Vowels ────────────────────────────────────────────────────
+  5:[
+    {id:"d5q1",prompt:"What is the key fix for MTI (Mother Tongue Influence) with the /ɪ/ sound?",options:["Dropping all final short consonants.","Using a crisp /ɪ/ sound, not the long /i:/.","Elongating the unstressed suffix.","Using rising intonation structures."],answer:1},
+    {id:"d5q2",prompt:"What is the mouth position for the short /ɪ/ sound?",options:["Smile wide and pull back tongue tightly.","Relaxed, minimal jaw drop.","Drop jaw fully with rounded lips.","Rest tongue flat against lower teeth."],answer:1},
+    {id:"d5q3",prompt:"Where does the primary stress fall in the word 'competition'?",options:["Initial (com-).","Secondary (pe-).","Penultimate (-ti-).","Ultimate (-on)."],answer:2},
+    {id:"d5q4",prompt:"What MTI error typically occurs in the word 'ambition'?",options:["Reducing the target to a weak schwa.","Stretching /ɪ/ to the long /i:/.","Introducing an intrusive glide sound.","Dropping the nasal termination."],answer:1},
+    {id:"d5q5",prompt:"Which word is the minimal pair example for the short /ɪ/ sound?",options:["Seat","Sit","Sat","Sight"],answer:1},
+    {id:"d5q6",prompt:"What is the key warning when applying stress to a syllable?",options:["Accelerate the unstressed syllable structure.","Don't warp the vowel quality when stressing.","Always apply extreme throat friction.","Eliminate nasal elements entirely."],answer:1},
+    {id:"d5q7",prompt:"What makes 'happy' phonetically unusual at the end?",options:["Uses a unique trilled vocalic structure.","It uses an intermediate sound between /ɪ/ and /i:/.","Features a silent terminal suffix.","Stress is placed equally on both segments."],answer:1},
+  ],
+  // ── Day 6: Short /ɪ/ vs Long /iː/ & Word Stress ──────────────────────────
+  6:[
+    {id:"d6q1",prompt:"What is the main characteristic of the short /ɪ/ sound when it occurs in a stressed syllable?",options:["It should be elongated or held longer.","It increases in loudness and pitch, but remains short.","It changes into a long /iː/ sound.","It becomes completely silent."],answer:1},
+    {id:"d6q2",prompt:"What does the acronym MTI stand for in language learning?",options:["Maximum Tone Intonation","Mother Tongue Interference","Multilingual Talk Interaction","Mispronounced Tongue Inflection"],answer:1},
+    {id:"d6q3",prompt:"Which description accurately matches the mouth and tongue position for the short /ɪ/ sound?",options:["Smile broadly, pull the lips tight, and push the tongue forward.","Relax the mouth, drop the jaw slightly, and place the tip of the tongue against the inner side of the bottom teeth.","Open the mouth wide, round the lips into an 'O' shape, and pull the tongue all the way back.","Keep the lips tense, close the teeth completely, and flatten the tongue."],answer:1},
+    {id:"d6q4",prompt:"In the word 'competition', which syllable receives the primary stress and what vowel does it contain?",options:["The first syllable ('com'), containing a long /iː/ sound.","The second syllable ('pe'), containing a short /e/ sound.","The third syllable ('ti'), containing a short /ɪ/ sound (com-pe-TI-tion).","The last syllable ('tion'), containing a schwa sound."],answer:2},
+    {id:"d6q5",prompt:"Match the short /ɪ/ words with their long /iː/ minimal pair counterparts: Sit→?, Bit→?, Fit→?, Hit→?",options:["Sit-Seat, Bit-Beat, Fit-Feet, Hit-Heat","Sit-Beat, Bit-Seat, Fit-Heat, Hit-Feet","Sit-Seat, Bit-Heat, Fit-Feet, Bit-Beat","Sit-Feet, Bit-Beat, Fit-Seat, Hit-Heat"],answer:0},
+    {id:"d6q6",prompt:"True or False: When stressing a syllable with a short /ɪ/ sound (like 'ambition'), you should change the vowel to a long /iː/ to make it stand out.",options:["True — you must elongate the vowel to stress it.","False — the vowel quality must remain constant even when stressed.","True — only in multi-syllable words.","False — only applies to unstressed syllables."],answer:1},
+    {id:"d6q7",prompt:"Where does the final vowel sound in the word 'happy' lie?",options:["Exactly identical to the long /iː/ sound in 'feet'.","Exactly identical to the short /ɪ/ sound in 'sit'.","A unique intermediate sound falling somewhere between short /ɪ/ and long /iː/."],answer:2},
+  ],
+  // ── Day 7: Consonant Clusters ──────────────────────────────────────────────
+  7:[
+    {id:"d7q1",prompt:"What is a consonant cluster?",options:["A group of identical vowel sounds inside a word.","Consecutive consonants without an intervening vowel.","Silent segments that alter stress patterns.","Words containing only nasal sound elements."],answer:1},
+    {id:"d7q2",prompt:"Which word begins with a three-consonant cluster?",options:["Problem","String","Practice","Challenge"],answer:1},
+    {id:"d7q3",prompt:"What is epenthetic vowel insertion?",options:["Dropping a letter to simplify a phrase transition.","Adding an extra vowel where there should be none (e.g. 'is-tation').","Stressing the wrong internal syllable segment.","Merging matching consonants at word boundaries."],answer:1},
+    {id:"d7q4",prompt:"What is the correct pronunciation sequence for 'tests'?",options:["Dropping the final sibilant sound entirely.","/t/ → /s/ → /t/ → /s/ sequence.","Replacing internal elements with a stop T.","Merging into a singular elongated sound block."],answer:1},
+    {id:"d7q5",prompt:"Which word contains a four-sound consonant cluster?",options:["Contexts","Twelfths","Months","Prospects"],answer:1},
+    {id:"d7q6",prompt:"What is the tip for pronouncing 'prospects' correctly?",options:["Drop the internal plosive elements completely.","Maintain a crisp sequence of all sounds.","Apply a weak schwa between consonants.","Elongate the ultimate vowel element."],answer:1},
+    {id:"d7q7",prompt:"Which word has a consonant cluster at the end?",options:["Blue","Act","No","See"],answer:1},
+  ],
+  // ── Day 8: Word Stress ─────────────────────────────────────────────────────
+  8:[
+    {id:"d8q1",prompt:"What is the definition of word stress?",options:["Pronouncing every syllable at the same volume.","One syllable louder, longer, and higher in pitch than others.","A technique to speed up the delivery of words.","Reducing all unstressed syllables to silence."],answer:1},
+    {id:"d8q2",prompt:"What is the typical stress pattern for two-syllable nouns?",options:["Second syllable stressed.","First syllable stressed.","Both syllables equally stressed.","Stress shifts depending on the sentence."],answer:1},
+    {id:"d8q3",prompt:"Which suffix most commonly shifts stress to the syllable before it?",options:["-ness","-ful","-tion / -sion","-ly"],answer:0},
+    {id:"d8q4",prompt:"Where does stress fall in words ending in '-ic' (e.g. 'academic')?",options:["Always on the first syllable.","On the syllable immediately before the '-ic' suffix.","Evenly distributed across all syllables.","On the final syllable '-ic' itself."],answer:1},
+    {id:"d8q5",prompt:"What happens to vowels in unstressed syllables in English?",options:["They are always clearly and fully pronounced.","They often reduce to a schwa /ə/ sound.","They are always completely dropped.","They shift to a long vowel sound."],answer:1},
+    {id:"d8q6",prompt:"What is the stress pattern for compound nouns like 'blackbird'?",options:["Equal stress on both words.","Primary stress on the second word.","Primary stress on the first word.","Stress alternates depending on context."],answer:2},
+    {id:"d8q7",prompt:"Why does incorrect word stress cause more confusion than mispronounced sounds?",options:["It changes the grammatical tense of the sentence.","Listeners process rhythm and beats first; wrong stress breaks the pattern.","It eliminates all vowels from the word.","It makes words sound like a different language entirely."],answer:1},
+  ],
+  // ── Day 9: Verb vs Noun Syllable Stress (existing — kept as-is) ────────────
+  9:[{id:"s3q1",prompt:"What general phonetic rule is shared regarding two-syllable verbs in English?",options:["Typically stressed on the first syllable.","Typically stressed on the second syllable.","Pronounced with completely silent vowels.","They do not have any syllable stress."],answer:1},{id:"s3q2",prompt:"For most two-syllable nouns and adjectives, where does syllable stress usually land?",options:["On the first syllable.","On the second syllable.","Evenly on both syllables.","It alternates depending on mood."],answer:0},{id:"s3q3",prompt:"Which word is stressed on the first syllable for both noun and verb forms?",options:["Regret","Project","Comment","Record"],answer:2},{id:"s3q4",prompt:"How does 'desert' pronunciation change from noun to verb?",options:["Noun: de-SERT, Verb: DE-Core","Noun: DE-zert, Verb: de-SERT","The noun drops the 's'.","Both are identical."],answer:1},{id:"s3q5",prompt:"What happens to the vowel in 'rebel' and 'record' when switching noun to verb?",options:["It becomes elongated.","The /ɛ/ weakens to /ɪ/ or schwa because the syllable becomes unstressed.","The first syllable becomes silent.","It changes to a nasal sound."],answer:1},{id:"s3q6",prompt:"Which word meaning 'sweet course after a meal' sounds like de-SERT?",options:["Dessert","Desert","Preference","Permit"],answer:0},{id:"s3q7",prompt:"In 'They will present the award tonight', how should 'present' be stressed?",options:["PRE-sent (noun)","pre-SENT (verb)","No stress","Both equally"],answer:1}],
+  // ── Day 10: TH Sound Mechanics (existing) ──────────────────────────────────
+  10:[{id:"s5q1",prompt:"What physical action makes the English 'TH' sounds correctly?",options:["Pressing tongue against soft palate.","Sticking tip of tongue between the teeth.","Curling tongue backward.","Keeping teeth tightly closed."],answer:1},{id:"s5q2",prompt:"What is the key difference between 'TH' in 'think' and 'this'?",options:["Think uses a stop; this uses continuous.","Think is unvoiced; this is voiced.","Think is British; this is American.","Think is behind teeth; this is between lips."],answer:1},{id:"s5q3",prompt:"Which grammatical categories help predict voiced/unvoiced final TH?",options:["Nouns unvoiced; verbs voiced.","Verbs unvoiced; adjectives voiced.","Nouns voiced; adjectives unvoiced.","Adjectives unvoiced; verbs voiced."],answer:0},{id:"s5q4",prompt:"What happens to the vowel in 'thank' in American English?",options:["It drops out.","It shifts toward an 'ae' sound.","It becomes long 'O'.","It becomes silent."],answer:1},{id:"s5q5",prompt:"When should 'the' be pronounced as 'thuh'?",options:["Before a vowel letter.","Before a consonant sound.","At the end of a sentence.","When adding stress."],answer:1},{id:"s5q6",prompt:"Why do we say 'thee' before 'apple' or 'orange'?",options:["Old British law.","To sound formal.","To remove an awkward linguistic jump.","They are proper nouns."],answer:2},{id:"s5q7",prompt:"When do you always use 'thee' even before a consonant?",options:["Speaking quickly.","When adding heavy stress or emphasis.","Talking to a trainer.","Never any exception."],answer:1}],
+  // ── Day 11: Silent Letters (existing) ─────────────────────────────────────
+  11:[{id:"s6q1",prompt:"Why does English have so many silent letters?",options:["A law made it harder for non-natives.","Pronunciation changed; spellings were frozen by printing presses.","Printers added letters to get paid more.","Silent letters only exist in American English."],answer:1},{id:"s6q2",prompt:"Which word contains a structurally silent 'W'?",options:["Window","Sword","Reward","Vow"],answer:1},{id:"s6q3",prompt:"How is 'receipt' correctly pronounced?",options:["'P' is silent.","'C' is silent, 'P' is popped.","Both 'P' and 'T' are silent.","Pronounced like 're-kept'."],answer:0},{id:"s6q4",prompt:"What rule applies to 'B' after 'M' at word end (thumb, lamb)?",options:["'B' is always pronounced.","'M' becomes silent.","'B' is almost always silent.","Combination becomes 'V'."],answer:2},{id:"s6q5",prompt:"In which word is 'D' completely silent?",options:["Decided","Wednesday","Driveway","Underneath"],answer:1},{id:"s6q6",prompt:"Which term features a structurally silent 'J'?",options:["Judge","Marijuana","Project","Rendezvous"],answer:1},{id:"s6q7",prompt:"Which consonants are virtually never silent in English?",options:["P and T","W and H","F and V","B and D"],answer:2}],
+  // ── Day 12: The 3 "O" Sounds ──────────────────────────────────────────────
+  12:[
+    {id:"d12q1",prompt:"Which type of 'O' sound requires a distinct jaw drop where you can fit two fingers vertically between your teeth?",options:["Diphthong O","Long O","Short O","Schwa O"],answer:2},
+    {id:"d12q2",prompt:"A director said 'own it' when she actually meant 'on it'. What sound should have been used for 'on it'?",options:["Diphthong O","Short O","Long O","Schwa O"],answer:1},
+    {id:"d12q3",prompt:"Word pairs like 'ROT vs ROTE' and 'NOT vs NOTE' — what is the sound change from the first word to the second?",options:["Long O changing to Short O","Short O changing to Diphthong O","Diphthong O changing to Long O","Short O changing to Long O"],answer:1},
+    {id:"d12q4",prompt:"Which of the following words features a Long O sound, typically found in words with an 'O + R' letter combination?",options:["Hot","Floor","Goat","Box"],answer:1},
+    {id:"d12q5",prompt:"If a speaker pronounces 'Messi is the goat' as 'Messi is the god', which pronunciation error occurred?",options:["Using a Short O instead of a Diphthong O","Using a Long O instead of a Short O","Using a Diphthong O instead of a Long O","Using a Short O instead of a Long O"],answer:0},
+    {id:"d12q6",prompt:"What are the starting and ending positions for the Diphthong O sound?",options:["Starting at /a/ and ending at /i/","Monophthong /ɔ/ with a steady mouth shape","Starting at /o/ and gliding into /u/","Starting at /u/ and gliding into /o/"],answer:2},
+    {id:"d12q7",prompt:"Identify the option where ALL three words contain a Short O sound:",options:["Boss, Bose, Box","Hot, Not, On","Core, Bore, Door","Go, Slow, Note"],answer:1},
+  ],
+  // ── Day 13: Mastering the R and L Consonant Sounds ───────────────────────
+  13:[
+    {id:"d13q1",prompt:"Which best describes the correct tongue position for the American English R sound (/r/)?",options:["The tip of the tongue presses firmly against the back of the front teeth.","The tongue pulls back into the mouth, and the sides touch the upper back teeth without the tip touching the roof of the mouth.","The tongue rests completely flat on the bottom of the mouth.","The tip of the tongue flickers rapidly against the alveolar ridge."],answer:1},
+    {id:"d13q2",prompt:"What lip shape should you form when producing the R sound?",options:["Wide and flat, like a forced smile.","Completely relaxed and hanging open.","A tight, slight circle (similar to a W sound shape) to project the sound.","A wide, vertical jaw drop."],answer:2},
+    {id:"d13q3",prompt:"What is the primary physical difference between the Light L (as in 'Light') and the Dark L (as in 'Ball')?",options:["Light L uses the back of the tongue; Dark L only uses the lips.","Light L involves the tongue tip touching the alveolar ridge; Dark L relies on tension and lifting in the back of the tongue.","Light L is unvoiced; Dark L is voiced.","Light L requires a major jaw drop; Dark L requires none."],answer:1},
+    {id:"d13q4",prompt:"In minimal pairs like 'LIGHT vs RIGHT', if a speaker says 'bLight' instead of 'bRight', what went wrong?",options:["They kept the tongue flat instead of raising the sides.","They dropped their jaw too much.","They mistakenly touched the tip of the tongue to the roof of the mouth instead of pulling it back.","They accidentally nasalized the vowel."],answer:2},
+    {id:"d13q5",prompt:"Which of the following words features a Dark L sound?",options:["Lemon","Reply","Control","Level (the first L)"],answer:2},
+    {id:"d13q6",prompt:"When R follows a vowel (as in 'Car' or 'Bird'), what must a speaker do for proper American pronunciation?",options:["Drop the R entirely and lengthen the vowel sound.","Transition smoothly from the vowel shape into the pulled-back R tongue position before the syllable ends.","Substitute a Schwa sound for the R.","Keep the tongue tip locked against the bottom teeth."],answer:1},
+    {id:"d13q7",prompt:"Which option has ALL three words containing a clear initial Light L sound?",options:["Low, Long, Lip","Girl, Pearl, World","Car, Far, Star","Full, Pull, Cool"],answer:0},
+  ],
+  // ── Day 14: Consonant Sounds & Mechanics (existing) ───────────────────────
+  14:[{id:"s1q1",prompt:"How many sounds and letters are there in English?",options:["26 sounds, 44 letters","44 sounds, 26 letters","44 sounds, 44 letters","24 sounds, 26 letters"],answer:1},{id:"s1q2",prompt:"What distinguishes voiced /b/ from unvoiced /p/?",options:["Completely different mouth position.","The /b/ is unvoiced; /p/ is voiced.","The /b/ is voiced; /p/ is unvoiced.","The /b/ cannot end a word."],answer:2},{id:"s1q3",prompt:"What is noted about /t/ and /d/ in Indian English?",options:["They are dropped at word end.","Substituted with /f/ and /v/.","A retroflex pronunciation with tongue curled back.","Pronounced as nasal sounds."],answer:2},{id:"s1q4",prompt:"Which sounds can you 'hold or retain' airflow of?",options:["/p/ and /b/","/k/ and /g/","/t/ and /d/","/f/ and /v/"],answer:3},{id:"s1q5",prompt:"Why do /m/, /n/, /ŋ/ stop working if you pinch your nose?",options:["They are aspirated.","They are nasal and need air through the nose.","They are unvoiced lip friction sounds.","They are trilled sounds."],answer:1},{id:"s1q6",prompt:"What is the difference between 'light L' and 'dark L'?",options:["Light L voiced; dark L unvoiced.","Light L before vowels; dark L pulled back at word end.","Light L native; dark L is an accent mistake.","Light L American; dark L British."],answer:1},{id:"s1q7",prompt:"What memory phrase helps with /w/ vs /v/?",options:["Bite W's, kiss V's.","Roll W's, drop V's.","Kiss W's, bite V's.","Hold W's, release V's."],answer:2}],
+  // ── Day 15: British vs American (existing + new questions merged) ──────────
+  15:[{id:"s7q1",prompt:"When do American speakers apply a 'Flap T' (soft D sound)?",options:["When a word starts with capital letter.","At very end of sentence.","Between two vowels or between R and a vowel.","When emphasizing in formal speech."],answer:2},{id:"s7q2",prompt:"What happens during a 'Stop T' in American English?",options:["'T' replaced by 'K'.","Mouth forms T but air is held, not released.","Speaker skips the sound.","Preceding vowel is lengthened."],answer:1},{id:"s7q3",prompt:"What happens to 'T' in identity, internet in casual American speech?",options:["Becomes 'Z'.","Gets heavily aspirated.","Goes silent after 'N'.","Word loses a syllable."],answer:2},{id:"s7q4",prompt:"What is 'Y-dropping' in American English?",options:["Dropping Y from plural nouns.","Omitting the 'yoo' /j/ glide in 'new' or 'Tuesday'.","Not pronouncing Y-starting words.","Replacing Y with F."],answer:1},{id:"s7q5",prompt:"How does 'R' differ between British and American English?",options:["British always pronounces R; American ignores it.","British R is silent unless before a vowel; American R is always pronounced.","American R only at word start.","No difference."],answer:1},{id:"s7q6",prompt:"Which pair shows American long 'I' vs British 'E'?",options:["Dance vs Dance","Hot vs Hat","Semi/Anti: British 'em-ee'/'an-tee' vs American 'sem-eye'/'an-tie'","Home vs Whom"],answer:2},{id:"s7q7",prompt:"How does 'laboratory' stress differ between dialects?",options:["British drops two syllables.","British: la-BOR-a-tory; American: LAB-ra-tory.","American adds extra O.","Identical; only tone changes."],answer:1}],
+  // ── Day 16: Diphthongs ────────────────────────────────────────────────────
+  16:[
+    {id:"d16q1",prompt:"What is the difference between a monophthong and a diphthong?",options:["Nasal configuration vs. open oral framing.","One fixed vowel position vs. a glide between two positions.","Stressed syllable versus weak unstressed form.","Voiced element versus unvoiced burst marker."],answer:1},
+    {id:"d16q2",prompt:"What does failing to transition through a diphthong cause?",options:["Rapid speech acceleration patterns.","Complete loss of sentence stress structure.","Heavy mother-tongue influence (MTI).","Automatic insertion of glottal stops."],answer:2},
+    {id:"d16q3",prompt:"Which diphthong ends in the /ɪ/ sound?",options:["Go","Rain","Now","Core"],answer:1},
+    {id:"d16q4",prompt:"How does 'near/here' differ between American and British English?",options:["American shifts directly to a pure schwa sound.","Both options omit rhotic influences entirely.","British uses a schwa because 'R' is silent; American uses the rhotic /r/.","British implements a hard flap T component."],answer:2},
+    {id:"d16q5",prompt:"How is 'now' typically pronounced in Indian English vs. standard?",options:["Simpler /a/ sound instead of the full diphthong.","Complex dynamic glide transition tracking.","Absolute elimination of internal vowels.","Heavy elongation of nasal boundaries."],answer:0},
+    {id:"d16q6",prompt:"What is the modern trend for the word 'tour'?",options:["Becoming a short monophthong sound.","Merging toward /ɔː/ so it sounds like 'tore'.","Shifting stress layout to absolute fronting.","Dropping initial consonant segments."],answer:1},
+    {id:"d16q7",prompt:"Which correctly pairs the diphthongs for 'fear' vs. 'fair'?",options:["/eə/ vs. /ɪə/.","Identical in rhotic styles.","fear = /ɪə/, fair = /eə/."],answer:2},
+  ],
+  // ── Day 17: Strong and Weak Forms (existing) ───────────────────────────────
+  17:[{id:"s2q1",prompt:"What two categories can English words be divided into for sentence rhythm?",options:["Nouns and Prepositions","Content words and Function words","British and American words","Stressed and Unstressed words"],answer:1},{id:"s2q2",prompt:"Which of these is a 'content word'?",options:["of","to","table","from"],answer:2},{id:"s2q3",prompt:"When must a function word use its strong form?",options:["At the very beginning of a sentence.","Before a proper noun.","At the very end of a sentence.","When spoken by American."],answer:2},{id:"s2q4",prompt:"Which vowel sound creates weak forms of 'to', 'at', 'for'?",options:["Long 'oo'","Short 'i'","Schwa /ə/","Long 'ay'"],answer:2},{id:"s2q5",prompt:"What is the strong-form pronunciation of 'of'?",options:["Pronounced with /v/ sound at end.","Pronounced like 'off'.","Always has silent 'o'.","Pronounced with long 'oh'."],answer:0},{id:"s2q6",prompt:"How does weak-form 'can' sound in casual speech?",options:["/kæn/","/kən/ with schwa","/kɑːnt/","/keɪn/"],answer:1},{id:"s2q7",prompt:"What happens to 'has', 'have', 'her' in their weak forms?",options:["Vowel disappears.","Trailing consonants doubled.","Initial 'H' is dropped.","Replaced with nasal sound."],answer:2}],
+  // ── Day 18: Schwa & Connected Speech (existing) ────────────────────────────
+  18:[{id:"s8q1",prompt:"What is the Schwa /ə/ sound?",options:["Sharp long vowel in stressed syllables.","Completely silent letter.","Relaxed neutral short vowel in unstressed syllables.","Trilled consonant at back of throat."],answer:2},{id:"s8q2",prompt:"In 'Photograph' vs 'Photography', how does the first vowel change?",options:["Stays identical.","In PHO-tograph first O is clear; in pho-TOG-raphy it weakens to schwa.","In PHO-tograph first O is schwa; in Photography it becomes 'oo'.","Stress moves to final syllable."],answer:1},{id:"s8q3",prompt:"When consonant-ending word meets vowel-starting word ('an apple'), what happens?",options:["A pause is placed between words.","Final consonant links smoothly to vowel, sounding like 'a-napple'.","Vowel at start is dropped.","Consonant is silenced."],answer:1},{id:"s8q4",prompt:"What happens when two vowels meet at a word boundary ('Go on')?",options:["A transitional glide /w/ or /j/ is inserted.","First word is dropped.","Both vowels become nasal.","A sharp glottal stop is required."],answer:0},{id:"s8q5",prompt:"Why does 'and' sound like 'n' in 'Rock and Roll'?",options:["'And' is a content word needing emphasis.","'And' is a function word weakened in connected speech.","Pronunciation mistake in American English.","'a' and 'd' cannot be together."],answer:1},{id:"s8q6",prompt:"Which syllables in 'Banana' have the schwa /ə/?",options:["Only the first","Only the middle","Both first and last","None"],answer:2},{id:"s8q7",prompt:"Why do native speakers use weak forms and linking so much?",options:["To sound formal and robotic.","To maintain natural rhythmic flow where stressed words carry the melody.","English lacks enough letters.","To confuse learners."],answer:1}],
+  // ── Day 19: Sentence Rhythm & Connected Speech (existing + new) ────────────
+  19:[{id:"s9q1",prompt:"What is 'Sentence Stress' in spoken English?",options:["Anxiety when reading long paragraphs.","Making every word the same length and pitch.","Giving extra volume and clarity to key words.","Shouting the final word."],answer:2},{id:"s9q2",prompt:"'I didn't steal YOUR keys' — what is implied?",options:["No keys were stolen.","The speaker stole someone else's keys.","They stole something else belonging to you.","Someone else stole your keys."],answer:1},{id:"s9q3",prompt:"What intonation is typical for Wh- questions?",options:["Rising at end.","Falling at end.","Flat monotone.","Zig-zag pitch."],answer:1},{id:"s9q4",prompt:"What pitch movement is expected at the end of a Yes/No question?",options:["Sharp drop.","Rising intonation.","Whispering last word.","No change."],answer:1},{id:"s9q5",prompt:"What are 'Thought Groups'?",options:["Silent periods for thinking.","Small phrases spoken together with a single intonation, separated by tiny pauses.","Vocabulary lists by category.","Dialects for business."],answer:1},{id:"s9q6",prompt:"What is 'catenation' in connected speech?",options:["Elision.","Assimilation.","Linking a final consonant to the next word's initial vowel.","Intrusion."],answer:2},{id:"s9q7",prompt:"In 'an apple', what happens in connected speech?",options:["Pause clearly between both components.","The /n/ moves forward and links to 'apple', sounding like 'a-napple'.","Eliminate terminal nasal tracks completely.","Introduce an explicit glottal stop buffer."],answer:1},{id:"s9q8",prompt:"What is elision in connected speech?",options:["Forcing extreme breath pressure on matching stops.","Dropping or omitting /t/ or /d/ for a smoother transition.","Adding extra vowel segments into consonant groups.","Shifting base vocal pitch to peak configurations."],answer:1},{id:"s9q9",prompt:"What creates an intrusive /w/ between words?",options:["Tongue curled backward into a retroflex posture.","Lips naturally rounded from /uː/ or /oʊ/ at the end of the previous word.","Lower teeth biting upper lip structures.","Dropping standard respiratory velocity metrics."],answer:1},{id:"s9q10",prompt:"What is a 'linking R' in British English?",options:["A silent structural marker used only for formatting.","An 'R' that is activated when the next word starts with a vowel.","Replaced entirely by an open schwa segment.","Exclusive to localized American vernaculars."],answer:1}],
+  // ── Day 20: Advanced Shadowing (existing) ─────────────────────────────────
+  20:[{id:"s4q1",prompt:"What psychological shift happens when you become fluent in a new language?",options:["You lose your native language ability.","Voice shifts to higher pitch.","A new language personality awakens, changing mannerisms.","Vocabulary becomes formal only."],answer:2},{id:"s4q2",prompt:"Why choose a language model of the same gender?",options:["Certain words are gender-specific.","Pitch, frequency, intonation align more easily.","Easier to find YouTube videos.","Native speakers only listen to same gender."],answer:1},{id:"s4q3",prompt:"Which is NOT a guideline for choosing a language model?",options:["Celebrity with large video presence.","Someone you admire so you don't get bored.","Native speaker with neutral accent.","Professional English teacher or professor."],answer:3},{id:"s4q4",prompt:"What is the first step of mechanical shadowing?",options:["Recording and playing back your voice.","Getting the transcript and reading it aloud first.","Memorizing the speech without text.","Setting playback speed to double."],answer:1},{id:"s4q5",prompt:"What should you focus on in the second shadowing step?",options:["Overall sentence rhythm.","Dictionary meanings.","Individual word pronunciation, syllable stress, basic sounds.","Facial expressions and gestures."],answer:2},{id:"s4q6",prompt:"What phonetic feature appears when Downey says 'about us' naturally?",options:["Flap T — 'T' between vowels sounds like soft 'D'.","Completely silent 'T'.","Heavy British glottal stop.","Retroflex T."],answer:0},{id:"s4q7",prompt:"Will you become an exact vocal copy of your language model?",options:["Yes, 100% identical after months.","No — you absorb rhythm but keep your unique vocal character.","No — native accent blocks all change.","Yes, but only with fictional characters."],answer:1}],
+};
+const PLACEHOLDER_QUIZ=[
+  {id:"pq1",prompt:"Placeholder question 1 — replace with real content.",hint:"Hint: think back to the class recap.",options:["Option A","Option B","Option C","Option D"],answer:0},
+  {id:"pq2",prompt:"Placeholder question 2 — replace with real content.",hint:"Hint: covered after the main example.",options:["Option A","Option B","Option C","Option D"],answer:1},
+  {id:"pq3",prompt:"Placeholder question 3 — replace with real content.",hint:"Hint: re-watch the closing summary.",options:["Option A","Option B","Option C","Option D"],answer:2}
+];
+
+// ─── COURSE ───────────────────────────────────────────────────────────────────
+// Day titles mapped to class order
+const DAY_TITLES={
+  1:"Foundational Phonetics",
+  2:"ED Endings",
+  3:"Pluralization",
+  4:"Age Endings",
+  5:"Short Vowels",
+  6:"Short /ɪ/ vs Long /iː/ & Word Stress",
+  7:"Consonant Clusters",
+  8:"Word Stress",
+  9:"Verb vs Noun Syllable Stress",
+  10:"TH Sound Mechanics",
+  11:"Silent Letters",
+  12:"The 3 O Sounds",
+  13:"Mastering R and L Sounds",
+  14:"Consonant Sounds & Mechanics",
+  15:"British vs American Accents",
+  16:"Diphthongs",
+  17:"Strong and Weak Forms",
+  18:"Schwa & Connected Speech",
+  19:"Sentence Rhythm & Intonation",
+  20:"Advanced Shadowing",
+};
+
+function buildLessons(sid,sectionLabel,count,start){
+  const ls=[];
+  for(let i=1;i<=count;i++){
+    const order=start+i-1;
+    const title=DAY_TITLES[order]||sectionLabel+" "+order;
+    
+    // Check config mapper at boot instantiation
+    const mediaConf = MASTER_MEDIA_CONFIG[order] || {};
+    
+    ls.push({
+      id:sid+"-"+i,sectionId:sid,order,
+      title,
+      description:"Placeholder description — replace with real class notes.",
+      unlockDate:addDays(courseStart,order-1),dayNumber:order,
+      thumbnailUrl: mediaConf.thumbnailUrl || null,
+      gradientOverride: mediaConf.gradientOverride || null
+    });
+  }
+  return ls;
+}
+const SECTIONS=[
+  {id:"a",title:"Accent Neutralisation",lessons:buildLessons("a","Accent Neutralisation",20,1)},
+  {id:"b",title:"Pronunciation Fix",lessons:buildLessons("b","Pronunciation Fix",10,21)}
+];
+const ALL_LESSONS=SECTIONS.flatMap(s=>s.lessons);
+
+// ─── PROGRESS STORE (persisted per student in localStorage) ──────────────────
+function getProgressKey(sid){return "be_progress_"+sid;}
+function loadProgress(sid){
+  try{return new Set(JSON.parse(localStorage.getItem(getProgressKey(sid))||"[]"));}
+  catch{return new Set();}
+}
+function saveProgress(sid,setObj){
+  localStorage.setItem(getProgressKey(sid),JSON.stringify([...setObj]));
+}
+// Returns true if lesson is completed by current student
+function isCompleted(lessonId){
+  if(!currentSession?.studentId) return false;
+  return loadProgress(currentSession.studentId).has(lessonId);
+}
+// Mark a lesson complete for current student
+function markLessonComplete(lessonId){
+  if(!currentSession?.studentId) return;
+  const p=loadProgress(currentSession.studentId);
+  p.add(lessonId);
+  saveProgress(currentSession.studentId,p);
+}
+
+// ─── PROFILE PHOTO ────────────────────────────────────────────────────────────
+function getPhoto(sid){return localStorage.getItem("be_photo_"+sid)||null;}
+function savePhoto(sid,dataUrl){try{localStorage.setItem("be_photo_"+sid,dataUrl);}catch(e){console.warn("Photo storage error",e);}}
+
+function avatarHtml(student,cls="w-16 h-16",txt="text-2xl"){
+  const p=getPhoto(student.id);
+  const i=student.name.split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
+  return p
+    ?`<img src="${p}" class="${cls} rounded-2xl object-cover shadow-md" alt="${student.name}"/>`
+    :`<div class="${cls} rounded-2xl bg-gradient-to-br from-brand to-brand-2 flex items-center justify-center text-white ${txt} font-bold shrink-0">${i}</div>`;
+}
+function avatarSmallHtml(student){
+  const p=getPhoto(student.id);
+  const i=student.name.split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2);
+  return p
+    ?`<img src="${p}" class="w-9 h-9 rounded-full object-cover shadow-sm" alt="${student.name}"/>`
+    :`<div class="w-9 h-9 rounded-full bg-gradient-to-br from-brand to-brand-2 flex items-center justify-center text-white text-sm font-bold shadow-md">${i}</div>`;
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+// 3-per-day drip unlock logic:
+const DAILY_DRIP=3;
+function getUnlockedSet(student){
+  const explicit=new Set(student.accessList||[]);
+  const done=new Set(
+    ALL_LESSONS
+      .filter(l=>loadProgress(student.id).has(l.id))
+      .map(l=>l.order)
+  );
+  const unlocked=new Set(explicit);
+  unlocked.add(1);
+
+  const todayStr=today.toISOString().slice(0,10);
+  const key="be_drip_"+student.id+"_"+todayStr;
+  let dripped;
+  try{dripped=new Set(JSON.parse(localStorage.getItem(key)||"[]"));}
+  catch{dripped=new Set();}
+
+  for(let i=1;i<ALL_LESSONS.length;i++){
+    const lesson=ALL_LESSONS[i];
+    const prev=ALL_LESSONS[i-1];
+    if(!done.has(prev.order)) break; 
+    if(unlocked.has(lesson.order)) continue; 
+    if(dripped.has(lesson.order)){unlocked.add(lesson.order);continue;}
+    if(dripped.size<DAILY_DRIP){
+      dripped.add(lesson.order);
+      unlocked.add(lesson.order);
+      localStorage.setItem(key,JSON.stringify([...dripped]));
+    } else {
+      break; 
+    }
+  }
+  return unlocked;
+}
+
+function isUnlocked(lesson){
+  if(adminUnlockAll)return true;
+  if(currentSession?.role==="student"){
+    const s=loadStudents()[currentSession.studentId];
+    if(!s)return false;
+    const{expired}=getValidity(s);
+    if(expired)return false;
+    return getUnlockedSet(s).has(lesson.order);
+  }
+  return false;
+}
+function isVideoAccessible(lesson){
+  if(!isUnlocked(lesson))return false;
+  if(currentSession?.role==="student"){
+    const locked=getLockedVideos(currentSession.studentId);
+    if(locked.includes(lesson.order))return false;
+  }
+  return true;
+}
+
+function formatDate(d){return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});}
+function getQuiz(l){return QUIZ_BANK[l.dayNumber]||PLACEHOLDER_QUIZ;}
+function hasRealQuiz(l){return!!QUIZ_BANK[l.dayNumber];}
+
+// ─── ROUTER ───────────────────────────────────────────────────────────────────
+const app=document.getElementById("app");
+function navigate(screen,params){render(screen,params||{});window.scrollTo(0,0);}
+function render(screen,params){
+  if(screen==="login")        return renderLogin();
+  if(screen==="admin-login")  return renderAdminLogin();
+  if(screen==="admin")        return renderAdmin(params.tab||"students");
+  if(screen==="admin-student")return renderAdminStudent(params.id);
+  if(screen==="dashboard")    return renderDashboard();
+  if(screen==="courses")      return renderMyCourses();
+  if(screen==="quizzes")      return renderQuizzes();
+  if(screen==="profile")      return renderProfile();
+  if(screen==="lesson")       return renderLesson(params.id);
+  if(screen==="quiz")         return renderQuiz(params.lessonId);
+}
+
+// ─── SIDEBAR HTML ────────────────────────────────────────────────────────────
+function sidebarHtml(active){
+  const links=[
+    {id:"dashboard",label:"Dashboard",icon:`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>`},
+    {id:"courses",label:"My Courses",icon:`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>`},
+    {id:"quizzes",label:"Quizzes",icon:`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>`},
+    {id:"profile",label:"Profile",icon:`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>`},
+  ];
+  return `
+  <div id="sidebar">
+    <div class="p-6 pb-4">
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-brand to-brand-2 flex items-center justify-center">
+          <img src="${LOGO_DATA_URI}" class="w-6 h-6 object-contain" alt="BE"/>
+        </div>
+        <div>
+          <p class="text-white font-display font-bold text-base leading-tight">Broken</p>
+          <p class="text-white font-display font-bold text-base leading-tight">English</p>
+        </div>
+      </div>
+      <p class="text-white/40 text-xs mt-2 ml-1">Speak Better. Live Better.</p>
+    </div>
+
+    <nav class="flex-1 px-3 mt-2">
+      ${links.map(l=>`
+        <div class="nav-link ${active===l.id?'active':''}" onclick="closeSidebar();navigate('${l.id}')">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">${l.icon}</svg>
+          <span>${l.label}</span>
+        </div>`).join("")}
+    </nav>
+
+    <div class="m-4 rounded-2xl border border-white/10 p-4 bg-white/5">
+      <div class="flex items-center gap-2 mb-1">
+        <div class="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center">
+          <svg class="w-4 h-4 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+        </div>
+        <div>
+          <p class="text-white text-xs font-semibold">Need Help?</p>
+          <p class="text-white/40 text-[10px]">We are here to help you!</p>
+        </div>
+      </div>
+      <button class="mt-2 w-full rounded-xl border border-brand/50 py-1.5 text-brand text-xs font-medium hover:bg-brand/10 transition">Contact Support</button>
+    </div>
+
+    <div class="px-3 pb-5">
+      <div class="nav-link" onclick="closeSidebar();currentSession=null;navigate('login')">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span>Logout</span>
+      </div>
+    </div>
+  </div>
+  <div id="sidebar-overlay" onclick="closeSidebar()"></div>`;
+}
+
+function closeSidebar(){
+  const sb=document.getElementById("sidebar");
+  const ov=document.getElementById("sidebar-overlay");
+  if(sb){sb.classList.remove("open");}
+  if(ov){ov.classList.remove("open");ov.style.display="";}
+}
+function openSidebar(){
+  const sb=document.getElementById("sidebar");
+  const ov=document.getElementById("sidebar-overlay");
+  if(sb){sb.classList.add("open");}
+  if(ov){ov.classList.add("open");ov.style.display="block";}
+}
+
+// ─── TOP BAR ─────────────────────────────────────────────────────────────────
+function topBarHtml(student){
+  return `
+  <div class="top-bar px-4 py-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-3 min-w-0">
+      <button class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition shrink-0" onclick="openSidebar()" aria-label="Menu">
+        <svg class="w-5 h-5" style="color:rgba(255,255,255,.7)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div class="min-w-0">
+        <p class="text-[11px] font-medium leading-none" style="color:rgba(255,255,255,.6)">Welcome back,</p>
+        <p class="text-sm font-bold text-white leading-tight truncate">${student.name}! 👋</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button class="p-2 rounded-xl hover:bg-gray-100 transition" aria-label="Notifications">
+        <svg class="w-5 h-5" style="color:rgba(255,255,255,.6)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      </button>
+      <button onclick="navigate('profile')" class="rounded-full overflow-hidden hover:ring-2 hover:ring-brand/30 transition">${avatarSmallHtml(student)}</button>
+    </div>
+  </div>`;
+}
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
+function renderLogin(){
+  app.innerHTML=`
+  <div class="min-h-screen flex" style="background:#000;">
+    <div class="hidden md:flex w-80 flex-col items-center justify-center px-8 py-12" style="
+      background:rgba(255,255,255,0.05);
+      backdrop-filter:blur(32px);
+      -webkit-backdrop-filter:blur(32px);
+      border-right:1px solid rgba(255,255,255,0.08);
+      box-shadow:inset -1px 0 0 rgba(255,255,255,0.04);
+    ">
+      <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-5" style="background:linear-gradient(135deg,#E8341A,#FF7100);box-shadow:0 8px 24px rgba(232,52,26,0.4);">
+        <img src="${LOGO_DATA_URI}" class="w-10 h-10 object-contain" alt="BE"/>
+      </div>
+      <h1 style="font-family:Poppins,sans-serif;color:#fff;font-size:22px;font-weight:700;text-align:center;">Broken English</h1>
+      <p style="color:rgba(255,255,255,0.45);font-size:13px;margin-top:6px;text-align:center;">Speak Better. Live Better.</p>
+      <div style="margin-top:32px;width:100%;display:flex;flex-direction:column;gap:10px;">
+        ${["30 Classes","20 Quiz Modules","Progress Tracking"].map(f=>`
+          <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 16px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.08);">
+            <div style="width:26px;height:26px;border-radius:8px;background:rgba(232,52,26,0.2);border:1px solid rgba(232,52,26,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg style="width:13px;height:13px;color:#FF7100;" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <span style="color:rgba(255,255,255,0.75);font-size:13px;font-weight:500;">${f}</span>
+          </div>`).join("")}
+      </div>
+    </div>
+
+    <div class="flex-1 flex items-center justify-center px-5 py-10" style="background:rgba(255,255,255,0.02);">
+      <div style="width:100%;max-width:380px;">
+        <div class="md:hidden flex items-center gap-3 mb-8">
+          <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#E8341A,#FF7100);display:flex;align-items:center;justify-content:center;">
+            <img src="${LOGO_DATA_URI}" style="width:24px;height:24px;object-fit:contain;" alt="BE"/>
+          </div>
+          <div>
+            <p style="font-weight:700;color:#fff;font-size:15px;">Broken English</p>
+            <p style="font-size:11px;color:rgba(255,255,255,0.45);">Speak Better. Live Better.</p>
+          </div>
+        </div>
+
+        <h2 style="font-size:28px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:-.5px;">Sign In</h2>
+        <p style="font-size:14px;color:rgba(255,255,255,0.45);margin-bottom:28px;">Enter your credentials to access your classes.</p>
+
+        <div style="
+          background:rgba(255,255,255,0.07);
+          backdrop-filter:blur(32px);
+          -webkit-backdrop-filter:blur(32px);
+          border:1px solid rgba(255,255,255,0.14);
+          border-radius:20px;
+          padding:28px;
+          box-shadow:0 16px 48px rgba(0,0,0,0.5),
+                     inset 0 1px 0 rgba(255,255,255,0.15),
+                     inset 0 -1px 0 rgba(0,0,0,0.1);
+        ">
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:8px;">Email Address</label>
+            <input id="login-email" type="email" autocomplete="email" placeholder="your@email.com" style="
+              width:100%;background:rgba(255,255,255,0.06);
+              border:1.5px solid rgba(255,255,255,0.15);
+              border-radius:12px;padding:13px 16px;
+              font-size:14px;color:#fff;outline:none;
+              backdrop-filter:blur(8px);
+              box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);
+              transition:all .18s;box-sizing:border-box;
+            " onfocus="this.style.borderColor='#E8341A';this.style.boxShadow='0 0 0 3px rgba(232,52,26,0.2),inset 0 1px 0 rgba(255,255,255,0.06)'"
+               onblur="this.style.borderColor='rgba(255,255,255,0.15)';this.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.06)'"/>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:8px;">Password</label>
+            <input id="login-pass" type="password" autocomplete="current-password" placeholder="••••••••" style="
+              width:100%;background:rgba(255,255,255,0.06);
+              border:1.5px solid rgba(255,255,255,0.15);
+              border-radius:12px;padding:13px 16px;
+              font-size:14px;color:#fff;outline:none;
+              backdrop-filter:blur(8px);
+              box-shadow:inset 0 1px 0 rgba(255,255,255,0.06);
+              transition:all .18s;box-sizing:border-box;
+            " onfocus="this.style.borderColor='#E8341A';this.style.boxShadow='0 0 0 3px rgba(232,52,26,0.2),inset 0 1px 0 rgba(255,255,255,0.06)'"
+               onblur="this.style.borderColor='rgba(255,255,255,0.15)';this.style.boxShadow='inset 0 1px 0 rgba(255,255,255,0.06)'"/>
+          </div>
+
+          <p id="login-err" style="display:none;font-size:12px;color:#ff6b6b;margin-bottom:12px;">Incorrect email or password.</p>
+
+          <button onclick="doStudentLogin()" style="
+            width:100%;background:linear-gradient(135deg,#E8341A,#FF7100);
+            border:none;border-radius:13px;padding:15px;
+            font-size:15px;font-weight:700;color:#fff;cursor:pointer;
+            box-shadow:0 6px 24px rgba(232,52,26,0.4),
+                       inset 0 1px 0 rgba(255,255,255,0.2);
+            transition:all .18s;letter-spacing:.01em;
+          " onmouseover="this.style.opacity='.9';this.style.transform='translateY(-1px)'"
+             onmouseout="this.style.opacity='1';this.style.transform='none'"
+             onmousedown="this.style.transform='translateY(0)'">
+            Sign In
+          </button>
+        </div>
+
+        <p style="margin-top:20px;text-align:center;font-size:12px;color:rgba(255,255,255,0.3);">Accounts are created by the course admin.</p>
+        <p style="margin-top:8px;text-align:center;">
+          <button onclick="navigate('admin-login')" style="font-size:11px;color:rgba(255,255,255,0.25);background:none;border:none;cursor:pointer;transition:color .18s;"
+            onmouseover="this.style.color='rgba(255,255,255,0.55)'" onmouseout="this.style.color='rgba(255,255,255,0.25)'">
+            Admin portal
+          </button>
+        </p>
+        <p style="margin-top:8px;text-align:center;">
+          <button onclick="const s=JSON.parse(localStorage.getItem('be_students')||'{}');const list=Object.values(s);alert(list.length===0?'No students in database. Go to Admin portal to add one.':'Students in database:\n\n'+list.map(x=>'Email: '+x.email+'\nPassword: '+x.password).join('\n\n'));" style="font-size:10px;color:rgba(255,255,255,0.15);background:none;border:none;cursor:pointer;">
+            Having trouble? Check accounts
+          </button>
+        </p>
+      </div>
+    </div>
+  </div>`;
+  document.getElementById("login-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
+}
+
+window.doStudentLogin=()=>{
+  const email=document.getElementById("login-email").value.trim().toLowerCase();
+  const pass=document.getElementById("login-pass").value;
+  const errEl=document.getElementById("login-err");
+
+  if(!email||!pass){
+    errEl.textContent="Please enter your email and password.";
+    errEl.style.display="block";
+    return;
+  }
+
+  const students=loadStudents();
+  const allStudents=Object.values(students);
+
+  const byEmail=allStudents.find(s=>s.email.toLowerCase()===email);
+  if(!byEmail){
+    errEl.textContent="No account found with that email address.";
+    errEl.style.display="block";
+    return;
+  }
+
+  if(byEmail.password!==pass){
+    errEl.textContent="Incorrect password. (Stored: "+byEmail.password.slice(0,2)+"***)";
+    errEl.style.display="block";
+    return;
+  }
+
+  const{expired}=getValidity(byEmail);
+  if(expired){
+    errEl.textContent="Your course access has expired. Please contact your admin.";
+    errEl.style.display="block";
+    return;
+  }
+
+  errEl.style.display="none";
+  currentSession={role:"student",studentId:byEmail.id};
+  try{
+    navigate("dashboard");
+  }catch(e){
+    errEl.textContent="Dashboard error: "+e.message;
+    errEl.style.display="block";
+    console.error(e);
+  }
+};
+
+// ─── ADMIN LOGIN ─────────────────────────────────────────────────────────────
+function renderAdminLogin(){
+  app.innerHTML=`
+  <div class="min-h-screen flex items-center justify-center px-5 py-10" style="background:#000;">
+    <div style="width:100%;max-width:380px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px;">
+        <div style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,#E8341A,#FF7100);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(232,52,26,.35);">
+          <img src="${LOGO_DATA_URI}" style="width:26px;height:26px;object-fit:contain;" alt="BE"/>
+        </div>
+        <div>
+          <p style="font-weight:700;color:#fff;font-size:15px;">Broken English</p>
+          <span style="display:inline-block;margin-top:3px;border-radius:99px;background:rgba(232,52,26,.15);border:1px solid rgba(232,52,26,.3);padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#FF7100;">Admin Access</span>
+        </div>
+      </div>
+
+      <h2 style="font-size:26px;font-weight:700;color:#fff;margin-bottom:4px;letter-spacing:-.4px;">Admin Panel</h2>
+      <p style="font-size:14px;color:rgba(255,255,255,.4);margin-bottom:24px;">Sign in to manage students and courses.</p>
+
+      <div style="
+        background:rgba(255,255,255,0.07);
+        backdrop-filter:blur(32px);
+        -webkit-backdrop-filter:blur(32px);
+        border:1px solid rgba(255,255,255,0.14);
+        border-radius:20px;padding:28px;
+        box-shadow:0 16px 48px rgba(0,0,0,.5),
+                   inset 0 1px 0 rgba(255,255,255,.15);
+      ">
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px;">Admin Email</label>
+          <input id="adm-email" type="email" placeholder="admin@brokenenglish.com" style="
+            width:100%;background:rgba(255,255,255,0.06);
+            border:1.5px solid rgba(255,255,255,0.15);
+            border-radius:12px;padding:13px 16px;
+            font-size:14px;color:#fff;outline:none;
+            box-sizing:border-box;transition:all .18s;
+          " onfocus="this.style.borderColor='#E8341A';this.style.boxShadow='0 0 0 3px rgba(232,52,26,.2)'"
+             onblur="this.style.borderColor='rgba(255,255,255,0.15)';this.style.boxShadow='none'"/>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:8px;">Password</label>
+          <input id="adm-pass" type="password" placeholder="••••••••" style="
+            width:100%;background:rgba(255,255,255,0.06);
+            border:1.5px solid rgba(255,255,255,0.15);
+            border-radius:12px;padding:13px 16px;
+            font-size:14px;color:#fff;outline:none;
+            box-sizing:border-box;transition:all .18s;
+          " onfocus="this.style.borderColor='#E8341A';this.style.boxShadow='0 0 0 3px rgba(232,52,26,.2)'"
+             onblur="this.style.borderColor='rgba(255,255,255,0.15)';this.style.boxShadow='none'"/>
+        </div>
+        <p id="adm-err" class="hidden" style="font-size:12px;color:#ff6b6b;margin-bottom:12px;">Invalid admin credentials.</p>
+        <button onclick="doAdminLogin()" style="
+          width:100%;background:linear-gradient(135deg,#E8341A,#FF7100);
+          border:none;border-radius:13px;padding:15px;
+          font-size:15px;font-weight:700;color:#fff;cursor:pointer;
+          box-shadow:0 6px 24px rgba(232,52,26,.4),inset 0 1px 0 rgba(255,255,255,.2);
+          transition:all .18s;
+        " onmouseover="this.style.opacity='.9';this.style.transform='translateY(-1px)'"
+           onmouseout="this.style.opacity='1';this.style.transform='none'">
+          Sign In as Admin
+        </button>
+      </div>
+
+      <p style="margin-top:20px;text-align:center;">
+        <button onclick="navigate('login')" style="font-size:12px;color:rgba(255,255,255,.3);background:none;border:none;cursor:pointer;transition:color .18s;"
+          onmouseover="this.style.color='rgba(255,255,255,.6)'" onmouseout="this.style.color='rgba(255,255,255,.3)'">
+          ← Student login
+        </button>
+      </p>
+    </div>
+  </div>`;
+  document.getElementById("adm-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doAdminLogin();});
+}
+window.doAdminLogin=()=>{
+  const email=document.getElementById("adm-email").value.trim().toLowerCase();
+  const pass=document.getElementById("adm-pass").value;
+  if(email!==ADMIN_CREDENTIALS.email.toLowerCase()||pass!==ADMIN_CREDENTIALS.password){
+    document.getElementById("adm-err").classList.remove("hidden");return;
+  }
+  currentSession={role:"admin"};navigate("admin");
+};
+
+// ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
+function loadVideos(){try{return JSON.parse(localStorage.getItem("be_videos")||"{}");}catch{return{};}}
+function saveVideos(v){localStorage.setItem("be_videos",JSON.stringify(v));}
+function getLockedVideos(sid){try{return JSON.parse(localStorage.getItem("be_locked_"+sid)||"[]");}catch{return[];}}
+function saveLockedVideos(sid,arr){localStorage.setItem("be_locked_"+sid,JSON.stringify(arr));}
+function getLockedQuizzes(sid){try{return JSON.parse(localStorage.getItem("be_quizlock_"+sid)||"[]");}catch{return[];}}
+function saveLockedQuizzes(sid,arr){localStorage.setItem("be_quizlock_"+sid,JSON.stringify(arr));}
+function isQuizAccessible(lesson){
+  if(!hasRealQuiz(lesson))return false;
+  if(!isCompleted(lesson.id))return false; 
+  if(currentSession?.role==="student"){
+    const locked=getLockedQuizzes(currentSession.studentId);
+    if(locked.includes(lesson.order))return false;
+  }
+  return true;
+}
+
+function getValidity(student){
+  if(!student.validUntil)return{validUntil:null,expired:false};
+  const d=new Date(student.validUntil); d.setHours(23,59,59,0);
+  if(student.completedAt)return{validUntil:d,expired:false};
+  return{validUntil:d,expired:today>d};
+}
+function validityBadge(student){
+  const{validUntil,expired}=getValidity(student);
+  if(!validUntil)return`<span class="rounded-full px-2 py-0.5 text-[10px]" style="background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.5)">No expiry</span>`;
+  if(expired)return`<span class="rounded-full bg-red-100 border border-red-200 px-2 py-0.5 text-[10px] font-semibold text-red-600">Expired ${validUntil.toLocaleDateString()}</span>`;
+  const days=Math.ceil((validUntil-today)/86400000);
+  return`<span class="rounded-full bg-green-50 border border-green-200 px-2 py-0.5 text-[10px] font-semibold text-green-700">${days}d left — ${validUntil.toLocaleDateString()}</span>`;
+}
+
+function adminTopBar(tab){
+  const tabs=[{id:'students',label:'Students'},{id:'classes',label:'Classes & Videos'},{id:'settings',label:'Settings'}];
+  return`<div class="admin-top-bar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#E8341A,#FF7100);display:flex;align-items:center;justify-content:center;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.3),0 4px 12px rgba(232,52,26,0.4);flex-shrink:0">
+        <img src="${LOGO_DATA_URI}" style="width:20px;height:20px;object-fit:contain" alt="BE"/>
+      </div>
+      <span style="font-weight:700;color:#fff;font-size:14px">Broken English</span>
+      <span class="pill pill-red" style="font-size:9px;letter-spacing:.08em;text-transform:uppercase">Admin</span>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      ${tabs.map(t=>`<button onclick="navigate('admin',{tab:'${t.id}'})"
+        style="padding:7px 16px;border-radius:12px;font-size:12px;font-weight:600;cursor:pointer;transition:all .18s;border:1px solid;${tab===t.id?'background:linear-gradient(135deg,#E8341A,#FF7100);color:#fff;border-color:rgba(255,255,255,0.22);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.28),0 4px 14px rgba(232,52,26,0.4)':'background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);border-color:rgba(255,255,255,0.2);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.22)'}">${t.label}</button>`).join('')}
+    </div>
+    <button onclick="currentSession=null;navigate('login')" style="font-size:12px;color:rgba(255,255,255,0.4);background:none;border:none;cursor:pointer;transition:color .18s" onmouseover="this.style.color='#ff6b6b'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">Sign out</button>
+  </div>`;
+}
+
+function glassBtn(label,onclick,variant='ghost'){
+  if(variant==='brand') return`<button onclick="${onclick}" style="padding:7px 14px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#E8341A,#FF7100);color:#fff;border:1px solid rgba(255,255,255,0.22);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.28),0 4px 14px rgba(232,52,26,0.38);transition:all .18s">${label}</button>`;
+  if(variant==='danger') return`<button onclick="${onclick}" style="padding:7px 14px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(232,52,26,0.14);color:#ff8070;border:1px solid rgba(232,52,26,0.28);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.12);transition:all .18s">${label}</button>`;
+  return`<button onclick="${onclick}" style="padding:7px 14px;border-radius:11px;font-size:12px;font-weight:600;cursor:pointer;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.8);border:1px solid rgba(255,255,255,0.22);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.28);transition:all .18s">${label}</button>`;
+}
+
+// ── STUDENTS TAB ──────────────────────────────────────────────────────────────
+function renderAdmin(tab){
+  if(tab==='classes') return renderAdminClasses();
+  if(tab==='settings') return renderAdminSettings();
+
+  const students=loadStudents();
+  const list=Object.values(students);
+
+  app.innerHTML=adminTopBar('students')+`
+  <div style="padding:24px;position:relative;z-index:1">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <h1 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:2px">Students</h1>
+        <p style="font-size:13px;color:rgba(255,255,255,0.45)">${list.length} enrolled</p>
+      </div>
+      <button onclick="openAddStudent()" style="display:flex;align-items:center;gap:8px;padding:11px 20px;border-radius:14px;background:linear-gradient(135deg,#E8341A,#FF7100);color:#fff;font-size:14px;font-weight:700;border:1px solid rgba(255,255,255,0.22);box-shadow:inset 0 2px 0 rgba(255,255,255,0.28),0 6px 20px rgba(232,52,26,0.42);cursor:pointer;transition:all .18s">
+        <svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Add Student
+      </button>
+    </div>
+
+    <div id="student-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:16px;overflow-y:auto">
+      <div class="lg" style="width:100%;max-width:420px;padding:28px;margin:auto">
+        <h2 id="modal-title" style="font-size:18px;font-weight:700;color:#fff;margin-bottom:20px">Add Student</h2>
+        <input id="s-id" type="hidden"/>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          ${[['s-name','Full Name','text','Jane Doe'],['s-email','Email','email','jane@email.com'],['s-pass','Password','text','Set a password']].map(([id,lbl,type,ph])=>`
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px">${lbl}</label>
+            <input id="${id}" type="${type}" placeholder="${ph}" class="glass-input"/>
+          </div>`).join('')}
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px">Course Validity</label>
+            <select id="s-validity" onchange="document.getElementById('s-custom-date-wrap').style.display=this.value==='custom'?'block':'none'" class="glass-input" style="cursor:pointer">
+              <option value="">No expiry</option>
+              <option value="7">1 Week</option><option value="30">1 Month</option>
+              <option value="60">2 Months</option><option value="90">3 Months</option>
+              <option value="180">6 Months</option><option value="365">1 Year</option>
+              <option value="custom">Custom date...</option>
+            </select>
+          </div>
+          <div id="s-custom-date-wrap" style="display:none">
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px">Expiry Date</label>
+            <input id="s-custom-date" type="date" class="glass-input"/>
+          </div>
+          <p id="modal-err" style="display:none;font-size:12px;color:#ff8070">Email already in use.</p>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button onclick="saveStudent()" class="btn-primary" style="flex:1;padding:12px;font-size:14px">Save</button>
+          <button onclick="closeModal()" class="btn-ghost" style="flex:1;padding:12px;font-size:14px">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="delete-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:16px">
+      <div class="lg" style="width:100%;max-width:340px;padding:32px;text-align:center">
+        <div style="width:48px;height:48px;border-radius:50%;background:rgba(232,52,26,0.15);border:1px solid rgba(232,52,26,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+          <svg style="width:22px;height:22px;color:#ff8070" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </div>
+        <p style="font-size:17px;font-weight:700;color:#fff;margin-bottom:6px">Delete Student?</p>
+        <p style="font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:24px">This permanently removes the student and all their data.</p>
+        <div style="display:flex;gap:10px">
+          <button id="confirm-delete-btn" class="btn-primary" style="flex:1;padding:11px;font-size:14px;background:linear-gradient(135deg,#c0392b,#E8341A)">Delete</button>
+          <button onclick="document.getElementById('delete-modal').style.display='none'" class="btn-ghost" style="flex:1;padding:11px;font-size:14px">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    ${list.length===0
+      ?`<div class="lg p-12" style="text-align:center"><p style="color:rgba(255,255,255,0.4);font-size:15px;font-weight:500">No students yet</p><p style="color:rgba(255,255,255,0.25);font-size:13px;margin-top:4px">Add your first student to get started.</p></div>`
+      :`<div class="lg" style="overflow:hidden;border-radius:20px">
+          <table class="admin-table" style="min-width:620px">
+            <thead><tr>
+              <th>Student</th><th>Validity</th>
+              <th class="center">Access</th><th class="center">Status</th>
+              <th class="right">Actions</th>
+            </tr></thead>
+            <tbody>
+              ${list.map((s,i)=>{
+                const{expired}=getValidity(s);
+                const locked=getLockedVideos(s.id);
+                return`<tr>
+                  <td><p style="font-weight:600;color:#fff">${s.name}</p><p style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:1px">${s.email}</p></td>
+                  <td>${validityBadge(s)}</td>
+                  <td class="center"><span class="pill pill-orange">${(s.accessList||[]).length}/${ALL_LESSONS.length}</span></td>
+                  <td class="center">
+                    ${expired?'<span class="pill pill-red">Expired</span>':'<span class="pill pill-green">Active</span>'}
+                    ${locked.length>0?`<span class="pill pill-yellow" style="margin-left:4px">${locked.length} locked</span>`:''}
+                  </td>
+                  <td class="right" style="white-space:nowrap">
+                    <div style="display:inline-flex;gap:6px">
+                      ${glassBtn('Manage',`Maps('admin-student',{id:'${s.id}'})`,'ghost')}
+                      ${glassBtn('Edit',`openEditStudent('${s.id}')`,'ghost')}
+                      ${glassBtn('Delete',`confirmDelete('${s.id}')`,'danger')}
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>`}
+  </div>`;
+
+  window.openAddStudent=()=>{
+    document.getElementById('modal-title').textContent='Add Student';
+    ['s-id','s-name','s-email','s-pass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    document.getElementById('s-validity').value='';
+    document.getElementById('s-custom-date-wrap').style.display='none';
+    document.getElementById('modal-err').style.display='none';
+    document.getElementById('student-modal').style.display='flex';
+  };
+  window.openEditStudent=(id)=>{
+    const s=loadStudents()[id];if(!s)return;
+    document.getElementById('modal-title').textContent='Edit Student';
+    document.getElementById('s-id').value=s.id;
+    document.getElementById('s-name').value=s.name;
+    document.getElementById('s-email').value=s.email;
+    document.getElementById('s-pass').value=s.password;
+    if(s.validUntil){
+      document.getElementById('s-validity').value='custom';
+      document.getElementById('s-custom-date').value=s.validUntil.slice(0,10);
+      document.getElementById('s-custom-date-wrap').style.display='block';
+    } else {
+      document.getElementById('s-validity').value='';
+      document.getElementById('s-custom-date-wrap').style.display='none';
+    }
+    document.getElementById('modal-err').style.display='none';
+    document.getElementById('student-modal').style.display='flex';
+  };
+  window.closeModal=()=>{document.getElementById('student-modal').style.display='none';};
+  window.saveStudent=()=>{
+    const students=loadStudents();
+    const id=document.getElementById('s-id').value||genId();
+    const name=document.getElementById('s-name').value.trim();
+    const email=document.getElementById('s-email').value.trim().toLowerCase();
+    const pass=document.getElementById('s-pass').value.trim();
+    if(!name||!email||!pass)return;
+    const dup=Object.values(students).find(s=>s.email.toLowerCase()===email&&s.id!==id);
+    if(dup){document.getElementById('modal-err').style.display='block';return;}
+    let validUntil=students[id]?.validUntil||null;
+    const valSel=document.getElementById('s-validity').value;
+    if(valSel==='custom'){validUntil=document.getElementById('s-custom-date').value||null;}
+    else if(valSel){const d=new Date();d.setDate(d.getDate()+Number(valSel));validUntil=d.toISOString().slice(0,10);}
+    else{validUntil=null;}
+    students[id]={...(students[id]||{}),id,name,email,password:pass,accessList:students[id]?.accessList||[1],validUntil,createdAt:students[id]?.createdAt||new Date().toISOString()};
+    saveStudents(students);closeModal();navigate('admin',{tab:'students'});
+  };
+  window.confirmDelete=(id)=>{
+    const modal=document.getElementById('delete-modal');
+    modal.style.display='flex';
+    document.getElementById('confirm-delete-btn').onclick=()=>{
+      const s=loadStudents();delete s[id];saveStudents(s);
+      localStorage.removeItem('be_photo_'+id);
+      localStorage.removeItem('be_locked_'+id);
+      localStorage.removeItem('be_quizlock_'+id);
+      localStorage.removeItem(getProgressKey(id));
+      localStorage.removeItem('be_logout_'+id);
+      modal.style.display='none';navigate('admin',{tab:'students'});
+    };
+  };
+}
+
+// ── PER-STUDENT MANAGE ────────────────────────────────────────────────────────
+function renderAdminStudent(id){
+  const students=loadStudents();
+  const s=students[id];
+  if(!s){navigate('admin');return;}
+  const access=new Set(s.accessList||[]);
+  const locked=new Set(getLockedVideos(id));
+  const quizLocked=new Set(getLockedQuizzes(id));
+  const{validUntil,expired}=getValidity(s);
+
+  app.innerHTML=adminTopBar('students')+`
+  <div style="padding:24px;position:relative;z-index:1">
+    <button onclick="navigate('admin',{tab:'students'})" style="display:flex;align-items:center;gap:6px;font-size:13px;color:rgba(255,255,255,0.45);background:none;border:none;cursor:pointer;margin-bottom:20px;transition:color .18s" onmouseover="this.style.color='#FF7100'" onmouseout="this.style.color='rgba(255,255,255,0.45)'">
+      <svg style="width:14px;height:14px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      Back to Students
+    </button>
+
+    <div class="lg p-5 mb-5">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <h1 style="font-size:20px;font-weight:700;color:#fff">${s.name}</h1>
+          <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px">${s.email}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
+            ${validityBadge(s)}
+            <span class="pill pill-orange">${access.size}/${ALL_LESSONS.length} unlocked</span>
+            ${locked.size>0?`<span class="pill pill-yellow">${locked.size} video${locked.size>1?'s':''} locked</span>`:''}
+            ${quizLocked.size>0?`<span class="pill" style="background:rgba(139,92,246,0.14);border:1px solid rgba(139,92,246,0.3);color:#c4b5fd">${quizLocked.size} quiz${quizLocked.size>1?'zes':''} locked</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
+          ${glassBtn('Unlock All',`grantAll('${id}')`,'brand')}
+          ${glassBtn('Lock All',`revokeAll('${id}')`,'ghost')}
+        </div>
+      </div>
+      <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1)">
+        <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:10px">Extend / Set Validity</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          ${[['7','+ 1 Wk'],['30','+ 1 Mo'],['90','+ 3 Mo'],['365','+ 1 Yr']].map(([d,l])=>glassBtn(l,`extendValidity('${id}',${d})`,'ghost')).join('')}
+          <input id="ext-date" type="date" class="glass-input" style="width:auto;padding:8px 12px;font-size:12px"/>
+          ${glassBtn('Set Date',`setCustomValidity('${id}')`,'brand')}
+          ${glassBtn('Remove Expiry',`clearValidity('${id}')`,'ghost')}
+        </div>
+      </div>
+    </div>
+
+    ${SECTIONS.map(section=>`
+      <div style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4)">${section.title}</p>
+          <div style="display:flex;gap:12px">
+            <button onclick="grantSection('${id}','${section.id}')" style="font-size:12px;color:var(--brand-2);background:none;border:none;cursor:pointer;font-weight:600">Unlock all</button>
+            <span style="color:rgba(255,255,255,0.2)">|</span>
+            <button onclick="revokeSection('${id}','${section.id}')" style="font-size:12px;color:rgba(255,255,255,0.4);background:none;border:none;cursor:pointer;font-weight:600">Lock all</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
+          ${section.lessons.map(l=>{
+            const granted=access.has(l.order);
+            const vidLk=locked.has(l.order);
+            const qLk=quizLocked.has(l.order);
+            const hasQuiz=hasRealQuiz(l);
+            const cardCls=granted?(vidLk?'class-card vid-locked':qLk?'class-card quiz-locked':'class-card unlocked'):'class-card';
+            const labelCol=granted?(vidLk?'#facc15':qLk?'#c4b5fd':'#4ade80'):'rgba(255,255,255,0.35)';
+            return`<div class="${cardCls}">
+              <p style="font-weight:700;font-size:12px;color:${labelCol};margin-bottom:2px">Class ${l.order}</p>
+              <p style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.35;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${l.title}</p>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <button onclick="toggleAccess('${id}',${l.order})" style="padding:5px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${granted?'background:rgba(34,197,94,0.14);border-color:rgba(34,197,94,0.32);color:#4ade80':'background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.45)'}">
+                  ${granted?'✓ Unlocked':'🔒 Locked'}
+                </button>
+                ${granted?`<button onclick="toggleVideoLock('${id}',${l.order})" style="padding:5px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${vidLk?'background:rgba(234,179,8,0.14);border-color:rgba(234,179,8,0.32);color:#facc15':'background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4)'}">
+                  ▶ ${vidLk?'Video Locked':'Lock Video'}
+                </button>`:''}
+                ${granted&&hasQuiz?`<button onclick="toggleQuizLock('${id}',${l.order})" style="padding:5px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${qLk?'background:rgba(139,92,246,0.14);border-color:rgba(139,92,246,0.32);color:#c4b5fd':'background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4)'}">
+                  ✎ ${qLk?'Quiz Locked':'Lock Quiz'}
+                </button>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`).join('')}
+
+    <div style="display:flex;justify-content:flex-end;margin-top:8px">
+      ${glassBtn('Done',`Maps('admin',{tab:'students'})`,'brand')}
+    </div>
+  </div>`;
+
+  window.extendValidity=(sid,days)=>{const st=loadStudents();const base=st[sid].validUntil?new Date(st[sid].validUntil):new Date();if(base<new Date())base.setTime(new Date().getTime());base.setDate(base.getDate()+Number(days));st[sid].validUntil=base.toISOString().slice(0,10);saveStudents(st);renderAdminStudent(sid);};
+  window.setCustomValidity=(sid)=>{const val=document.getElementById('ext-date').value;if(!val)return;const st=loadStudents();st[sid].validUntil=val;saveStudents(st);renderAdminStudent(sid);};
+  window.clearValidity=(sid)=>{const st=loadStudents();st[sid].validUntil=null;saveStudents(st);renderAdminStudent(sid);};
+  window.toggleAccess=(sid,classOrder)=>{const st=loadStudents();const list=new Set(st[sid].accessList||[]);list.has(classOrder)?list.delete(classOrder):list.add(classOrder);st[sid].accessList=[...list];saveStudents(st);renderAdminStudent(sid);};
+  window.toggleVideoLock=(sid,classOrder)=>{const lk=new Set(getLockedVideos(sid));lk.has(classOrder)?lk.delete(classOrder):lk.add(classOrder);saveLockedVideos(sid,[...lk]);renderAdminStudent(sid);};
+  window.toggleQuizLock=(sid,classOrder)=>{const lk=new Set(getLockedQuizzes(sid));lk.has(classOrder)?lk.delete(classOrder):lk.add(classOrder);saveLockedQuizzes(sid,[...lk]);renderAdminStudent(sid);};
+  window.grantAll=(sid)=>{const st=loadStudents();st[sid].accessList=ALL_LESSONS.map(l=>l.order);saveStudents(st);renderAdminStudent(sid);};
+  window.revokeAll=(sid)=>{const st=loadStudents();st[sid].accessList=[];saveStudents(st);renderAdminStudent(sid);};
+  window.grantSection=(sid,secId)=>{const st=loadStudents();const orders=SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order);const list=new Set(st[sid].accessList||[]);orders.forEach(o=>list.add(o));st[sid].accessList=[...list];saveStudents(st);renderAdminStudent(sid);};
+  window.revokeSection=(sid,secId)=>{const st=loadStudents();const orders=SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order);const list=new Set(st[sid].accessList||[]);orders.forEach(o=>list.delete(o));st[sid].accessList=[...list];saveStudents(st);renderAdminStudent(sid);};
+}
+
+// ── CLASSES & VIDEOS ──────────────────────────────────────────────────────────
+function renderAdminClasses(){
+  const students=Object.values(loadStudents());
+  const videos=loadVideos();
+
+  app.innerHTML=adminTopBar('classes')+`
+  <div style="padding:24px;position:relative;z-index:1">
+    <h1 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px">Classes & Videos</h1>
+    <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:20px">Set video URLs, titles and durations for each class.</p>
+
+    <div id="video-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:16px">
+      <div class="lg" style="width:100%;max-width:480px;padding:28px">
+        <h2 style="font-size:18px;font-weight:700;color:#fff;margin-bottom:20px">Edit Class Video</h2>
+        <input id="vm-order" type="hidden"/>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
+          ${[['vm-title','Video Title','text','e.g. Pronunciation Essentials'],['vm-src','Video URL (MP4)','text','https://...'],['vm-dur','Duration','text','e.g. 18 min']].map(([id,lbl,type,ph])=>`
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px">${lbl}</label>
+            <input id="${id}" type="${type}" placeholder="${ph}" class="glass-input"/>
+          </div>`).join('')}
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px">Description</label>
+            <textarea id="vm-desc" rows="2" placeholder="What students will learn..." class="glass-input" style="resize:none"></textarea>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button onclick="saveVideo()" class="btn-primary" style="flex:1;padding:12px;font-size:14px">Save</button>
+          <button onclick="document.getElementById('video-modal').style.display='none'" class="btn-ghost" style="flex:1;padding:12px;font-size:14px">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    ${SECTIONS.map(section=>`
+      <div style="margin-bottom:24px">
+        <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:12px">${section.title}</p>
+        <div class="lg" style="overflow:hidden;border-radius:18px">
+          <div style="overflow-x:auto">
+          <table class="admin-table" style="min-width:560px">
+            <thead><tr>
+              <th style="width:40px">#</th><th>Title / Duration</th>
+              <th class="center">Video</th><th class="center">Students</th>
+              <th class="center">Quiz</th><th class="right">Action</th>
+            </tr></thead>
+            <tbody>
+              ${section.lessons.map(l=>{
+                const v=videos[l.order]||{};
+                const count=students.filter(s=>(s.accessList||[]).includes(l.order)).length;
+                return`<tr>
+                  <td style="color:rgba(255,255,255,0.35);font-size:12px;font-family:monospace">${l.order}</td>
+                  <td>
+                    <p style="font-weight:600;color:#fff;font-size:13px">${v.title||l.title}</p>
+                    <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">${v.duration||'Duration not set'}</p>
+                  </td>
+                  <td class="center">${v.src?'<span class="pill pill-green">Set</span>':'<span class="pill pill-grey">Not set</span>'}</td>
+                  <td class="center"><span class="pill ${count>0?'pill-green':'pill-grey'}">${count}/${students.length}</span></td>
+                  <td class="center">${hasRealQuiz(l)?'<span class="pill pill-red">Ready</span>':'<span class="pill pill-grey">—</span>'}</td>
+                  <td class="right">${glassBtn('Edit',`openVideoModal(${l.order})`)}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          </div>
+        </div>
+      </div>`).join('')}
+  </div>`;
+
+  window.openVideoModal=(order)=>{
+    const v=loadVideos()[order]||{};
+    document.getElementById('vm-order').value=order;
+    document.getElementById('vm-title').value=v.title||'';
+    document.getElementById('vm-src').value=v.src||'';
+    document.getElementById('vm-dur').value=v.duration||'';
+    document.getElementById('vm-desc').value=v.desc||'';
+    document.getElementById('video-modal').style.display='flex';
+  };
+  window.saveVideo=()=>{
+    const order=Number(document.getElementById('vm-order').value);
+    const vids=loadVideos();
+    vids[order]={title:document.getElementById('vm-title').value.trim(),src:document.getElementById('vm-src').value.trim(),duration:document.getElementById('vm-dur').value.trim(),desc:document.getElementById('vm-desc').value.trim()};
+    saveVideos(vids);document.getElementById('video-modal').style.display='none';renderAdminClasses();
+  };
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function renderAdminSettings(){
+  app.innerHTML=adminTopBar('settings')+`
+  <div style="padding:24px;max-width:600px;position:relative;z-index:1">
+    <h1 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px">Settings</h1>
+    <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:24px">Global course configuration.</p>
+
+    ${[
+      {
+        title:'Daily Drip Limit',
+        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:12px">Students can unlock up to <strong style="color:#FF7100">${DAILY_DRIP} new classes per day</strong>. Change the <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;font-size:12px">DAILY_DRIP</code> constant in the source code to adjust.</p>
+        <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;font-family:monospace;font-size:12px;color:rgba(255,255,255,0.7)">const DAILY_DRIP = ${DAILY_DRIP};</div>`
+      },
+      {
+        title:'Admin Credentials',
+        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:12px">Current admin: <strong style="color:#fff">${ADMIN_CREDENTIALS.email}</strong>. Edit <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;font-size:12px">ADMIN_CREDENTIALS</code> in the source code to change login details.</p>
+        <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;font-family:monospace;font-size:12px;color:rgba(255,255,255,0.7)">email: "${ADMIN_CREDENTIALS.email}"</div>`
+      },
+      {
+        title:'Data Management',
+        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px">Student data is stored in browser localStorage. Export to JSON for backup.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          ${glassBtn('Export All Data','exportData()')}
+          ${glassBtn('Import Data','importDataPrompt()')}
+        </div>
+        <input id="import-file" type="file" accept=".json" style="display:none" onchange="doImport(event)"/>`
+      }
+    ].map(s=>`<div class="lg p-5 mb-4">
+      <p style="font-size:13px;font-weight:700;color:var(--brand-2);margin-bottom:10px">${s.title}</p>
+      ${s.body}
+    </div>`).join('')}
+  </div>`;
+
+  window.exportData=()=>{
+    const students=loadStudents();
+    const progressData={};
+    Object.keys(students).forEach(sid=>{progressData[sid]=[...loadProgress(sid)];});
+    const data={students,videos:loadVideos(),progress:progressData};
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+    a.download='broken-english-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();
+  };
+  window.importDataPrompt=()=>document.getElementById('import-file').click();
+  window.doImport=(e)=>{
+    const file=e.target.files[0];if(!file)return;
+    const r=new FileReader();
+    r.onload=(ev)=>{
+      try{
+        const data=JSON.parse(ev.target.result);
+        if(data.students)saveStudents(data.students);
+        if(data.videos)saveVideos(data.videos);
+        if(data.progress){Object.entries(data.progress).forEach(([sid,arr])=>{saveProgress(sid,new Set(arr));});}
+        alert('Import successful!');renderAdminSettings();
+      }catch{alert('Invalid JSON file.');}
+    };
+    r.readAsText(file);
+  };
+}
+
+// ─── MY COURSES ───────────────────────────────────────────────────────────────
+function renderMyCourses(){
+  if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
+  const student=loadStudents()[currentSession.studentId];
+  if(!student){currentSession=null;navigate("login");return;}
+  const unlockedLessons=ALL_LESSONS.filter(isUnlocked);
+  const completedLessons=ALL_LESSONS.filter(l=>isCompleted(l.id));
+  const pct=Math.round((completedLessons.length/ALL_LESSONS.length)*100);
+
+  app.innerHTML=sidebarHtml("courses")+`
+  <div id="main-content">
+    ${topBarHtml(student)}
+    <div class="p-4 lg:p-6">
+      <h1 class="font-bold text-white text-xl mb-0.5">My Courses</h1>
+      <p class="text-sm mb-5" style="color:rgba(255,255,255,0.45)">All your enrolled modules in one place.</p>
+
+      <div class="lg p-5 mb-5 flex flex-col sm:flex-row items-start sm:items-center gap-5">
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-white text-sm mb-3">Spoken English Mastery Course</p>
+          <div class="prog-bar mb-2"><div class="prog-fill" style="width:${pct}%"></div></div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold" style="color:var(--brand-2)">${pct}% Complete</span>
+            <span style="color:rgba(255,255,255,0.5)">${completedLessons.length}/${ALL_LESSONS.length} done</span>
+          </div>
+        </div>
+        <div class="flex gap-5 shrink-0">
+          ${[
+            [ALL_LESSONS.length,"Total","rgba(255,255,255,0.9)"],
+            [unlockedLessons.length,"Unlocked","#FF7100"],
+            [completedLessons.length,"Done","#4ade80"],
+          ].map(([v,l,col])=>`<div class="text-center">
+            <p class="font-bold text-xl" style="color:${col}">${v}</p>
+            <p class="text-[10px] mt-0.5" style="color:rgba(255,255,255,0.45)">${l}</p>
+          </div>`).join('<div style="width:1px;background:rgba(255,255,255,0.1)"></div>')}
+        </div>
+      </div>
+
+      ${SECTIONS.map(section=>{
+        const sDone=section.lessons.filter(l=>isCompleted(l.id)).length;
+        const sUnlocked=section.lessons.filter(isUnlocked).length;
+        return`<div class="mb-5">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <p class="font-bold text-white text-sm">${section.title}</p>
+              <p class="text-[11px]" style="color:rgba(255,255,255,0.45)">${sDone}/${section.lessons.length} completed</p>
+            </div>
+            <span class="rounded-full px-3 py-1 text-[11px] font-bold" style="background:rgba(255,113,0,0.15);border:1px solid rgba(255,113,0,0.25);color:#FF7100">${sUnlocked} unlocked</span>
+          </div>
+          <div class="lg" style="border-radius:18px;overflow:hidden;">
+            ${section.lessons.map((l,i)=>{
+              const unlocked=isUnlocked(l);
+              const completed=isCompleted(l.id);
+              const rq=hasRealQuiz(l);
+              return`<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${unlocked?'cursor:pointer':'opacity:0.4;cursor:not-allowed'};transition:background .15s"
+                onclick="${unlocked?`Maps('lesson',{id:'${l.id}'})`:''}">
+                <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${completed?'background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.35)':unlocked?'background:rgba(232,52,26,0.15);border:1px solid rgba(232,52,26,0.25)':'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)'}">
+                  ${completed
+                    ?`<svg style="width:18px;height:18px;color:#4ade80" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`
+                    :unlocked
+                    ?`<svg style="width:18px;height:18px;color:#FF7100" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+                    :`<svg style="width:16px;height:16px;color:rgba(255,255,255,0.35)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`}
+                </div>
+                <div style="flex:1;min-width:0">
+                  <p style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Day ${l.order} — ${l.title}</p>
+                  <p style="font-size:11px;margin-top:2px;${completed?'color:#4ade80':unlocked?'color:#FF7100':'color:rgba(255,255,255,0.4)'}">${completed?'Completed':unlocked?'Continue Learning':'Locked'}</p>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                  ${rq&&unlocked?`<span style="border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700;background:rgba(232,52,26,0.15);border:1px solid rgba(232,52,26,0.3);color:var(--brand-2)">Quiz</span>`:''}
+                  ${unlocked?`<svg style="width:14px;height:14px;color:rgba(255,255,255,0.3)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`:''}
+                </div>
+              </div>`;
+            }).join("")}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+// ─── QUIZZES ─────────────────────────────────────────────────────────────────
+function renderQuizzes(){
+  if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
+  const student=loadStudents()[currentSession.studentId];
+  if(!student){currentSession=null;navigate("login");return;}
+
+  const quizLessons=ALL_LESSONS.filter(l=>hasRealQuiz(l));
+  const locked=quizLessons.filter(l=>!isUnlocked(l));
+  const quizLockedList=currentSession?.role==="student"?getLockedQuizzes(currentSession.studentId):[];
+  const unlockableQuizzes=quizLessons.filter(l=>isUnlocked(l)&&!isCompleted(l.id));
+  const readyQuizzes=quizLessons.filter(l=>isUnlocked(l)&&isCompleted(l.id)&&!quizLockedList.includes(l.order));
+  const adminLockedQuizzes=quizLessons.filter(l=>isUnlocked(l)&&isCompleted(l.id)&&quizLockedList.includes(l.order));
+
+  const STATS=[
+    {label:"Total Quizzes",value:quizLessons.length,color:"rgba(255,255,255,0.9)"},
+    {label:"Available",value:readyQuizzes.length,color:"var(--brand-2)"},
+    {label:"Finish Lesson",value:unlockableQuizzes.length,color:"#fb923c"},
+    {label:"Locked",value:locked.length+adminLockedQuizzes.length,color:"rgba(255,255,255,0.35)"},
+  ];
+
+  app.innerHTML=sidebarHtml("quizzes")+`
+  <div id="main-content">
+    ${topBarHtml(student)}
+    <div class="p-4 lg:p-6">
+      <h1 class="font-bold text-white text-xl mb-0.5">Quizzes</h1>
+      <p class="text-sm mb-5" style="color:rgba(255,255,255,0.45)">Complete each lesson to unlock its quiz. Pass with 70% or more.</p>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        ${STATS.map(s=>`
+          <div class="lg p-4 text-center">
+            <p class="font-bold text-2xl" style="color:${s.color}">${s.value}</p>
+            <p class="text-[11px] mt-1" style="color:rgba(255,255,255,0.45)">${s.label}</p>
+          </div>`).join("")}
+      </div>
+
+      <div class="lg" style="border-radius:20px;overflow:hidden;">
+        ${quizLessons.map((l,i)=>{
+          const unlocked=isUnlocked(l);
+          const lessonDone=isCompleted(l.id);
+          const qAdminLocked=quizLockedList.includes(l.order);
+          const quizReady=unlocked&&lessonDone&&!qAdminLocked;
+          const section=SECTIONS.find(s=>s.id===l.sectionId);
+          return`<div style="display:flex;align-items:center;gap:14px;padding:16px 20px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${quizReady?'cursor:pointer':'cursor:default'};transition:background .15s;${!quizReady?'opacity:0.55':''}"
+            onclick="${quizReady?`Maps('quiz',{lessonId:'${l.id}'})`:''}">
+            <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${quizReady?'background:linear-gradient(135deg,#E8341A,#FF7100);box-shadow:inset 0 2px 0 rgba(255,255,255,0.25),0 4px 12px rgba(232,52,26,0.4)':qAdminLocked&&lessonDone?'background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.25)':'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)'}">
+              <svg style="width:18px;height:18px;color:${quizReady?'#fff':qAdminLocked&&lessonDone?'#facc15':'rgba(255,255,255,0.4)'}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+              </svg>
+            </div>
+            <div style="flex:1;min-width:0">
+              <p style="font-size:14px;font-weight:600;color:#fff">Day ${l.order} Quiz</p>
+              <p style="font-size:11px;margin-top:2px;color:rgba(255,255,255,0.45);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.title} · ${section.title}</p>
+            </div>
+            <div style="flex-shrink:0;display:flex;align-items:center;gap:8px">
+              ${quizReady
+                ?`<span style="border-radius:99px;padding:4px 12px;font-size:11px;font-weight:700;background:rgba(34,197,94,0.15);border:1px solid rgba(34,197,94,0.3);color:#4ade80">Ready</span>
+                  <svg style="width:14px;height:14px;color:rgba(255,255,255,0.3)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`
+                :qAdminLocked&&lessonDone
+                ?`<span style="border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700;background:rgba(234,179,8,0.12);border:1px solid rgba(234,179,8,0.22);color:#facc15">🔒 Admin</span>`
+                :unlocked&&!lessonDone
+                ?`<span style="border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700;background:rgba(255,113,0,0.12);border:1px solid rgba(255,113,0,0.22);color:#fb923c">Finish Lesson</span>`
+                :`<span style="border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.35)">🔒 Locked</span>`}
+            </div>
+          </div>`;
+        }).join("")}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── PROFILE ─────────────────────────────────────────────────────────────────
+function renderProfile(){
+  if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
+  const student=loadStudents()[currentSession.studentId];
+  if(!student){currentSession=null;navigate("login");return;}
+
+  const completedCount=ALL_LESSONS.filter(l=>isCompleted(l.id)).length;
+  const quizCount=ALL_LESSONS.filter(l=>hasRealQuiz(l)&&isUnlocked(l)&&isCompleted(l.id)).length;
+  const pct=Math.round((completedCount/ALL_LESSONS.length)*100);
+
+  app.innerHTML=sidebarHtml("profile")+`
+  <div id="main-content">
+    ${topBarHtml(student)}
+    <div class="p-4 lg:p-6 max-w-2xl">
+      <h1 class="font-bold text-white text-xl mb-0.5">Profile</h1>
+      <p class="text-sm mb-5" style="color:rgba(255,255,255,0.45)">Your account details and learning progress.</p>
+
+      <div class="lg p-5 mb-4 flex items-center gap-5">
+        <div class="avatar-upload shrink-0" onclick="document.getElementById('photo-input').click()" title="Tap to change photo">
+          <div id="profile-avatar">${avatarHtml(student,"w-16 h-16","text-2xl")}</div>
+          <div class="avatar-overlay rounded-2xl">
+            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </div>
+          <input id="photo-input" type="file" accept="image/*" class="hidden" onchange="handlePhotoUpload(event,'${student.id}')"/>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="font-bold text-white text-lg">${student.name}</p>
+          <p class="text-sm mt-0.5" style="color:rgba(255,255,255,0.45)">${student.email}</p>
+          <span style="display:inline-block;margin-top:8px;border-radius:99px;background:rgba(232,52,26,0.15);border:1px solid rgba(232,52,26,0.28);padding:2px 10px;font-size:11px;font-weight:700;color:var(--brand-2)">Student</span>
+          <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:6px">Tap photo to change</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        ${[
+          {label:"Lessons Done",value:completedCount,color:"#4ade80",icon:'<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'},
+          {label:"Quizzes Ready",value:quizCount,color:"var(--brand-2)",icon:'<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2m-6 9l2 2 4-4"/>'},
+          {label:"Progress",value:pct+"%",color:"#60a5fa",icon:'<path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>'},
+        ].map(s=>`<div class="lg p-4 text-center">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 8px">
+            <svg style="width:18px;height:18px;color:${s.color}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">${s.icon}</svg>
+          </div>
+          <p class="font-bold text-lg text-white">${s.value}</p>
+          <p style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px">${s.label}</p>
+        </div>`).join("")}
+      </div>
+
+      <div class="lg p-5 mb-4">
+        <p class="font-bold text-white text-sm mb-4">Account Details</p>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          ${[
+            ["Full Name",student.name],
+            ["Email Address",student.email],
+            ["Member Since",new Date(student.createdAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})],
+          ].map(([lbl,val])=>`<div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">${lbl}</label>
+            <div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:12px 16px;font-size:14px;color:rgba(255,255,255,0.85);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.1)">${val}</div>
+          </div>`).join("")}
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">Course Access Validity</label>
+            ${(()=>{
+              const{validUntil,expired}=getValidity(student);
+              if(student.completedAt) return`<div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+                <svg style="width:16px;height:16px;color:#4ade80;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <div><p style="font-size:13px;font-weight:600;color:#4ade80">Course Complete 🎉 — Lifetime Access</p>
+                <p style="font-size:11px;color:rgba(74,222,128,0.7);margin-top:2px">Finished ${new Date(student.completedAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p></div>
+              </div>`;
+              if(!validUntil) return`<div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:12px 16px;font-size:14px;color:rgba(255,255,255,0.6)">No expiry — lifetime access</div>`;
+              const days=Math.ceil((validUntil-today)/86400000);
+              const col=expired?'rgba(239,68,68,0.12)':days<=7?'rgba(239,68,68,0.1)':days<=30?'rgba(234,179,8,0.1)':'rgba(34,197,94,0.1)';
+              const bcol=expired?'rgba(239,68,68,0.28)':days<=7?'rgba(239,68,68,0.22)':days<=30?'rgba(234,179,8,0.22)':'rgba(34,197,94,0.22)';
+              const tcol=expired?'#fca5a5':days<=7?'#fca5a5':days<=30?'#facc15':'#4ade80';
+              const msg=expired?`Access expired on ${validUntil.toLocaleDateString()}`:days<=7?`⚠ Expiring in ${days} days — ${validUntil.toLocaleDateString()}`:days<=30?`⏳ ${days} days remaining — valid until ${validUntil.toLocaleDateString()}`:`✓ Active — valid until ${validUntil.toLocaleDateString()}`;
+              const sub=expired?'Contact your admin to renew.':'Complete all classes to keep access forever!';
+              return`<div style="background:${col};border:1px solid ${bcol};border-radius:12px;padding:12px 16px">
+                <p style="font-size:13px;font-weight:600;color:${tcol}">${msg}</p>
+                <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px">${sub}</p>
+              </div>`;
+            })()}
+          </div>
+        </div>
+        <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:14px">To update your name or email, contact your course admin.</p>
+      </div>
+
+      <div class="lg p-5 mb-4" id="pass-card">
+        <div class="flex items-center justify-between mb-3">
+          <p class="font-bold text-white text-sm">Change Password</p>
+          <button onclick="togglePassForm()" id="pass-toggle-btn" style="font-size:12px;color:var(--brand-2);background:none;border:none;cursor:pointer;font-weight:600">Change</button>
+        </div>
+        <div id="pass-form" class="hidden" style="display:none;flex-direction:column;gap:12px">
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">New Password</label>
+            <input id="new-pass" type="password" placeholder="Enter new password" class="glass-input"/>
+          </div>
+          <div>
+            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">Confirm Password</label>
+            <input id="confirm-pass" type="password" placeholder="Confirm new password" class="glass-input"/>
+          </div>
+          <p id="pass-err" style="display:none;font-size:12px;color:#fca5a5"></p>
+          <p id="pass-ok" style="display:none;font-size:12px;color:#4ade80">Password updated!</p>
+          <div class="flex gap-3">
+            <button onclick="savePassword()" class="btn-primary flex-1" style="padding:11px;font-size:14px">Save</button>
+            <button onclick="togglePassForm()" class="btn-ghost flex-1" style="padding:11px;font-size:14px">Cancel</button>
+          </div>
+        </div>
+        <div id="pass-placeholder" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:12px 16px;color:rgba(255,255,255,0.3);font-size:14px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.08)">••••••••••</div>
+      </div>
+
+      <button onclick="currentSession=null;navigate('login')" class="btn-ghost w-full flex items-center justify-center gap-2" style="border-color:rgba(232,52,26,0.3);color:rgba(255,113,0,0.9)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Sign Out
+      </button>
+    </div>
+  </div>`;
+
+  window.togglePassForm=()=>{
+    const form=document.getElementById("pass-form");
+    const placeholder=document.getElementById("pass-placeholder");
+    const btn=document.getElementById("pass-toggle-btn");
+    const hidden=form.style.display==="none"||form.style.display==="";
+    form.style.display=hidden?"flex":"none";
+    placeholder.style.display=hidden?"none":"block";
+    btn.textContent=hidden?"Cancel":"Change";
+    document.getElementById("pass-err").style.display="none";
+    document.getElementById("pass-ok").style.display="none";
+  };
+  window.savePassword=()=>{
+    const np=document.getElementById("new-pass").value;
+    const cp=document.getElementById("confirm-pass").value;
+    const err=document.getElementById("pass-err");
+    const ok=document.getElementById("pass-ok");
+    err.style.display="none";ok.style.display="none";
+    if(!np||np.length<6){err.textContent="Password must be at least 6 characters.";err.style.display="block";return;}
+    if(np!==cp){err.textContent="Passwords do not match.";err.style.display="block";return;}
+    const students=loadStudents();
+    students[student.id].password=np;
+    saveStudents(students);
+    ok.style.display="block";
+    document.getElementById("new-pass").value="";
+    document.getElementById("confirm-pass").value="";
+  };
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+let activeSectionId=SECTIONS[0].id;
+let activeLesson=null;
+let currentPage=0;
+const PAGE_SIZE=5;
+
+function renderDashboard(){
+  if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
+  const student=loadStudents()[currentSession.studentId];
+  if(!student){currentSession=null;navigate("login");return;}
+
+  const{expired}=getValidity(student);
+  if(expired){
+    currentSession=null;
+    app.innerHTML=`<div class="min-h-screen flex items-center justify-center bg-gray-50 px-5">
+      <div class="text-center max-w-sm">
+        <div class="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+          <svg class="w-8 h-8 text-brand" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h2 class="font-display font-bold text-gray-800 text-xl mb-2">Access Expired</h2>
+        <p class="text-gray-400 text-sm mb-6">Your course validity has ended on ${getValidity(student).validUntil?.toLocaleDateString()}. Please contact your admin to extend access.</p>
+        <button onclick="navigate('login')" class="rounded-xl bg-gradient-to-r from-brand to-brand-2 px-6 py-3 text-white font-semibold text-sm hover:opacity-90 transition">Back to Login</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  const logoutAt=localStorage.getItem("be_logout_"+student.id);
+  if(logoutAt&&Date.now()>Number(logoutAt)){
+    localStorage.removeItem("be_logout_"+student.id);
+    currentSession=null;
+    navigate("login");
+    return;
+  }
+
+  const completedCount=ALL_LESSONS.filter(l=>isCompleted(l.id)).length;
+  const unlockedCount=ALL_LESSONS.filter(isUnlocked).length;
+  const pct=Math.round((completedCount/ALL_LESSONS.length)*100);
+
+  activeLesson=ALL_LESSONS.find(l=>isUnlocked(l)&&!isCompleted(l.id))||ALL_LESSONS.find(l=>isUnlocked(l))||ALL_LESSONS[0];
+
+  app.innerHTML=sidebarHtml("dashboard")+`
+  <div id="main-content" style="display:flex;flex-direction:column;min-height:100vh;">
+    ${topBarHtml(student)}
+
+    <div class="stats-strip px-4 py-4">
+      <div class="flex items-center gap-4">
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-white text-sm mb-2">Spoken English Mastery Course</p>
+          <div class="prog-bar mb-1.5"><div class="prog-fill" style="width:${pct}%"></div></div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-semibold" style="color:#FF7100">${pct}% Complete</span>
+            <span class="text-white/60 text-sm">${completedCount}/${ALL_LESSONS.length} done</span>
+          </div>
+        </div>
+        <svg viewBox="0 0 64 64" class="w-14 h-14 shrink-0 hidden sm:block">
+          <defs><linearGradient id="pg" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#E8341A"/><stop offset="100%" stop-color="#FF7100"/></linearGradient></defs>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="#F0F0F0" stroke-width="5"/>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="url(#pg)" stroke-width="5"
+            stroke-dasharray="${2*Math.PI*26}" stroke-dashoffset="${2*Math.PI*26*(1-pct/100)}"
+            stroke-linecap="round" transform="rotate(-90 32 32)"/>
+          <text x="32" y="37" text-anchor="middle" font-size="11" font-weight="700" fill="#FF7100" font-family="Poppins,sans-serif">${pct}%</text>
+        </svg>
+      </div>
+      <div class="flex gap-2 mt-3 overflow-x-auto pb-0.5">
+        <span class="shrink-0 rounded-full px-3 py-1 text-xs font-medium" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.7);">${ALL_LESSONS.length} total</span>
+        <span class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold" style="background:rgba(232,52,26,.15);border:1px solid rgba(232,52,26,.25);color:#FF7100;">${unlockedCount} unlocked</span>
+        <span class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);color:#4ADE80;">${completedCount} completed</span>
+        ${(()=>{
+          if(student.completedAt) return`<span class="shrink-0 rounded-full bg-green-100 border border-green-200 px-3 py-1 text-xs font-semibold text-green-700">🎉 Course Complete — Lifetime Access</span>`;
+          const{validUntil,expired}=getValidity(student);
+          if(!validUntil) return'';
+          const days=Math.ceil((validUntil-today)/86400000);
+          if(expired) return`<span class="shrink-0 rounded-full bg-red-100 border border-red-200 px-3 py-1 text-xs font-semibold text-red-600">⚠ Access expired</span>`;
+          if(days<=7) return`<span class="shrink-0 rounded-full bg-red-50 border border-red-200 px-3 py-1 text-xs font-semibold text-red-500">⏰ Expires in ${days}d</span>`;
+          if(days<=30) return`<span class="shrink-0 rounded-full bg-yellow-50 border border-yellow-200 px-3 py-1 text-xs font-semibold text-yellow-700">⏳ ${days}d left</span>`;
+          return`<span class="shrink-0 rounded-full bg-blue-50 border border-blue-100 px-3 py-1 text-xs font-semibold text-blue-600">✓ Valid until ${validUntil.toLocaleDateString()}</span>`;
+        })()}
+      </div>
+    </div>
+
+    <div class="dashboard-layout flex-1">
+      <div class="courses-col p-4 pt-0">
+        <div class="flex gap-2 mb-4 overflow-x-auto pb-0.5 px-4 pt-4">
+          ${SECTIONS.map(sec=>`
+            <button id="tab-${sec.id}" onclick="switchTab('${sec.id}')"
+              class="shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition whitespace-nowrap
+                ${sec.id===activeSectionId?'bg-gradient-to-r from-brand to-brand-2 text-white shadow-sm':'bg-white text-gray-500 border border-white/15 hover:border-brand/40 hover:text-brand'}">
+              ${sec.title}
+            </button>`).join("")}
+        </div>
+
+        <div class="module-list-container">
+          <div class="module-list-header">
+            <p class="font-bold text-white text-sm tracking-wide">Course Modules</p>
+            <span id="page-info" class="text-xs" style="color:rgba(255,255,255,.4)"></span>
+          </div>
+          <div id="module-list" class="p-3"></div>
+          <div id="pagination" class="px-4 py-3 flex items-center justify-between gap-3" style="border-top:1px solid rgba(255,255,255,.07);"></div>
+        </div>
+      </div>
+
+      <div class="lesson-panel-wrap p-4" id="lesson-panel">
+        ${lessonPanelHtml(activeLesson)}
+      </div>
+    </div>
+  </div>`;
+
+  renderModuleList();
+}
+
+function getPagedLessons(sectionId){
+  const section=SECTIONS.find(s=>s.id===sectionId);
+  const lessons=section.lessons;
+  const totalPages=Math.ceil(lessons.length/PAGE_SIZE);
+  const page=Math.max(0,Math.min(currentPage,totalPages-1));
+  const start=page*PAGE_SIZE;
+  return{lessons:lessons.slice(start,start+PAGE_SIZE),page,totalPages,total:lessons.length,start};
+}
+
+function renderModuleList(){
+  const {lessons,page,totalPages,total,start}=getPagedLessons(activeSectionId);
+
+  const info=document.getElementById("page-info");
+  if(info) info.textContent=`Showing ${start+1}–${Math.min(start+PAGE_SIZE,total)} of ${total}`;
+
+  const listEl=document.getElementById("module-list");
+
+  const BG_GRADIENTS=[
+    "linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",
+    "linear-gradient(135deg,#0d0d0d 0%,#1a0a00 50%,#3d1500 100%)",
+    "linear-gradient(135deg,#0a1628 0%,#0d2137 50%,#102a42 100%)",
+    "linear-gradient(135deg,#100c1c 0%,#1a1030 50%,#251545 100%)",
+    "linear-gradient(135deg,#0e1a10 0%,#142b16 50%,#1c3b1f 100%)",
+    "linear-gradient(135deg,#1a0e0e 0%,#2d1212 50%,#3d1818 100%)",
+    "linear-gradient(135deg,#0e1520 0%,#131e2d 50%,#19283d 100%)",
+    "linear-gradient(135deg,#1a1500 0%,#2e2400 50%,#3d3000 100%)",
+    "linear-gradient(135deg,#001a1a 0%,#002d2d 50%,#003d3d 100%)",
+    "linear-gradient(135deg,#1a001a 0%,#2d002d 50%,#3d003d 100%)",
+  ];
+
+  if(listEl) listEl.innerHTML=lessons.map((l,idx)=>{
+    const unlocked=isUnlocked(l);
+    const completed=isCompleted(l.id);
+    const isActive=activeLesson&&activeLesson.id===l.id;
+    
+    const bg=l.gradientOverride || BG_GRADIENTS[(l.order-1)%BG_GRADIENTS.length];
+    const inlineBgStyle = l.thumbnailUrl ? `background-image: url('${l.thumbnailUrl}');` : `background: ${bg};`;
+
+    const statusColor=completed?'#22C55E':unlocked?'#FF7100':'#9CA3AF';
+    const statusText=completed?'Completed':unlocked?'In Progress':'Locked';
+    const iconSvg=completed
+      ?`<svg class="w-5 h-5" style="color:#22C55E" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`
+      :unlocked
+      ?`<svg class="w-5 h-5" style="color:#FF7100" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`
+      :`<svg class="w-4 h-4" style="color:#6B7280" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`;
+
+    return`<div class="module-banner ${unlocked?'':'locked'} ${isActive?'active-banner':''} mb-2"
+      data-id="${l.id}"
+      onclick="${unlocked?`selectLesson('${l.id}')`:''}" >
+      <div class="module-banner-bg" style="${inlineBgStyle}"></div>
+      <div class="module-banner-overlay"></div>
+      <div class="module-banner-content">
+        <div class="module-banner-icon">${iconSvg}</div>
+        <div class="module-banner-text">
+          <div class="module-banner-day">Day ${l.order}</div>
+          <div class="module-banner-title">${l.title}</div>
+          <div class="module-banner-status" style="color:${statusColor}">${statusText}</div>
+        </div>
+        ${unlocked?`<svg class="w-4 h-4 shrink-0" style="color:rgba(255,255,255,.4)" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>`:''}
+      </div>
+    </div>`;
+  }).join("");
+
+  const pagEl=document.getElementById("pagination");
+  if(pagEl){
+    if(totalPages<=1){pagEl.innerHTML='';return;}
+    const btnClass="rounded-lg border px-3 py-1.5 text-xs font-semibold transition";
+    const dots=(current,total)=>{
+      const pages=[];
+      for(let i=0;i<total;i++){
+        if(i===0||i===total-1||Math.abs(i-current)<=1) pages.push(i);
+        else if(pages[pages.length-1]!=='…') pages.push('…');
+      }
+      return pages;
+    };
+    pagEl.innerHTML=`
+      <button onclick="changePage(${page-1})" ${page===0?'disabled':''} class="${btnClass} ${page===0?'btn-ghost text-sm px-3 py-1.5 opacity-30 cursor-not-allowed':'btn-ghost text-sm px-3 py-1.5'}">
+        ← Prev
+      </button>
+      <div class="flex gap-1 flex-wrap justify-center">
+        ${dots(page,totalPages).map(p=>p==='…'
+          ?`<span class="px-2 py-1.5 text-xs text-gray-400">…</span>`
+          :`<button onclick="changePage(${p})" class="${btnClass} ${p===page?'bg-gradient-to-r from-brand to-brand-2 text-white border-transparent':'btn-ghost text-sm px-3 py-1.5'}">${p+1}</button>`
+        ).join("")}
+      </div>
+      <button onclick="changePage(${page+1})" ${page===totalPages-1?'disabled':''} class="${btnClass} ${page===totalPages-1?'btn-ghost text-sm px-3 py-1.5 opacity-30 cursor-not-allowed':'btn-ghost text-sm px-3 py-1.5'}">
+        Next →
+      </button>`;
+  }
+}
+
+window.changePage=(p)=>{
+  currentPage=p;
+  renderModuleList();
+  document.getElementById("module-list")?.scrollIntoView({behavior:"smooth",block:"nearest"});
+};
+
+window.switchTab=(sectionId)=>{
+  activeSectionId=sectionId;
+  currentPage=0;
+  SECTIONS.forEach(s=>{
+    const btn=document.getElementById("tab-"+s.id);
+    if(btn) btn.className=`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition whitespace-nowrap ${s.id===sectionId?'bg-gradient-to-r from-brand to-brand-2 text-white shadow-sm':'bg-white text-gray-500 border border-white/15 hover:border-brand/40 hover:text-brand'}`;
+  });
+  renderModuleList();
+};
+
+window.selectLesson=(lessonId)=>{
+  activeLesson=ALL_LESSONS.find(l=>l.id===lessonId);
+  document.getElementById("lesson-panel").innerHTML=lessonPanelHtml(activeLesson);
+  document.querySelectorAll(".module-banner").forEach(r=>{
+    r.classList.remove("active-banner");
+  });
+  const target=document.querySelector(`.module-banner[data-id="${lessonId}"]`);
+  if(target) target.classList.add("active-banner");
+  if(window.innerWidth<1024){
+    document.getElementById("lesson-panel")?.scrollIntoView({behavior:"smooth"});
+  }
+};
+
+function lessonPanelHtml(lesson){
+  if(!lesson)return`<div class="flex flex-col items-center justify-center h-full p-8 text-center gap-3">
+    <svg class="w-12 h-12 text-gray-200" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
+    <p class="text-gray-400 text-sm font-medium">Select a module to preview</p>
+    <p class="text-xs text-gray-300">Choose any unlocked class from the list</p>
+  </div>`;
+  const unlocked=isUnlocked(lesson);
+  const completed=isCompleted(lesson.id);
+  const section=SECTIONS.find(s=>s.id===lesson.sectionId);
+  const realQuiz=hasRealQuiz(lesson);
+
+  const panelBgStyle = lesson.thumbnailUrl 
+    ? `background-image: url('${lesson.thumbnailUrl}'); background-size: cover; background-position: center;` 
+    : `background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);`;
+
+  return`
+  <div class="p-4 lg:p-5">
+    <div class="flex items-start justify-between gap-3 mb-4">
+      <div class="min-w-0 flex-1">
+        <p class="text-[11px] font-bold uppercase tracking-wider mb-1" style="color:#FF7100">${section.title}</p>
+        <h2 class="font-bold text-white text-base leading-snug">Day ${lesson.order} — ${lesson.title}</h2>
+      </div>
+      ${unlocked
+        ?`<button onclick="navigate('lesson',{id:'${lesson.id}'})" class="shrink-0 rounded-xl bg-gradient-to-r from-brand to-brand-2 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:opacity-90 transition active:scale-95">${completed?'Revisit':'Start'}</button>`
+        :`<span class="shrink-0 rounded-xl bg-gray-100 px-3 py-2 text-xs text-gray-400">🔒 Locked</span>`}
+    </div>
+
+    <div class="relative rounded-2xl overflow-hidden aspect-video mb-4 cursor-pointer group ${unlocked?'':'opacity-50 cursor-not-allowed'}"
+      style="${panelBgStyle}"
+      onclick="${unlocked?`Maps('lesson',{id:'${lesson.id}'})`:''}" >
+      
+      ${!lesson.thumbnailUrl ? `
+      <div class="absolute inset-0 bg-gradient-to-br from-gray-900/90 via-gray-800/50 to-gray-700/30 flex flex-col justify-end p-4">
+        <p class="font-display font-bold text-white text-base leading-tight">Pronunciation</p>
+        <p class="font-display font-bold text-brand text-base leading-tight">Essentials</p>
+        <p class="text-white/50 text-xs mt-1">Speak Clearly. Be Understood.</p>
+      </div>` : `<div class="absolute inset-0 bg-black/30"></div>`}
+
+      ${unlocked
+        ?`<div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center group-hover:bg-white/35 group-hover:scale-110 transition-all">
+              <svg class="w-5 h-5 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </div>
+          </div>`
+        :`<div class="absolute inset-0 flex items-center justify-center">
+            <svg class="w-9 h-9 text-white/30" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/></svg>
+          </div>`}
+    </div>
+
+    <div class="mb-3">
+      <h3 class="font-semibold text-white text-sm mb-0.5">Pronunciation of Common Words</h3>
+      <p class="text-xs font-medium" style="color:#FF7100">Instructor: Broken English Team</p>
+    </div>
+
+    <div class="flex gap-3 mb-4">
+      <div class="panel-card flex-1 p-3">
+        <p class="text-[10px] font-bold uppercase tracking-wide mb-2" style="color:rgba(255,255,255,.5)">In This Lesson</p>
+        <ul class="space-y-1.5">
+          ${["Pronunciation patterns","Stress & intonation","Common mistakes","Real-world examples"].map(pt=>
+            `<li class="flex items-center gap-1.5 text-xs" style="color:rgba(255,255,255,.7)">
+              <span class="w-1 h-1 rounded-full shrink-0" style="background:rgba(255,113,0,.6)"></span>${pt}
+            </li>`).join("")}
+        </ul>
+      </div>
+      <div class="panel-card shrink-0 p-3 text-center min-w-[80px]">
+        <svg class="w-5 h-5 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>
+        <p class="text-[10px]" style="color:rgba(255,255,255,.5)">Duration</p>
+        <p class="text-xs font-bold text-white">18 min</p>
+        ${realQuiz?`<div class="mt-2 pt-2 border-t border-white/15">
+          <p class="text-[10px] text-gray-400">After class</p>
+          <p class="text-[10px] font-semibold text-brand">Quiz ready</p>
+        </div>`:''}
+      </div>
+    </div>
+
+    ${(()=> {
+      if(!unlocked) return`<div class="w-full rounded-xl bg-gray-100 py-3 text-center text-sm text-gray-400">Complete previous module to unlock</div>`;
+      if(!completed) return`<button onclick="navigate('lesson',{id:'${lesson.id}'})" class="w-full rounded-xl bg-gradient-to-r from-brand to-brand-2 py-3 text-sm font-bold text-white shadow-sm hover:opacity-90 transition active:scale-[.98]">Start Lesson</button>`;
+      const qLocked=currentSession?.role==="student"&&getLockedQuizzes(currentSession.studentId).includes(lesson.order);
+      if(realQuiz && !qLocked) return`<button onclick="navigate('quiz',{lessonId:'${lesson.id}'})" class="w-full rounded-xl bg-gradient-to-r from-brand to-brand-2 py-3 text-sm font-bold text-white shadow-sm hover:opacity-90 transition active:scale-[.98]">Start Quiz</button>`;
+      if(realQuiz && qLocked) return`<div class="w-full rounded-xl bg-yellow-50 border border-yellow-200 py-3 text-center text-sm font-semibold text-yellow-700">🔒 Quiz Locked by Admin</div>`;
+      return`<button onclick="navigate('lesson',{id:'${lesson.id}'})" class="w-full rounded-xl border-2 border-brand text-brand py-3 text-sm font-bold hover:bg-red-50 transition active:scale-[.98]">Revisit Lesson</button>`;
+    })()}
+  </div>`;
+}
+
+// ─── LESSON ───────────────────────────────────────────────────────────────────
+function renderLesson(lessonId){
+  const lesson=ALL_LESSONS.find(l=>l.id===lessonId);
+  if(!lesson||!isUnlocked(lesson)){
+    app.innerHTML=`<div class="min-h-screen flex items-center justify-center bg-gray-50">
+      <div class="text-center max-w-sm px-5">
+        <p class="text-red-400 text-sm mb-4">This class is not unlocked yet.</p>
+        <button onclick="navigate('dashboard')" class="rounded-xl bg-gradient-to-r from-brand to-brand-2 px-5 py-2.5 text-white text-sm font-semibold hover:opacity-90 transition">Dashboard</button>
+      </div></div>`;
+    return;
+  }
+  if(!isVideoAccessible(lesson)){
+    app.innerHTML=`<div class="min-h-screen flex items-center justify-center bg-gray-50">
+      <div class="text-center max-w-sm px-5">
+        <div class="w-14 h-14 rounded-2xl bg-yellow-50 flex items-center justify-center mx-auto mb-4">
+          <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h2 class="font-display font-bold text-gray-800 mb-2">Video Temporarily Locked</h2>
+        <p class="text-gray-400 text-sm mb-6">Your admin has temporarily locked this video. Please check back later or contact support.</p>
+        <button onclick="navigate('dashboard')" class="rounded-xl bg-gradient-to-r from-brand to-brand-2 px-5 py-2.5 text-white text-sm font-semibold hover:opacity-90 transition">Back to Dashboard</button>
+      </div></div>`;
+    return;
+  }
+  const completed=isCompleted(lesson.id);
+  const section=SECTIONS.find(s=>s.id===lesson.sectionId);
+  const realQuiz=hasRealQuiz(lesson);
+
+  if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
+  const student=loadStudents()[currentSession.studentId];
+
+  const videoMeta=loadVideos()[lesson.order]||{};
+  const videoSrc=videoMeta.src||SAMPLE_VIDEO;
+  const videoDuration=videoMeta.duration||"18 min";
+  const videoTitle=videoMeta.title||lesson.title;
+  const videoDesc=videoMeta.desc||lesson.description;
+
+  app.innerHTML=sidebarHtml("")+`
+  <div id="main-content">
+    ${topBarHtml(student)}
+    <div class="p-5 lg:p-6 max-w-4xl mx-auto w-full">
+      <button onclick="navigate('dashboard')" class="flex items-center gap-1.5 text-sm transition mb-5" style="color:rgba(255,255,255,.5)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Back to Dashboard
+      </button>
+
+      <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:#FF7100">${section.title} · Day ${lesson.order}</p>
+      <h1 class="font-bold text-white text-xl mb-1">${lesson.title}</h1>
+      ${videoTitle&&videoTitle!==lesson.title?`<p class="text-sm font-medium text-gray-500 mb-1">${videoTitle}</p>`:''}
+      <p class="text-sm mb-5" style="color:rgba(255,255,255,.6)">${videoDesc}</p>
+
+      <div class="card overflow-hidden mb-4">
+        <div id="player-wrapper" class="no-select relative aspect-video bg-gray-900">
+          <video id="video" class="w-full h-full" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline>
+            <source id="video-source" src="${QUALITIES[0].src}"/>
+          </video>
+          <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div id="watermark" class="watermark-drift select-none whitespace-nowrap rounded px-3 py-1 font-mono text-[10px] text-white/20"></div>
+          </div>
+          <div class="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between p-3">
+            <div id="quality-buttons" class="pointer-events-auto flex gap-1.5 rounded-full bg-black/50 px-2 py-1 backdrop-blur"></div>
+            <button id="fullscreen-btn" class="pointer-events-auto rounded-full bg-black/50 px-3 py-1 text-xs text-white/70 backdrop-blur hover:text-white">⛶</button>
+          </div>
+        </div>
+        <div class="px-5 py-3 flex items-center justify-between gap-3 border-t border-white/10">
+          <p class="text-xs" style="color:rgba(255,255,255,.6)">${realQuiz?`<span class="inline-block rounded-full bg-red-50 border border-red-100 px-2.5 py-0.5 text-xs font-semibold text-brand mr-2">Quiz ready</span>`:''}Quality switcher in player controls.</p>
+          <button id="mark-complete-btn" class="shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition
+            ${completed?'bg-green-50 text-green-600 border border-green-200 cursor-default':'bg-gradient-to-r from-brand to-brand-2 text-white shadow-sm hover:opacity-90'}">
+            ${completed?`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Completed`:'Mark Complete'}
+          </button>
+        </div>
+      </div>
+
+      <div id="quiz-cta"></div>
+    </div>
+  </div>`;
+
+  setupPlayer(lesson,student);
+  renderQuizCta(lesson,completed);
+}
+
+function setupPlayer(lesson,student){
+  const wrapper=document.getElementById("player-wrapper");
+  const video=document.getElementById("video");
+  const source=document.getElementById("video-source");
+
+  const videoMeta=loadVideos()[lesson.order]||{};
+  const currentSrc=videoMeta.src||SAMPLE_VIDEO;
+  if(source.src!==currentSrc){source.src=currentSrc;video.load();}
+
+  wrapper.addEventListener("contextmenu",e=>e.preventDefault());
+  video.addEventListener("dragstart",e=>e.preventDefault());
+
+  const qBtns=document.getElementById("quality-buttons");
+  qBtns.innerHTML=QUALITIES.map((q,i)=>
+    `<button data-i="${i}" class="qbtn rounded-full px-2.5 py-1 text-xs transition ${i===0?'bg-gradient-to-r from-brand to-brand-2 text-white':'text-white/70 hover:text-white'}">${q.label}</button>`
+  ).join("");
+  let qi=0;
+  qBtns.querySelectorAll(".qbtn").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const i=Number(btn.dataset.i);if(i===qi)return;
+      const t=video.currentTime,playing=!video.paused;
+      qi=i;source.src=QUALITIES[i].src;video.load();video.currentTime=t;
+      if(playing)video.play().catch(()=>{});
+      qBtns.querySelectorAll(".qbtn").forEach(b=>{
+        b.className=`qbtn rounded-full px-2.5 py-1 text-xs transition ${Number(b.dataset.i)===i?'bg-gradient-to-r from-brand to-brand-2 text-white':'text-white/70 hover:text-white'}`;
+      });
+    });
+  });
+
+  const fsBtn=document.getElementById("fullscreen-btn");
+  fsBtn.addEventListener("click",()=>{document.fullscreenElement?document.exitFullscreen():wrapper.requestFullscreen?.().catch(()=>{});});
+  document.addEventListener("fullscreenchange",()=>{fsBtn.textContent=document.fullscreenElement?"Exit ⛶":"⛶";});
+
+  const wm=document.getElementById("watermark");
+  function tick(){wm.textContent=`${student.name} \u00B7 ${student.email} \u00B7 ${new Date().toLocaleString()}`;}
+  tick();setInterval(tick,1000);
+
+  const markBtn=document.getElementById("mark-complete-btn");
+  markBtn.disabled=isCompleted(lesson.id);
+  function markComplete(){
+    if(isCompleted(lesson.id))return;
+    markLessonComplete(lesson.id); 
+    markBtn.disabled=true;
+    markBtn.innerHTML=`<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Completed`;
+    markBtn.className="shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-green-50 text-green-600 border border-green-200 cursor-default transition";
+    renderQuizCta(lesson, true);
+
+    if(currentSession?.role==="student"){
+      const students=loadStudents();
+      const s=students[currentSession.studentId];
+      if(s){
+        const unlocked=ALL_LESSONS.filter(l=>isUnlocked(l));
+        const allDone=unlocked.every(l=>isCompleted(l.id));
+        if(allDone&&unlocked.length>0){
+          if(!s.completedAt){
+            s.completedAt=new Date().toISOString();
+            students[s.id].completedAt=s.completedAt;
+            saveStudents(students);
+          }
+          const banner=document.createElement("div");
+          banner.className="fixed inset-x-0 top-16 z-50 mx-4 rounded-2xl bg-green-50 border border-green-200 shadow-xl p-5 flex items-center gap-4";
+          banner.innerHTML=`<svg class="w-8 h-8 text-green-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div class="flex-1 min-w-0">
+              <p class="font-display font-bold text-green-800">Course Complete!</p>
+              <p class="text-xs text-green-600 mt-0.5">Congratulations! You will be automatically logged out after 24 hours.</p>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-green-400 hover:text-green-600 shrink-0 text-xl leading-none">&#215;</button>`;
+          document.body.appendChild(banner);
+          if(!localStorage.getItem("be_logout_"+s.id)){
+            localStorage.setItem("be_logout_"+s.id,String(Date.now()+24*60*60*1000));
+          }
+        }
+      }
+    }
+  }
+  video.addEventListener("ended",markComplete);
+  markBtn.addEventListener("click",markComplete);
+}
+
+function renderQuizCta(lesson,completed){
+  const el=document.getElementById("quiz-cta");
+  if(!hasRealQuiz(lesson)){el.innerHTML='';return;}
+  const lessonDone=completed||isCompleted(lesson.id);
+  const quizLocked=currentSession?.role==="student"&&getLockedQuizzes(currentSession.studentId).includes(lesson.order);
+
+  if(!lessonDone){
+    el.innerHTML=`<div class="panel-card p-5 flex items-center justify-between gap-4 opacity-60">
+      <div>
+        <p class="font-semibold" style="color:rgba(255,255,255,.5)">Class Quiz</p>
+        <p class="text-xs mt-0.5" style="color:rgba(255,255,255,.5)">Complete this lesson to unlock the quiz.</p>
+      </div>
+      <span class="shrink-0 rounded-xl bg-gray-100 px-4 py-2 text-sm text-gray-400">🔒 Locked</span>
+    </div>`;
+  } else if(quizLocked){
+    el.innerHTML=`<div class="panel-card p-5 flex items-center justify-between gap-4">
+      <div>
+        <p class="font-semibold text-white text-sm">Class Quiz</p>
+        <p class="text-xs text-yellow-600 mt-0.5">Quiz temporarily locked by your admin.</p>
+      </div>
+      <span class="shrink-0 rounded-xl bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm font-semibold text-yellow-700">🔒 Admin Locked</span>
+    </div>`;
+  } else {
+    el.innerHTML=`<div class="panel-card p-5 flex items-center justify-between gap-4">
+      <div>
+        <p class="font-semibold text-white text-sm">Class Quiz</p>
+        <p class="text-xs mt-0.5" style="color:rgba(255,255,255,.5)">Lesson complete — test what you learned.</p>
+      </div>
+      <button onclick="navigate('quiz',{lessonId:'${lesson.id}'})" class="shrink-0 rounded-xl bg-gradient-to-r from-brand to-brand-2 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:opacity-90 transition">Start Quiz</button>
+    </div>`;
+  }
+}
+
+// ─── QUIZ ─────────────────────────────────────────────────────────────────────
+function renderQuiz(lessonId){
+  const lesson=ALL_LESSONS.find(l=>l.id===lessonId);
+  if(!lesson||!isCompleted(lesson.id)){navigate("lesson",{id:lessonId});return;}
+  if(currentSession?.role==="student"){
+    const lockedQuizzes=getLockedQuizzes(currentSession.studentId);
+    if(lockedQuizzes.includes(lesson.order)){
+      navigate("lesson",{id:lessonId});return;
+    }
+  }
+  if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
+  const student=loadStudents()[currentSession.studentId];
+
+  const QUESTIONS=getQuiz(lesson);
+  const total=QUESTIONS.length;
+  let current=0,correct=0,answered=false;
+
+  app.innerHTML=sidebarHtml("")+`
+  <div id="main-content">
+    ${topBarHtml(student)}
+    <div class="p-5 lg:p-6 max-w-2xl mx-auto w-full">
+      <button onclick="navigate('lesson',{id:'${lessonId}'})" class="flex items-center gap-1.5 text-sm transition mb-5" style="color:rgba(255,255,255,.5)">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        Back to Lesson
+      </button>
+      <p class="text-xs font-semibold uppercase tracking-wider mb-1" style="color:#FF7100">${"Day "+lesson.order+" · "+lesson.title}</p>
+      <h1 class="font-bold text-white text-xl mb-6">Class Quiz</h1>
+
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <span id="q-counter" class="text-xs font-semibold" style="color:rgba(255,255,255,.6)"></span>
+          <span id="q-score" class="text-xs font-semibold text-gray-400"></span>
+        </div>
+        <div class="prog-bar"><div id="progress-fill" class="prog-fill" style="width:0%"></div></div>
+      </div>
+      <div id="question-slot"></div>
+    </div>
+  </div>`;
+
+  function updateProgress(){
+    document.getElementById("q-counter").textContent=`Question ${current+1} of ${total}`;
+    document.getElementById("q-score").textContent=current>0?`${correct} correct`:"";
+    document.getElementById("progress-fill").style.width=`${(current/total)*100}%`;
+  }
+
+  function showQuestion(idx){
+    answered=false;
+    const q=QUESTIONS[idx];
+    document.getElementById("question-slot").innerHTML=`
+      <div class="glass-white rounded-2xl p-6">
+        ${q.hint?`<div class="flex justify-end mb-3">
+          <button onclick="document.getElementById('hint-box').classList.toggle('hidden')" class="rounded-full border border-white/15 px-3 py-1 text-xs text-gray-400 hover:border-brand/40 hover:text-brand transition">Hint</button>
+        </div>
+        <div id="hint-box" class="hidden mb-4 rounded-xl bg-orange-50 border border-orange-100 px-4 py-3 text-xs text-orange-600">${q.hint}</div>`:""}
+        <p class="text-gray-800 font-semibold text-base mb-5 leading-relaxed">${q.prompt}</p>
+        <div id="options-list" class="space-y-2.5">
+          ${q.options.map((opt,oi)=>`
+            <button id="opt-${oi}" onclick="pickAnswer(${oi})" class="quiz-opt">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-white/15 font-semibold text-xs text-gray-400">${String.fromCharCode(65+oi)}</span>
+              <span class="leading-snug">${opt}</span>
+            </button>`).join("")}
+        </div>
+        <div id="feedback-box" class="hidden mt-4"></div>
+        <div id="next-wrap" class="hidden mt-5">
+          <button onclick="nextQuestion()" class="w-full rounded-xl bg-gradient-to-r from-brand to-brand-2 py-3.5 text-sm font-bold text-white shadow-sm hover:opacity-90 transition">
+            ${idx<total-1?"Next Question →":"See Results"}
+          </button>
+        </div>
+      </div>`;
+
+    updateProgress();
+
+    window.pickAnswer=(oi)=>{
+      if(answered)return;answered=true;
+      const isCorrect=oi===q.answer;if(isCorrect)correct++;
+      q.options.forEach((_,i)=>{
+        const btn=document.getElementById("opt-"+i);btn.disabled=true;
+        if(i===q.answer){btn.classList.add("correct");btn.querySelector("span:first-child").className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-green-500 bg-green-500 font-semibold text-xs text-white";}
+        else if(i===oi){btn.classList.add("wrong");btn.querySelector("span:first-child").className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-red-500 bg-red-500 font-semibold text-xs text-white";}
+        else{btn.classList.add("dim");}
+      });
+      const fb=document.getElementById("feedback-box");fb.classList.remove("hidden");
+      fb.innerHTML=isCorrect
+        ?`<div class="flex items-center gap-3 rounded-xl bg-green-50 border border-green-200 px-4 py-3"><svg class="w-5 h-5 text-green-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p class="text-sm font-semibold text-green-700">Correct! Well done.</p></div>`
+        :`<div class="flex items-start gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3"><svg class="w-5 h-5 text-red-400 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><div><p class="text-sm font-semibold text-red-700">Incorrect</p><p class="text-xs text-red-500 mt-0.5">Answer: ${String.fromCharCode(65+q.answer)}) ${q.options[q.answer]}</p></div></div>`;
+      document.getElementById("next-wrap").classList.remove("hidden");
+    };
+  }
+
+  window.nextQuestion=()=>{
+    current++;
+    if(current<total){showQuestion(current);window.scrollTo(0,0);}
+    else showResults();
+  };
+
+  function showResults(){
+    const score=Math.round((correct/total)*100);const passed=score>=70;
+    document.getElementById("progress-fill").style.width="100%";
+    document.getElementById("q-counter").textContent="Complete";
+    document.getElementById("q-score").textContent=`${correct}/${total} correct`;
+    document.getElementById("question-slot").innerHTML=`
+      <div class="lg p-8 text-center">
+        <div class="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center ${passed?'bg-green-50 border-4 border-green-200':'bg-red-50 border-4 border-red-200'}">
+          <p class="font-display font-bold text-2xl ${passed?'text-green-600':'text-brand'}">${score}%</p>
+        </div>
+        <p class="font-bold text-white text-xl mb-1">${passed?'Passed! 🎉':'Not quite'}</p>
+        <p class="text-gray-400 text-sm mb-6">${correct} of ${total} correct &middot; pass mark 70%</p>
+        <div class="flex justify-center gap-8 mb-8 pb-6 border-b border-white/10">
+          <div class="text-center"><p class="font-display font-bold text-2xl text-green-500">${correct}</p><p class="text-xs mt-1 uppercase tracking-wider font-semibold" style="color:rgba(255,255,255,.5)">Correct</p></div>
+          <div class="w-px bg-gray-100"></div>
+          <div class="text-center"><p class="font-display font-bold text-2xl text-red-400">${total-correct}</p><p class="text-xs mt-1 uppercase tracking-wider font-semibold" style="color:rgba(255,255,255,.5)">Wrong</p></div>
+        </div>
+        <div class="flex flex-col items-center gap-3">
