@@ -2540,10 +2540,11 @@ function renderLesson(lessonId){
               return`<div style="position:relative;width:100%;height:100%;background:#000">
                 <iframe
                   id="bunny-player"
-                  style="width:100%;height:100%;border:none;pointer-events:auto"
+                  style="width:100%;height:100%;border:none"
                   src="${bunnyUrl}"
-                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
-                  allowfullscreen>
+                  loading="lazy"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"
+                  allowfullscreen="true">
                 </iframe>
               </div>`;
             }
@@ -2617,11 +2618,13 @@ function getYouTubeId(url){
 // Convert any Bunny.net URL to embed format
 function getBunnyEmbedUrl(url){
   if(!url)return null;
-  // Already an embed URL
-  if(url.includes('iframe.mediadelivery.net/embed'))return url;
-  // Player URL: https://player.mediadelivery.net/play/LIBRARY/VIDEO_ID
-  const m=url.match(/(?:player\.mediadelivery\.net\/play|iframe\.mediadelivery\.net\/embed)\/(\d+)\/([a-f0-9-]+)/i);
-  if(m)return`https://iframe.mediadelivery.net/embed/${m[1]}/${m[2]}?autoplay=false&preload=true`;
+  if(!url.includes('mediadelivery.net'))return null;
+  // Extract library ID and video ID from any Bunny URL format
+  const m=url.match(/\/(\d+)\/([a-f0-9-]{36})/i);
+  if(m){
+    // Use iframe.mediadelivery.net with required params
+    return`https://iframe.mediadelivery.net/embed/${m[1]}/${m[2]}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
+  }
   return null;
 }
 
