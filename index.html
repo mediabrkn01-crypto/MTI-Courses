@@ -318,7 +318,91 @@
   .adm-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s;box-shadow:0 1px 4px rgba(0,0,0,0.3);}
   .adm-track.on .adm-thumb{transform:translateX(18px);}
 
-  /* ── MISC ── */
+  /* ── MAGNIFICATION HOVER — all interactive rows & cards ── */
+
+  /* Module banners — already have transform, enhance it */
+  .module-banner:not(.locked):hover{
+    transform:scale(1.028) translateY(-2px);
+  }
+
+  /* My Courses lesson rows */
+  .course-row{
+    transition:transform .2s cubic-bezier(.34,1.3,.64,1), background .15s;
+  }
+  .course-row:hover{
+    transform:scale(1.018) translateX(4px);
+    background:rgba(255,255,255,0.07) !important;
+    border-radius:14px;
+  }
+
+  /* Quiz list rows */
+  .quiz-row{
+    transition:transform .2s cubic-bezier(.34,1.3,.64,1), background .15s;
+  }
+  .quiz-row:hover{
+    transform:scale(1.018) translateX(4px);
+    background:rgba(255,255,255,0.07) !important;
+    border-radius:14px;
+  }
+
+  /* Admin table rows */
+  .admin-table tbody tr{
+    transition:transform .18s cubic-bezier(.34,1.3,.64,1), background .15s;
+  }
+  .admin-table tbody tr:hover{
+    transform:scale(1.012) translateX(3px);
+    background:rgba(255,255,255,0.06) !important;
+  }
+
+  /* Admin class cards (manage student grid) */
+  .class-card{
+    transition:transform .2s cubic-bezier(.34,1.3,.64,1), box-shadow .2s;
+  }
+  .class-card:hover{
+    transform:scale(1.06) translateY(-3px);
+    box-shadow:inset 0 2px 0 rgba(255,255,255,0.4), 0 12px 32px rgba(0,0,0,0.45) !important;
+    z-index:2;position:relative;
+  }
+
+  /* .lg glass panels — subtle lift on hover */
+  .lg{
+    transition:transform .2s cubic-bezier(.34,1.3,.64,1), box-shadow .2s;
+  }
+  .lg:hover{
+    transform:translateY(-2px);
+    box-shadow:
+      inset 0 2px 0 rgba(255,255,255,0.85),
+      inset 1px 0 0 rgba(255,255,255,0.22),
+      inset 0 -1.5px 0 rgba(0,0,0,0.15),
+      0 16px 48px rgba(0,0,0,0.45),
+      0 4px 14px rgba(0,0,0,0.25),
+      0 0 0 0.5px rgba(255,255,255,0.18) !important;
+  }
+
+  /* Buttons magnify on hover */
+  .btn-primary:hover{transform:scale(1.03) translateY(-1px) !important;}
+  .btn-ghost:hover{transform:scale(1.03) translateY(-1px) !important;}
+  .tab-glass:hover{transform:scale(1.05) !important;}
+  .tab-glass.active:hover{transform:scale(1.05) !important;}
+
+  /* Quiz options */
+  .quiz-opt:hover{transform:scale(1.02) translateX(5px) !important;}
+
+  /* Nav links */
+  .nav-link:hover{transform:scale(1.04) translateX(3px);}
+  .nav-link.active:hover{transform:scale(1.02) translateX(2px);}
+
+  /* Pill badges — subtle pop */
+  .pill{transition:transform .18s cubic-bezier(.34,1.3,.64,1);}
+  .pill:hover{transform:scale(1.12);}
+
+  /* Sidebar help card */
+  #sidebar .lg:hover{transform:scale(1.04) !important;}
+
+  /* Panel cards in lesson preview */
+  .panel-card{transition:transform .2s cubic-bezier(.34,1.3,.64,1), box-shadow .2s;}
+  .panel-card:hover{transform:scale(1.04) translateY(-2px);}
+
   @keyframes drift{0%{transform:translate(0,0);}25%{transform:translate(8vw,4vh);}50%{transform:translate(-4vw,10vh);}75%{transform:translate(6vw,-6vh);}100%{transform:translate(0,0);}}
   .watermark-drift{animation:drift 30s ease-in-out infinite;}
   .no-select{user-select:none;-webkit-user-select:none;}
@@ -373,11 +457,11 @@ const COLOR_GRAD_DIR = "135deg";
 //   • Use that URL (ending in .jpg or .png) below
 //
 const MODULE_IMAGES = {
-   1: "WhatsApp Image 2026-06-25 at 12.12.54 PM (1).jpeg",    // Day 1  — Foundational Phonetics
-   2: "WhatsApp Image 2026-06-25 at 12.12.54 PM (2).jpeg",    // Day 2  — ED Endings
-   3: "WhatsApp Image 2026-06-25 at 12.12.54 PM.jpeg",    // Day 3  — Pluralization
-   4: "WhatsApp Image 2026-06-25 at 12.12.54 PM (1).jpeg",    // Day 4  — Age Endings
-   5: "WhatsApp Image 2026-06-25 at 12.12.54 PM (2).jpeg",    // Day 5  — Short Vowels
+   1: "",    // Day 1  — Foundational Phonetics
+   2: "",    // Day 2  — ED Endings
+   3: "",    // Day 3  — Pluralization
+   4: "",    // Day 4  — Age Endings
+   5: "",    // Day 5  — Short Vowels
    6: "",    // Day 6  — Short /ɪ/ vs Long /iː/
    7: "",    // Day 7  — Consonant Clusters
    8: "",    // Day 8  — Word Stress
@@ -1410,23 +1494,94 @@ function renderAdminClasses(){
     <h1 style="font-size:22px;font-weight:700;color:#fff;margin-bottom:4px">Classes & Videos</h1>
     <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-bottom:20px">Set video URLs, titles and durations for each class.</p>
 
-    <div id="video-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:16px">
-      <div class="lg" style="width:100%;max-width:480px;padding:28px">
-        <h2 style="font-size:18px;font-weight:700;color:#fff;margin-bottom:20px">Edit Class Video</h2>
+    <!-- Lesson Panel Edit Modal -->
+    <div id="video-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:flex-start;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);padding:16px;overflow-y:auto">
+      <div class="lg" style="width:100%;max-width:720px;margin:24px auto">
+        <!-- Header -->
+        <div style="padding:22px 24px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div>
+            <h2 style="font-size:18px;font-weight:700;color:#fff">Edit Class <span id="vm-class-label" style="color:var(--brand-2)"></span></h2>
+            <p style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:3px">These appear in the lesson preview panel and on the lesson page.</p>
+          </div>
+          <button onclick="document.getElementById('video-modal').style.display='none'" style="width:32px;height:32px;border-radius:99px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+        </div>
         <input id="vm-order" type="hidden"/>
-        <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px">
-          ${[['vm-title','Video Title','text','e.g. Pronunciation Essentials'],['vm-src','Video URL (MP4)','text','https://...'],['vm-dur','Duration','text','e.g. 18 min']].map(([id,lbl,type,ph])=>`
-          <div>
-            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px">${lbl}</label>
-            <input id="${id}" type="${type}" placeholder="${ph}" class="glass-input"/>
-          </div>`).join('')}
-          <div>
-            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:7px">Description</label>
-            <textarea id="vm-desc" rows="2" placeholder="What students will learn..." class="glass-input" style="resize:none"></textarea>
+
+        <div style="display:flex;gap:20px;padding:0 24px 22px;flex-wrap:wrap">
+          <!-- LEFT: form fields -->
+          <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:13px">
+
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px">
+              <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin-bottom:10px">📋 Lesson Panel Info</p>
+
+              <div style="margin-bottom:11px">
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Panel Title</label>
+                <input id="vm-panelTitle" type="text" placeholder="e.g. Pronunciation Essentials" class="glass-input" oninput="updateVmPreview()"/>
+              </div>
+
+              <div style="margin-bottom:11px">
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Instructor Name</label>
+                <input id="vm-instructor" type="text" placeholder="e.g. Broken English Team" class="glass-input" oninput="updateVmPreview()"/>
+              </div>
+
+              <div style="margin-bottom:11px">
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Duration</label>
+                <input id="vm-dur" type="text" placeholder="e.g. 18 min" class="glass-input" oninput="updateVmPreview()"/>
+              </div>
+
+              <div>
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Bullet Points <span style="color:rgba(255,255,255,0.3);font-weight:400;text-transform:none;font-size:9px">— one per line</span></label>
+                <textarea id="vm-bullets" rows="4" placeholder="Pronunciation patterns&#10;Stress & intonation&#10;Common mistakes&#10;Real-world examples" class="glass-input" style="resize:vertical" oninput="updateVmPreview()"></textarea>
+              </div>
+            </div>
+
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px">
+              <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin-bottom:10px">🎬 Video & Media</p>
+
+              <div style="margin-bottom:11px">
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Video URL (MP4)</label>
+                <input id="vm-src" type="text" placeholder="https://..." class="glass-input"/>
+              </div>
+
+              <div style="margin-bottom:11px">
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Thumbnail / Panel Image URL</label>
+                <input id="vm-thumb" type="text" placeholder="https://i.imgur.com/..." class="glass-input" oninput="updateVmPreview()"/>
+                <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px">Upload to <a href="https://imgur.com" target="_blank" style="color:var(--brand-2)">imgur.com</a> → right-click image → Copy image address</p>
+              </div>
+
+              <div>
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Lesson Page Description</label>
+                <textarea id="vm-desc" rows="2" placeholder="Short description shown on the lesson page..." class="glass-input" style="resize:none"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT: live preview -->
+          <div style="width:210px;flex-shrink:0">
+            <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:10px">👁 Live Preview</p>
+            <div id="vm-preview" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:16px;overflow:hidden">
+              <div style="height:110px;background:linear-gradient(135deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center">
+                <svg style="width:28px;height:28px;color:rgba(255,255,255,0.2)" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+              <div style="padding:12px">
+                <p id="pvw-title" style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px">—</p>
+                <p id="pvw-instructor" style="font-size:10px;color:var(--brand-2);margin-bottom:10px">Instructor: —</p>
+                <div style="background:rgba(255,255,255,0.07);border-radius:10px;padding:10px;margin-bottom:8px">
+                  <p style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">In This Lesson</p>
+                  <div id="pvw-bullets" style="display:flex;flex-direction:column;gap:4px"></div>
+                </div>
+                <div style="background:rgba(255,255,255,0.07);border-radius:10px;padding:10px;text-align:center">
+                  <p style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:2px">Duration</p>
+                  <p id="pvw-dur" style="font-size:13px;font-weight:700;color:#fff">—</p>
+                </div>
+              </div>
+            </div>
+            <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px;text-align:center">Updates as you type</p>
           </div>
         </div>
-        <div style="display:flex;gap:10px">
-          <button onclick="saveVideo()" class="btn-primary" style="flex:1;padding:12px;font-size:14px">Save</button>
+
+        <div style="padding:0 24px 22px;display:flex;gap:10px">
+          <button onclick="saveVideo()" class="btn-primary" style="flex:1;padding:12px;font-size:14px">Save Changes</button>
           <button onclick="document.getElementById('video-modal').style.display='none'" class="btn-ghost" style="flex:1;padding:12px;font-size:14px">Cancel</button>
         </div>
       </div>
@@ -1468,18 +1623,57 @@ function renderAdminClasses(){
 
   window.openVideoModal=(order)=>{
     const v=loadVideos()[order]||{};
+    const lesson=ALL_LESSONS.find(l=>l.order===order);
     document.getElementById('vm-order').value=order;
-    document.getElementById('vm-title').value=v.title||'';
+    document.getElementById('vm-class-label').textContent=`Day ${order} — ${lesson?.title||''}`;
+    document.getElementById('vm-panelTitle').value=v.panelTitle||'';
+    document.getElementById('vm-instructor').value=v.instructor||'';
     document.getElementById('vm-src').value=v.src||'';
     document.getElementById('vm-dur').value=v.duration||'';
+    document.getElementById('vm-bullets').value=v.bullets||'';
+    document.getElementById('vm-thumb').value=v.thumb||'';
     document.getElementById('vm-desc').value=v.desc||'';
     document.getElementById('video-modal').style.display='flex';
+    updateVmPreview();
+  };
+  window.updateVmPreview=()=>{
+    const title=document.getElementById('vm-panelTitle').value||'Panel Title';
+    const instr=document.getElementById('vm-instructor').value||'Broken English Team';
+    const dur=document.getElementById('vm-dur').value||'18 min';
+    const bulletsRaw=document.getElementById('vm-bullets').value||'Pronunciation patterns\nStress & intonation\nCommon mistakes\nReal-world examples';
+    const thumb=document.getElementById('vm-thumb').value;
+    const bullets=bulletsRaw.split('\n').filter(b=>b.trim()).slice(0,5);
+    document.getElementById('pvw-title').textContent=title;
+    document.getElementById('pvw-instructor').textContent='Instructor: '+instr;
+    document.getElementById('pvw-dur').textContent=dur;
+    document.getElementById('pvw-bullets').innerHTML=bullets.map(b=>
+      `<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(255,255,255,0.7)">
+        <span style="width:4px;height:4px;border-radius:50%;background:var(--brand-2);flex-shrink:0"></span>${b}
+      </div>`).join('');
+    // Update preview thumbnail
+    const previewBg=document.querySelector('#vm-preview>div:first-child');
+    if(previewBg){
+      if(thumb){previewBg.style.backgroundImage=`url('${thumb}')`;previewBg.style.backgroundSize='cover';previewBg.style.backgroundPosition='center';}
+      else{previewBg.style.backgroundImage='';previewBg.style.background='linear-gradient(135deg,#1a1a2e,#16213e)';}
+    }
   };
   window.saveVideo=()=>{
     const order=Number(document.getElementById('vm-order').value);
     const vids=loadVideos();
-    vids[order]={title:document.getElementById('vm-title').value.trim(),src:document.getElementById('vm-src').value.trim(),duration:document.getElementById('vm-dur').value.trim(),desc:document.getElementById('vm-desc').value.trim()};
-    saveVideos(vids);document.getElementById('video-modal').style.display='none';renderAdminClasses();
+    vids[order]={
+      panelTitle: document.getElementById('vm-panelTitle').value.trim(),
+      instructor: document.getElementById('vm-instructor').value.trim(),
+      src:        document.getElementById('vm-src').value.trim(),
+      duration:   document.getElementById('vm-dur').value.trim(),
+      bullets:    document.getElementById('vm-bullets').value.trim(),
+      thumb:      document.getElementById('vm-thumb').value.trim(),
+      desc:       document.getElementById('vm-desc').value.trim(),
+      // keep legacy title field for lesson page compat
+      title:      document.getElementById('vm-panelTitle').value.trim(),
+    };
+    saveVideos(vids);
+    document.getElementById('video-modal').style.display='none';
+    renderAdminClasses();
   };
 }
 
@@ -1595,7 +1789,7 @@ function renderMyCourses(){
               const unlocked=isUnlocked(l);
               const completed=isCompleted(l.id);
               const rq=hasRealQuiz(l);
-              return`<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${unlocked?'cursor:pointer':'opacity:0.4;cursor:not-allowed'};transition:background .15s"
+              return`<div class="course-row" style="display:flex;align-items:center;gap:14px;padding:14px 18px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${unlocked?'cursor:pointer':'opacity:0.4;cursor:not-allowed'}"
                 onclick="${unlocked?`navigate('lesson',{id:'${l.id}'})`:''}">
                 <div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${completed?'background:rgba(34,197,94,0.2);border:1px solid rgba(34,197,94,0.35)':unlocked?'background:rgba(232,52,26,0.15);border:1px solid rgba(232,52,26,0.25)':'background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12)'}">
                   ${completed
@@ -1663,7 +1857,7 @@ function renderQuizzes(){
           const qAdminLocked=quizLockedList.includes(l.order);
           const quizReady=unlocked&&lessonDone&&!qAdminLocked;
           const section=SECTIONS.find(s=>s.id===l.sectionId);
-          return`<div style="display:flex;align-items:center;gap:14px;padding:16px 20px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${quizReady?'cursor:pointer':'cursor:default'};transition:background .15s;${!quizReady?'opacity:0.55':''}"
+          return`<div class="quiz-row" style="display:flex;align-items:center;gap:14px;padding:16px 20px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${quizReady?'cursor:pointer':'cursor:default'};${!quizReady?'opacity:0.55':''}"
             onclick="${quizReady?`navigate('quiz',{lessonId:'${l.id}'})`:''}">
             <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${quizReady?'background:linear-gradient(135deg,#E8341A,#FF7100);box-shadow:inset 0 2px 0 rgba(255,255,255,0.25),0 4px 12px rgba(232,52,26,0.4)':qAdminLocked&&lessonDone?'background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.25)':'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)'}">
               <svg style="width:18px;height:18px;color:${quizReady?'#fff':qAdminLocked&&lessonDone?'#facc15':'rgba(255,255,255,0.4)'}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -2069,9 +2263,16 @@ function lessonPanelHtml(lesson){
   const section=SECTIONS.find(s=>s.id===lesson.sectionId);
   const realQuiz=hasRealQuiz(lesson);
 
-  const panelBgStyle = lesson.thumbnailUrl 
-    ? `background-image: url('${lesson.thumbnailUrl}'); background-size: cover; background-position: center;` 
-    : `background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);`;
+  // Read ALL fields from admin-editable videoMeta
+  const vm=loadVideos()[lesson.order]||{};
+  const panelTitle   = vm.panelTitle   || lesson.title;
+  const instructor   = vm.instructor   || "Broken English Team";
+  const duration     = vm.duration     || "18 min";
+  const bullets      = vm.bullets      ? vm.bullets.split("\n").filter(b=>b.trim()) : ["Pronunciation patterns","Stress & intonation","Common mistakes","Real-world examples"];
+  const thumbUrl     = vm.thumb        || lesson.thumbnailUrl || "";
+  const panelBgStyle = thumbUrl
+    ? `background-image:url('${thumbUrl}');background-size:cover;background-position:center;`
+    : `background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);`;
 
   return`
   <div class="p-4 lg:p-5">
@@ -2087,15 +2288,12 @@ function lessonPanelHtml(lesson){
 
     <div class="relative rounded-2xl overflow-hidden aspect-video mb-4 cursor-pointer group ${unlocked?'':'opacity-50 cursor-not-allowed'}"
       style="${panelBgStyle}"
-      onclick="${unlocked?`navigate('lesson',{id:'${lesson.id}'})`:''}" >
-      
-      ${!lesson.thumbnailUrl ? `
+      onclick="${unlocked?`navigate('lesson',{id:'${lesson.id}'})`:''}">
+      ${!thumbUrl?`
       <div class="absolute inset-0 bg-gradient-to-br from-gray-900/90 via-gray-800/50 to-gray-700/30 flex flex-col justify-end p-4">
-        <p class="font-display font-bold text-white text-base leading-tight">Pronunciation</p>
-        <p class="font-display font-bold text-brand text-base leading-tight">Essentials</p>
-        <p class="text-white/50 text-xs mt-1">Speak Clearly. Be Understood.</p>
-      </div>` : `<div class="absolute inset-0 bg-black/30"></div>`}
-
+        <p class="font-display font-bold text-white text-base leading-tight">${panelTitle}</p>
+        <p class="text-white/50 text-xs mt-1">${instructor}</p>
+      </div>`:`<div class="absolute inset-0 bg-black/30"></div>`}
       ${unlocked
         ?`<div class="absolute inset-0 flex items-center justify-center">
             <div class="w-11 h-11 rounded-full bg-white/20 backdrop-blur flex items-center justify-center group-hover:bg-white/35 group-hover:scale-110 transition-all">
@@ -2108,15 +2306,15 @@ function lessonPanelHtml(lesson){
     </div>
 
     <div class="mb-3">
-      <h3 class="font-semibold text-white text-sm mb-0.5">Pronunciation of Common Words</h3>
-      <p class="text-xs font-medium" style="color:#FF7100">Instructor: Broken English Team</p>
+      <h3 class="font-semibold text-white text-sm mb-0.5">${panelTitle}</h3>
+      <p class="text-xs font-medium" style="color:#FF7100">Instructor: ${instructor}</p>
     </div>
 
     <div class="flex gap-3 mb-4">
       <div class="panel-card flex-1 p-3">
         <p class="text-[10px] font-bold uppercase tracking-wide mb-2" style="color:rgba(255,255,255,.5)">In This Lesson</p>
         <ul class="space-y-1.5">
-          ${["Pronunciation patterns","Stress & intonation","Common mistakes","Real-world examples"].map(pt=>
+          ${bullets.map(pt=>
             `<li class="flex items-center gap-1.5 text-xs" style="color:rgba(255,255,255,.7)">
               <span class="w-1 h-1 rounded-full shrink-0" style="background:rgba(255,113,0,.6)"></span>${pt}
             </li>`).join("")}
@@ -2125,7 +2323,7 @@ function lessonPanelHtml(lesson){
       <div class="panel-card shrink-0 p-3 text-center min-w-[80px]">
         <svg class="w-5 h-5 text-gray-400 mx-auto mb-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 6v6l4 2"/></svg>
         <p class="text-[10px]" style="color:rgba(255,255,255,.5)">Duration</p>
-        <p class="text-xs font-bold text-white">18 min</p>
+        <p class="text-xs font-bold text-white">${duration}</p>
         ${realQuiz?`<div class="mt-2 pt-2 border-t border-white/15">
           <p class="text-[10px] text-gray-400">After class</p>
           <p class="text-[10px] font-semibold text-brand">Quiz ready</p>
@@ -2143,6 +2341,8 @@ function lessonPanelHtml(lesson){
     })()}
   </div>`;
 }
+
+
 
 // ─── LESSON ───────────────────────────────────────────────────────────────────
 function renderLesson(lessonId){
