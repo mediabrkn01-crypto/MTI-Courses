@@ -521,16 +521,16 @@ const SITE_TAGLINE  = "Speak Better. Live Better."; // shown under logo
 //   3. Save and push — done!
 //
 // LOGO  (shown in sidebar, login page, admin bar)
-const LOGO_BASE64 = "Broken English Final Logo-01 (1).png";
+const LOGO_BASE64 = "logo.png";
 //  ↑ change this to your logo filename  e.g. "my-logo.png"
 
 // FAVICON  (tiny icon in the browser tab)
-const FAVICON_BASE64 = "Broken English Final Logo-02 (1).png";
+const FAVICON_BASE64 = "favicon.png";
 //  ↑ change this to your favicon filename  e.g. "favicon.png"
 
 // ── 2. ADMIN LOGIN ────────────────────────────────────────────────────────────
 const ADMIN_EMAIL    = "admin@brokenenglish.com"; // ← your admin email
-const ADMIN_PASSWORD = "1234";               // ← your admin password
+const ADMIN_PASSWORD = "admin1234";               // ← your admin password
 
 // ── 3. COURSE DRIP SETTING ───────────────────────────────────────────────────
 const DAILY_UNLOCK_LIMIT = 3; // new classes unlocked per student per day
@@ -2523,6 +2523,7 @@ function renderLesson(lessonId){
         <div id="player-wrapper" class="no-select relative aspect-video bg-gray-900">
           ${(()=>{
             const ytId=getYouTubeId(videoSrc);
+            const bunnyUrl=getBunnyEmbedUrl(videoSrc);
             if(ytId){
               return`<div style="position:relative;width:100%;height:100%;background:#000">
                 <iframe
@@ -2532,6 +2533,17 @@ function renderLesson(lessonId){
                   allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   allowfullscreen
                   referrerpolicy="strict-origin">
+                </iframe>
+              </div>`;
+            }
+            if(bunnyUrl){
+              return`<div style="position:relative;width:100%;height:100%;background:#000">
+                <iframe
+                  id="bunny-player"
+                  style="width:100%;height:100%;border:none;pointer-events:auto"
+                  src="${bunnyUrl}"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
+                  allowfullscreen>
                 </iframe>
               </div>`;
             }
@@ -2602,13 +2614,24 @@ function getYouTubeId(url){
   return null;
 }
 
+// Convert any Bunny.net URL to embed format
+function getBunnyEmbedUrl(url){
+  if(!url)return null;
+  // Already an embed URL
+  if(url.includes('iframe.mediadelivery.net/embed'))return url;
+  // Player URL: https://player.mediadelivery.net/play/LIBRARY/VIDEO_ID
+  const m=url.match(/(?:player\.mediadelivery\.net\/play|iframe\.mediadelivery\.net\/embed)\/(\d+)\/([a-f0-9-]+)/i);
+  if(m)return`https://iframe.mediadelivery.net/embed/${m[1]}/${m[2]}?autoplay=false&preload=true`;
+  return null;
+}
+
 function setupPlayer(lesson,student){
   const wrapper=document.getElementById("player-wrapper");
   const videoMeta=loadVideos()[lesson.order]||{};
   const realSrc=videoMeta.src||SAMPLE_VIDEO;
 
-  // If YouTube — iframe handles playback, watermark overlay handles protection
-  if(getYouTubeId(realSrc)){
+  // If YouTube or Bunny.net — iframe handles playback, watermark overlay handles protection
+  if(getYouTubeId(realSrc)||getBunnyEmbedUrl(realSrc)){
     wrapper.addEventListener("contextmenu",e=>e.preventDefault());
     return;
   }
