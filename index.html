@@ -2397,7 +2397,7 @@ function renderLesson(lessonId){
       <div class="card overflow-hidden mb-4">
         <div id="player-wrapper" class="no-select relative aspect-video bg-gray-900">
           <video id="video" class="w-full h-full" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline>
-            <source id="video-source" src="${QUALITIES[0].src}"/>
+            <source id="video-source" src="${videoSrc}"/>
           </video>
           <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
             <div id="watermark" class="watermark-drift select-none whitespace-nowrap rounded px-3 py-1 font-mono text-[10px] text-white/20"></div>
@@ -2430,14 +2430,25 @@ function setupPlayer(lesson,student){
   const source=document.getElementById("video-source");
 
   const videoMeta=loadVideos()[lesson.order]||{};
-  const currentSrc=videoMeta.src||SAMPLE_VIDEO;
-  if(source.src!==currentSrc){source.src=currentSrc;video.load();}
+  const realSrc=videoMeta.src||SAMPLE_VIDEO;
+
+  // Set the correct src if it hasn't been set yet
+  if(!source.src||source.src===window.location.href){
+    source.src=realSrc;
+    video.load();
+  }
 
   wrapper.addEventListener("contextmenu",e=>e.preventDefault());
   video.addEventListener("dragstart",e=>e.preventDefault());
 
+  // Quality buttons — if admin set a real URL, all qualities use it
+  // (different quality files can be set by using separate URLs per quality in future)
+  const qualitySrcs=realSrc!==SAMPLE_VIDEO
+    ?[{label:"1080p",src:realSrc},{label:"720p",src:realSrc},{label:"480p",src:realSrc}]
+    :QUALITIES;
+
   const qBtns=document.getElementById("quality-buttons");
-  qBtns.innerHTML=QUALITIES.map((q,i)=>
+  qBtns.innerHTML=qualitySrcs.map((q,i)=>
     `<button data-i="${i}" class="qbtn rounded-full px-2.5 py-1 text-xs transition ${i===0?'bg-gradient-to-r from-brand to-brand-2 text-white':'text-white/70 hover:text-white'}">${q.label}</button>`
   ).join("");
   let qi=0;
@@ -2445,7 +2456,7 @@ function setupPlayer(lesson,student){
     btn.addEventListener("click",()=>{
       const i=Number(btn.dataset.i);if(i===qi)return;
       const t=video.currentTime,playing=!video.paused;
-      qi=i;source.src=QUALITIES[i].src;video.load();video.currentTime=t;
+      qi=i;source.src=qualitySrcs[i].src;video.load();video.currentTime=t;
       if(playing)video.play().catch(()=>{});
       qBtns.querySelectorAll(".qbtn").forEach(b=>{
         b.className=`qbtn rounded-full px-2.5 py-1 text-xs transition ${Number(b.dataset.i)===i?'bg-gradient-to-r from-brand to-brand-2 text-white':'text-white/70 hover:text-white'}`;
