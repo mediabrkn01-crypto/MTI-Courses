@@ -404,6 +404,15 @@
   .panel-card:hover{transform:scale(1.04) translateY(-2px);}
 
   @keyframes drift{0%{transform:translate(0,0);}25%{transform:translate(8vw,4vh);}50%{transform:translate(-4vw,10vh);}75%{transform:translate(6vw,-6vh);}100%{transform:translate(0,0);}}
+  /* ── VIDEO PROTECTION ── */
+  video,iframe{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
+  #player-wrapper{user-select:none;-webkit-user-select:none;}
+  /* Warning overlay */
+  #screen-warn{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.95);backdrop-filter:blur(20px);align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+  #screen-warn.show{display:flex;}
+  /* Blur player when tab loses focus during lesson */
+  body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{filter:blur(16px);transition:filter .2s;}
+
   .watermark-drift{animation:drift 30s ease-in-out infinite;}
   .no-select{user-select:none;-webkit-user-select:none;}
   .avatar-upload{position:relative;display:inline-block;cursor:pointer;}
@@ -415,6 +424,75 @@
 </style>
 </head>
 <body>
+
+<!-- ── GLOBAL VIDEO PROTECTION ── -->
+<div id="screen-warn">
+  <svg style="width:48px;height:48px;color:#E8341A" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+  <p style="color:#fff;font-size:18px;font-weight:700">Content Protected</p>
+  <p style="color:rgba(255,255,255,0.5);font-size:13px;text-align:center;max-width:280px">This video is for your personal learning only. Screen recording is not permitted.</p>
+</div>
+
+<script>
+(function(){
+  // 1. Block right-click everywhere
+  document.addEventListener('contextmenu',e=>{e.preventDefault();return false;});
+
+  // 2. Block screenshot/recording keyboard shortcuts
+  document.addEventListener('keydown',e=>{
+    // Block PrintScreen, Cmd+Shift+3/4/5 (Mac), Win+PrintScreen
+    if(e.key==='PrintScreen'||
+       (e.metaKey&&e.shiftKey&&['3','4','5','s','S'].includes(e.key))||
+       (e.ctrlKey&&e.shiftKey&&['s','S'].includes(e.key))){
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+    // Block F12, Ctrl+U (view source), Ctrl+S (save), Ctrl+Shift+I
+    if(e.key==='F12'||(e.ctrlKey&&['u','s','U','S'].includes(e.key))||
+       (e.ctrlKey&&e.shiftKey&&['i','I'].includes(e.key))){
+      e.preventDefault();
+    }
+  },true);
+
+  // 3. Block text selection on video areas
+  document.addEventListener('selectstart',e=>{
+    if(e.target.closest('#player-wrapper')||e.target.closest('#yt-player')){
+      e.preventDefault();
+    }
+  });
+
+  // 4. Blur video when tab is hidden (blocks most screen recorders that need focus)
+  document.addEventListener('visibilitychange',()=>{
+    if(document.hidden){
+      document.body.classList.add('tab-hidden');
+    } else {
+      document.body.classList.remove('tab-hidden');
+    }
+  });
+
+  // 5. Detect picture-in-picture (common screen recording method)
+  document.addEventListener('enterpictureinpicture',e=>{
+    e.target.pause?.();
+    e.target.requestFullscreen?.().catch(()=>{});
+  },true);
+
+  // 6. Block drag of video/images
+  document.addEventListener('dragstart',e=>{
+    if(e.target.tagName==='VIDEO'||e.target.tagName==='IMG'||e.target.tagName==='IFRAME'){
+      e.preventDefault();
+    }
+  });
+
+  // 7. DevTools detection — blur content if opened
+  let devOpen=false;
+  const threshold=160;
+  setInterval(()=>{
+    const w=window.outerWidth-window.innerWidth>threshold||window.outerHeight-window.innerHeight>threshold;
+    if(w&&!devOpen){devOpen=true;document.body.classList.add('tab-hidden');}
+    if(!w&&devOpen){devOpen=false;document.body.classList.remove('tab-hidden');}
+  },1000);
+})();
+</script>
 <div id="app"></div>
 
 <script>
@@ -2399,14 +2477,19 @@ function renderLesson(lessonId){
           ${(()=>{
             const ytId=getYouTubeId(videoSrc);
             if(ytId){
-              return`<iframe
-                id="yt-player"
-                class="w-full h-full"
-                src="https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&color=white"
-                frameborder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen>
-              </iframe>`;
+              // Privacy-enhanced embed with all sharing/related disabled
+              return`<div style="position:relative;width:100%;height:100%;background:#000">
+                <iframe
+                  id="yt-player"
+                  style="width:100%;height:100%;border:none;pointer-events:auto"
+                  src="https://www.youtube-nocookie.com/embed/${ytId}?rel=0&modestbranding=1&controls=1&disablekb=0&fs=1&iv_load_policy=3&cc_load_policy=0&playsinline=1&color=white&showinfo=0&origin=${encodeURIComponent(window.location.origin)}"
+                  allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  allowfullscreen
+                  referrerpolicy="strict-origin">
+                </iframe>
+                <!-- Invisible overlay blocks right-click on iframe -->
+                <div style="position:absolute;inset:0;pointer-events:none;user-select:none"></div>
+              </div>`;
             }
             return`<video id="video" class="w-full h-full" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline>
               <source id="video-source" src="${videoSrc}"/>
@@ -2456,9 +2539,11 @@ function setupPlayer(lesson,student){
   const videoMeta=loadVideos()[lesson.order]||{};
   const realSrc=videoMeta.src||SAMPLE_VIDEO;
 
-  // If YouTube — iframe handles playback, skip native video setup
+  // If YouTube — iframe handles playback, add extra protection
   if(getYouTubeId(realSrc)){
-    // Watermark not applicable for YouTube
+    // Block right-click on iframe area
+    wrapper.addEventListener("contextmenu",e=>e.preventDefault());
+    // Disable pointer events on transparent overlay to block sharing UI
     return;
   }
 
