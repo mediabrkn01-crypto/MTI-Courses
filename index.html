@@ -445,6 +445,15 @@ async function sbLoadProgress(studentId){
 }
 
 // Log quiz score to Supabase
+// Test connection on load
+(async function(){
+  try{
+    var r=await _sb.from('students').select('id').limit(1);
+    if(r.error) console.warn('Supabase connection warning:', r.error.message);
+    else console.log('Supabase connected OK');
+  }catch(e){console.warn('Supabase init error:',e);}
+})();
+
 async function sbSaveQuizScore(studentId, lessonId, score, total){
   try{
     const{error}=await _sb.from('quiz_scores').upsert({
@@ -765,7 +774,13 @@ function statsStripHtml(studentId){
 
 // ─── ADMIN SYSTEM ─────────────────────────────────────────────────────────────
 function loadStudents(){try{return JSON.parse(localStorage.getItem("brokeneng_students")||"{}");}catch{return{};}}
-function saveStudents(s){localStorage.setItem("brokeneng_students",JSON.stringify(s));}
+function saveStudents(s){
+  localStorage.setItem("brokeneng_students",JSON.stringify(s));
+  // Sync each student to Supabase
+  if(typeof _sb!=='undefined'){
+    Object.values(s).forEach(function(st){ sbSaveStudent(st); });
+  }
+}
 function genId(){return"s_"+Math.random().toString(36).slice(2,9);}
 let currentSession=null;
 let adminUnlockAll=false;
