@@ -438,61 +438,6 @@ async function sbSaveStudent(student){
   }catch(e){console.warn('Supabase error:', e);}
 }
 
-// ── Supabase Storage: image upload helpers ────────────────────────────────────
-// Bucket must exist in Supabase dashboard → Storage → New bucket → name: class-images → Public ✓
-const SB_IMAGE_BUCKET='class-images';
-
-// Shrink an image file down under maxBytes, returns a JPEG Blob.
-// Scales dimensions down step by step and drops quality until it fits.
-async function sbShrinkImageToBlob(file,maxBytes){
-  const img=await new Promise((res,rej)=>{
-    const i=new Image();
-    i.onload=()=>res(i);
-    i.onerror=rej;
-    i.src=URL.createObjectURL(file);
-  });
-
-  let w=img.naturalWidth,h=img.naturalHeight;
-  const MAX_DIM=1600; // no need for huge banner images
-  if(w>MAX_DIM||h>MAX_DIM){
-    const scale=MAX_DIM/Math.max(w,h);
-    w=Math.round(w*scale);h=Math.round(h*scale);
-  }
-
-  const canvas=document.createElement('canvas');
-  const ctx=canvas.getContext('2d');
-  let quality=0.9;
-  let blob=null;
-
-  for(let attempt=0;attempt<8;attempt++){
-    canvas.width=w;canvas.height=h;
-    ctx.clearRect(0,0,w,h);
-    ctx.drawImage(img,0,0,w,h);
-    blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality));
-    if(!blob) throw new Error('Could not process image');
-    if(blob.size<=maxBytes) break;
-    // still too big: shrink quality first, then dimensions
-    if(quality>0.5){ quality-=0.15; }
-    else { w=Math.round(w*0.8); h=Math.round(h*0.8); quality=0.8; }
-  }
-
-  URL.revokeObjectURL(img.src);
-  if(blob.size>maxBytes) console.warn('Image still above target after shrink:',blob.size,'bytes');
-  return blob;
-}
-
-// Upload a Blob to Supabase Storage, return its public URL
-async function sbUploadImage(blob,path){
-  const{error}=await _sb.storage.from(SB_IMAGE_BUCKET).upload(path,blob,{
-    contentType:'image/jpeg',
-    upsert:true
-  });
-  if(error) throw new Error(error.message||'Storage upload failed');
-  const{data}=_sb.storage.from(SB_IMAGE_BUCKET).getPublicUrl(path);
-  if(!data||!data.publicUrl) throw new Error('Could not get public URL');
-  return data.publicUrl;
-}
-
 // Delete student from Supabase
 async function sbDeleteStudent(studentId){
   try{
@@ -586,10 +531,12 @@ const COLOR_BRAND2  = "#FF7100";   // ← secondary brand color (orange)
 const COLOR_GRAD_DIR = "135deg";
 
 // ── 5. MODULE BANNER IMAGES ──────────────────────────────────────────────────
+// Paste any image URL (from Imgur, Google Drive, Dropbox, etc.) next to the day.
 // Leave as "" to show the default dark gradient placeholder.
-// To set an image, use the 📁 Upload button in the admin Images tab or the
-// Classes & Videos edit modal — it shrinks your photo under 1MB and stores it
-// in Supabase Storage automatically. You can also paste any direct image URL here.
+//
+// HOW TO GET A FREE IMAGE URL:
+//   • Go to https://imgur.com → upload your image → right-click → Copy image address
+//   • Use that URL (ending in .jpg or .png) below
 //
 const MODULE_IMAGES = {
    1: "",    // Day 1  — Foundational Phonetics
@@ -1853,15 +1800,9 @@ function renderAdminClasses(){
               </div>
 
               <div style="margin-bottom:11px">
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Thumbnail / Panel Image</label>
-                <div style="display:flex;gap:8px;align-items:flex-start">
-                  <input id="vm-thumb" type="text" placeholder="https://..." class="glass-input" oninput="updateVmPreview()" style="flex:1"/>
-                  <label id="vm-thumb-upload-label" style="flex-shrink:0;padding:9px 12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:8px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif">
-                    📁 Upload
-                    <input type="file" accept="image/*" style="display:none" onchange="handleVmThumbUpload(event)"/>
-                  </label>
-                </div>
-                <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px">Upload a photo (auto-shrunk under 1MB) or paste an image URL.</p>
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Thumbnail / Panel Image URL</label>
+                <input id="vm-thumb" type="text" placeholder="https://i.imgur.com/..." class="glass-input" oninput="updateVmPreview()"/>
+                <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px">Upload to <a href="https://imgur.com" target="_blank" style="color:var(--brand-2)">imgur.com</a> → right-click image → Copy image address</p>
               </div>
 
               <div>
@@ -1998,29 +1939,6 @@ function renderAdminClasses(){
       else{previewBg.style.backgroundImage='';previewBg.style.background='linear-gradient(135deg,#1a1a2e,#16213e)';}
     }
   };
-  // File upload for vm-thumb — shrink under 1MB, push to Supabase Storage, fill the URL field
-  window.handleVmThumbUpload=async function(evt){
-    var file=evt.target.files[0];
-    if(!file) return;
-    var label=document.getElementById('vm-thumb-upload-label');
-    var origHtml=label?label.innerHTML:'';
-    if(label){label.textContent='⏳ Uploading…';}
-
-    try{
-      var order=document.getElementById('vm-order').value||Date.now();
-      var shrunkBlob=await sbShrinkImageToBlob(file,1*1024*1024); // <1MB
-      var path='modules/'+order+'-'+Date.now()+'.jpg';
-      var publicUrl=await sbUploadImage(shrunkBlob,path);
-
-      document.getElementById('vm-thumb').value=publicUrl;
-      updateVmPreview();
-    }catch(e){
-      console.error('Supabase image upload error:',e);
-      alert('Image upload failed: '+e.message);
-    }finally{
-      if(label){label.innerHTML=origHtml;}
-    }
-  };
   window.saveVideo=()=>{
     const order=Number(document.getElementById('vm-order').value);
     const vids=loadVideos();
@@ -2143,15 +2061,11 @@ function renderAdminImages(){
     if(preview){
       var img=preview.querySelector('img');
       if(img){img.src=url;}
-      else if(url){
-        var labelEl=preview.querySelector('div[style*="position:absolute"]');
-        var labelText=labelEl?labelEl.textContent:'';
-        preview.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">'+labelText+'</div>';
-      }
+      else if(url){preview.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">'+preview.querySelector('div[style*="position:absolute"]').textContent+'</div>';}
     }
   };
 
-  // File upload — shrink under 1MB, push real file to Supabase Storage, get back public URL
+  // File upload — upload to Imgur anonymously, get URL back
   window.handleImgUpload=async function(evt,order){
     var file=evt.target.files[0];
     if(!file) return;
@@ -2159,18 +2073,45 @@ function renderAdminImages(){
     if(label){label.textContent='⏳ Uploading…';label.style.color='var(--g3)';}
 
     try{
-      var shrunkBlob=await sbShrinkImageToBlob(file,1*1024*1024); // <1MB
-      var path='modules/'+order+'-'+Date.now()+'.jpg';
-      var publicUrl=await sbUploadImage(shrunkBlob,path);
+      // Convert to base64 for Imgur API
+      var base64=await new Promise(function(res,rej){
+        var r=new FileReader();
+        r.onload=function(e){res(e.target.result.split(',')[1]);};
+        r.onerror=rej;
+        r.readAsDataURL(file);
+      });
 
-      var inp=document.getElementById('img-url-'+order);
-      if(inp){inp.value=publicUrl;}
-      saveImgUrl(order);
-      if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
+      // Upload to Imgur (anonymous, no login needed)
+      var resp=await fetch('https://api.imgur.com/3/image',{
+        method:'POST',
+        headers:{
+          'Authorization':'Client-ID 546c25a59c58ad7',  // public Imgur client ID
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({image:base64,type:'base64'})
+      });
+      var data=await resp.json();
+
+      if(data.success&&data.data&&data.data.link){
+        var url=data.data.link;
+        var inp=document.getElementById('img-url-'+order);
+        if(inp){inp.value=url;}
+        saveImgUrl(order);
+        if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
+      } else {
+        throw new Error(data.data&&data.data.error||'Upload failed');
+      }
     }catch(e){
-      console.error('Supabase image upload error:',e);
-      if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
-      alert('Image upload failed: '+e.message);
+      console.error('Imgur upload error:',e);
+      // Fallback: save as base64 directly
+      var r2=new FileReader();
+      r2.onload=function(ev){
+        var inp=document.getElementById('img-url-'+order);
+        if(inp){inp.value=ev.target.result;saveImgUrl(order);}
+        if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
+      };
+      r2.readAsDataURL(file);
+      alert('Imgur upload failed - saved as local image. Error: '+e.message);
     }
   };
 }
@@ -2923,7 +2864,8 @@ function renderLesson(lessonId){
         +'<div id="quiz-cta"></div>'
       +'</div>'
       +'<div style="width:280px;flex-shrink:0;border-left:1px solid var(--border);background:rgba(13,13,28,.6);overflow-y:auto;padding:16px 0;backdrop-filter:blur(20px);display:flex;flex-direction:column" id="mp-right" class="mp-right-panel">'
-        +'<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:0 16px 12px;font-family:JetBrains Mono,monospace">All Missions</div>'
+        +(thumbUrl?'<div style="width:100%;flex-shrink:0;position:relative;overflow:hidden"><img src="'+thumbUrl+'" style="width:100%;height:200px;object-fit:cover;display:block"/><div style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(13,13,28,0) 30%,rgba(13,13,28,.98) 100%)"></div><div style="position:absolute;bottom:12px;left:14px;right:14px"><div style="font-size:8px;color:rgba(255,255,255,.45);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.09em;margin-bottom:4px">MISSION '+lesson.order+'</div><div style="font-size:14px;font-weight:800;color:#fff;line-height:1.3;font-family:Montserrat,sans-serif">'+lesson.title+'</div></div></div>':'')
+        +'<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:12px 16px 8px;font-family:JetBrains Mono,monospace">All Missions</div>'
         +missionList
       +'</div>'
     +'</div>'
