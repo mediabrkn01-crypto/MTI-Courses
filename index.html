@@ -417,9 +417,12 @@ async function sbSaveStudent(student){
       email: student.email,
       password_hash: student.password,
       valid_until: student.validUntil||null,
+      access_list: student.accessList||[1],
+      completed_at: student.completedAt||null,
       created_at: student.createdAt||new Date().toISOString()
     }, {onConflict:'id'});
     if(error) console.warn('Supabase student save error:', error.message);
+    else console.log('Student synced to Supabase:', student.name);
   }catch(e){console.warn('Supabase error:', e);}
 }
 
@@ -1246,7 +1249,7 @@ function renderLogin(){
       <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Password</label>
       <input id="login-pass" type="password" autocomplete="current-password" placeholder="••••••••" class="glass-input" style="margin-bottom:8px"/>
       <p id="login-err" style="display:none;color:var(--g1);font-size:13px;margin-bottom:8px">Incorrect email or password.</p>
-      <button onclick="doStudentLogin()" class="btn-primary" style="margin-top:8px">Sign In</button>
+      <button id="login-btn-main" onclick="doStudentLogin()" class="btn-primary" style="margin-top:8px">Sign In</button>
       <p style="margin-top:20px;text-align:center;font-size:12px;color:var(--muted)">Accounts are created by the course admin.</p>
       <p style="margin-top:8px;text-align:center">
         <button onclick="navigate('admin-login')" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer" onmouseover="this.style.color='var(--g3)'" onmouseout="this.style.color='var(--muted)'">Admin portal</button>
@@ -1259,10 +1262,11 @@ function renderLogin(){
   document.getElementById("login-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
 }
 
-window.doStudentLogin=()=>{
+window.doStudentLogin=async()=>{
   const email=document.getElementById("login-email").value.trim().toLowerCase();
   const pass=document.getElementById("login-pass").value;
   const errEl=document.getElementById("login-err");
+  const btn=document.querySelector('#login-pass~button')||document.querySelector('button[onclick*="doStudentLogin"]');
 
   if(!email||!pass){
     errEl.textContent="Please enter your email and password.";
@@ -1270,10 +1274,46 @@ window.doStudentLogin=()=>{
     return;
   }
 
+  // Show loading state
+  errEl.style.display="none";
+  errEl.textContent="";
+  const loginBtn=document.getElementById("login-btn-main");
+  if(loginBtn){loginBtn.textContent="Signing in...";loginBtn.disabled=true;}
+
+  // 1. Try Supabase first (works across devices)
+  var sbStudent=null;
+  if(typeof _sb!=="undefined"){
+    try{
+      const{data,error}=await _sb.from("students")
+        .select("*")
+        .eq("email",email)
+        .single();
+      if(!error&&data){
+        sbStudent=data;
+        // Sync to localStorage for offline use
+        const localStudents=loadStudents();
+        localStudents[data.id]={
+          id:data.id,
+          name:data.name,
+          email:data.email,
+          password:data.password_hash,
+          validUntil:data.valid_until||null,
+          accessList:data.access_list||[1],
+          createdAt:data.created_at||new Date().toISOString(),
+          completedAt:data.completed_at||null
+        };
+        localStorage.setItem("brokeneng_students",JSON.stringify(localStudents));
+      }
+    }catch(e){console.warn("Supabase login lookup failed:",e);}
+  }
+
+  // 2. Fall back to localStorage
   const students=loadStudents();
   const allStudents=Object.values(students);
+  const byEmail=allStudents.find(s=>s.email&&s.email.toLowerCase()===email);
 
-  const byEmail=allStudents.find(s=>s.email.toLowerCase()===email);
+  if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
+
   if(!byEmail){
     errEl.textContent="No account found with that email address.";
     errEl.style.display="block";
@@ -1281,7 +1321,7 @@ window.doStudentLogin=()=>{
   }
 
   if(byEmail.password!==pass){
-    errEl.textContent="Incorrect password. (Stored: "+byEmail.password.slice(0,2)+"***)";
+    errEl.textContent="Incorrect password.";
     errEl.style.display="block";
     return;
   }
