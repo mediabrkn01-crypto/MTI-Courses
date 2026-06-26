@@ -29,7 +29,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 /* BOOT */
 #boot-screen{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;transition:opacity .5s}
 #boot-screen.hidden{opacity:0;pointer-events:none}
-.boot-logo{width:72px;height:72px;border-radius:18px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:800;font-size:30px;color:#fff;box-shadow:0 0 60px rgba(255,45,120,.5),0 0 120px rgba(255,45,120,.2);margin-bottom:28px;animation:bootPulse 2s ease-in-out infinite}
+.boot-logo{display:flex;align-items:center;justify-content:center;margin-bottom:20px}
 @keyframes bootPulse{0%,100%{box-shadow:0 0 40px rgba(255,45,120,.4),0 0 80px rgba(255,45,120,.15)}50%{box-shadow:0 0 80px rgba(255,45,120,.7),0 0 160px rgba(255,45,120,.3)}}
 .boot-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .boot-sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;margin-bottom:48px}
@@ -321,7 +321,7 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 
 <!-- BOOT SCREEN -->
 <div id="boot-screen">
-  <div class="boot-logo" id="boot-logo-el">BE</div>
+  <div class="boot-logo" id="boot-logo-el"><img src="" id="boot-logo-img" style="max-height:80px;max-width:200px;object-fit:contain;display:none"/><span id="boot-logo-text" style="display:none">BE</span></div>
   <div class="boot-title" id="boot-site-name">Broken English</div>
   <div class="boot-sub">VOICE OS · INITIALISING</div>
   <div class="boot-bar-wrap">
@@ -508,8 +508,8 @@ const SITE_TAGLINE  = "Speak Better. Live Better."; // shown under logo
 //
 // ── SITE IMAGES — put filenames here (same folder as this HTML on GitHub) ───
 const SITE_IMAGES = {
-  mainLogo:  "Broken English Final Logo-03.png",      // ← your logo file     e.g. "be-logo.png"
-  favicon:   "Broken English Final Logo-02 (1).png",   // ← your favicon file  e.g. "favicon.ico"
+  mainLogo:  "logo.png",      // ← your logo file     e.g. "be-logo.png"
+  favicon:   "favicon.png",   // ← your favicon file  e.g. "favicon.ico"
 };
 
 // Aliases used throughout the app
@@ -657,10 +657,14 @@ function getLogoSrc(){ return (typeof LOGO_URL!=="undefined"&&LOGO_URL)?LOGO_URL
 // ── BOOT SCREEN ──────────────────────────────────────────────────────────────
 (function runBoot(){
   // Update logo inside boot screen
-  const bootLogoEl = document.getElementById('boot-logo-el');
+  const bootLogoImg = document.getElementById('boot-logo-img');
   const logoImg = getLogoSrc();
-  if(logoImg && !logoImg.startsWith('data:image/png;base64,iVBOR')) {
-    bootLogoEl.innerHTML = `<img src="${logoImg}" style="width:52px;height:52px;object-fit:contain;border-radius:12px" onerror="this.style.display='none'"/>`;
+  if(logoImg && bootLogoImg){
+    bootLogoImg.src = logoImg;
+    bootLogoImg.style.display = 'inline-block';
+  } else {
+    var bt = document.getElementById('boot-logo-text');
+    if(bt) bt.style.display = 'block';
   }
   document.getElementById('boot-site-name').textContent = SITE_NAME;
 
@@ -1276,11 +1280,36 @@ function renderLogin(){
       padding:48px 40px 40px;backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
       box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,45,120,.1),inset 0 1px 0 rgba(255,255,255,.15)">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);border-radius:28px 28px 0 0"></div>
-      <div style="text-align:center;margin-bottom:28px">
-        <img src="${getLogoSrc()}" style="max-height:80px;max-width:220px;object-fit:contain;display:inline-block" onerror="this.style.display='none'"/>
-        <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.12em;margin-top:8px;text-transform:uppercase">VOICE OPERATING SYSTEM</div>
-      </div>`;
-  var lp=document.getElementById("login-pass");if(lp)lp.addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
+
+      <!-- LOGO — full image, centered, no box -->
+      <div style="text-align:center;margin-bottom:32px">
+        <img src="${getLogoSrc()}" style="max-height:90px;max-width:260px;object-fit:contain;display:inline-block" onerror="this.style.display='none'"/>
+      </div>
+
+      <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:6px">Sign In</h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:28px">Enter your credentials to access your classes.</p>
+
+      <div id="login-err" style="display:none;background:rgba(237,31,81,.1);border:1px solid rgba(237,31,81,.25);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--g1);margin-bottom:16px"></div>
+
+      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px">EMAIL</label>
+      <input id="login-email" type="email" placeholder="your@email.com" autocomplete="email"
+        style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;padding:14px 16px;outline:none;transition:border .2s;box-sizing:border-box;margin-bottom:14px"
+        onfocus="this.style.borderColor='rgba(255,45,120,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
+
+      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px">PASSWORD</label>
+      <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
+        style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;padding:14px 16px;outline:none;transition:border .2s;box-sizing:border-box;margin-bottom:22px"
+        onfocus="this.style.borderColor='rgba(255,45,120,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
+
+      <button id="login-btn-main" onclick="doStudentLogin()" class="btn-primary" style="margin-bottom:20px;font-size:15px;font-weight:800;letter-spacing:.02em">Sign In</button>
+
+      <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:10px">Accounts are created by the course admin.</p>
+      <p style="text-align:center"><span style="font-size:12px;color:var(--muted2);cursor:pointer" onclick="navigate('admin-login')">Admin portal</span></p>
+      <p style="text-align:center;margin-top:8px"><span style="font-size:11px;color:rgba(255,255,255,.2);cursor:pointer" onclick="navigate('admin')">Having trouble? Check accounts</span></p>
+    </div>
+  </div>`;
+  var lp=document.getElementById("login-pass");
+  if(lp) lp.addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
 }
 
 window.doStudentLogin=async()=>{
