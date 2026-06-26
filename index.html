@@ -506,13 +506,15 @@ const SITE_TAGLINE  = "Speak Better. Live Better."; // shown under logo
 // Get the URL: open the image on GitHub → click "Raw" → copy the URL
 // Example: https://raw.githubusercontent.com/yourname/yourrepo/main/logo.png
 //
-const LOGO_URL    = "https://github.com/mediabrkn01-crypto/MTI-Courses/blob/main/Broken%20English%20Final%20Logo-03.png";
-//  ↑ e.g. "https://raw.githubusercontent.com/broken-english/portal/main/logo.png"
+// ── SITE IMAGES — put filenames here (same folder as this HTML on GitHub) ───
+const SITE_IMAGES = {
+  mainLogo:  "Broken English Final Logo-03.png",      // ← your logo file     e.g. "be-logo.png"
+  favicon:   "Broken English Final Logo-02 (1).png",   // ← your favicon file  e.g. "favicon.ico"
+};
 
-const FAVICON_URL = "https://github.com/mediabrkn01-crypto/MTI-Courses/blob/main/Broken%20English%20Final%20Logo-02%20(1).png ";
-//  ↑ e.g. "https://raw.githubusercontent.com/broken-english/portal/main/favicon.png"
-
-// Legacy aliases (keep for compatibility)
+// Aliases used throughout the app
+const LOGO_URL    = SITE_IMAGES.mainLogo;
+const FAVICON_URL = SITE_IMAGES.favicon;
 const LOGO_BASE64 = LOGO_URL;
 const FAVICON_BASE64 = FAVICON_URL;
 
@@ -606,7 +608,7 @@ const QUALITIES  = [{label:"1080p",src:SAMPLE_VIDEO},{label:"720p",src:SAMPLE_VI
 
 
 const LOGO_DATA_URI="data:image/png;base64,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";
-function getLogoSrc(){ return (typeof LOGO_URL!=="undefined"&&LOGO_URL&&!LOGO_URL.includes("YOUR_"))?LOGO_URL:(LOGO_BASE64||LOGO_DATA_URI||""); }
+function getLogoSrc(){ return (typeof LOGO_URL!=="undefined"&&LOGO_URL)?LOGO_URL:""; }
 
 
 // Apply brand colors, favicon and title at runtime
