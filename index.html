@@ -260,6 +260,18 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
   /* mob-nav shown on mobile only */
   /* Bottom nav padding so content doesn't hide behind it */
   #main-content>div:last-child{padding-bottom:80px!important}
+  /* Hide right mission list panel on mobile — not enough space */
+  .mp-right-panel{display:none!important}
+  /* Lesson body — allow left side to scroll full width */
+  #mp-right{display:none!important}
+  /* Lesson topbar — wrap on very small screens */
+  .mv-topbar-acts{flex-wrap:wrap;gap:6px}
+  /* Lesson content full width */
+  #mp-right{display:none!important}
+  /* Lesson info padding smaller on mobile */
+  #main-content [style*="padding:24px 28px"]{padding:16px 14px!important}
+  /* Video max height on mobile */
+  #player-wrapper{max-height:40vh!important}
   .dash-stats-grid{grid-template-columns:repeat(2,1fr)!important}
   /* Module banner text truncation */
   .module-banner-title{font-size:12px!important}
@@ -426,6 +438,61 @@ async function sbSaveStudent(student){
   }catch(e){console.warn('Supabase error:', e);}
 }
 
+// ── Supabase Storage: image upload helpers ────────────────────────────────────
+// Bucket must exist in Supabase dashboard → Storage → New bucket → name: class-images → Public ✓
+const SB_IMAGE_BUCKET='class-images';
+
+// Shrink an image file down under maxBytes, returns a JPEG Blob.
+// Scales dimensions down step by step and drops quality until it fits.
+async function sbShrinkImageToBlob(file,maxBytes){
+  const img=await new Promise((res,rej)=>{
+    const i=new Image();
+    i.onload=()=>res(i);
+    i.onerror=rej;
+    i.src=URL.createObjectURL(file);
+  });
+
+  let w=img.naturalWidth,h=img.naturalHeight;
+  const MAX_DIM=1600; // no need for huge banner images
+  if(w>MAX_DIM||h>MAX_DIM){
+    const scale=MAX_DIM/Math.max(w,h);
+    w=Math.round(w*scale);h=Math.round(h*scale);
+  }
+
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  let quality=0.9;
+  let blob=null;
+
+  for(let attempt=0;attempt<8;attempt++){
+    canvas.width=w;canvas.height=h;
+    ctx.clearRect(0,0,w,h);
+    ctx.drawImage(img,0,0,w,h);
+    blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality));
+    if(!blob) throw new Error('Could not process image');
+    if(blob.size<=maxBytes) break;
+    // still too big: shrink quality first, then dimensions
+    if(quality>0.5){ quality-=0.15; }
+    else { w=Math.round(w*0.8); h=Math.round(h*0.8); quality=0.8; }
+  }
+
+  URL.revokeObjectURL(img.src);
+  if(blob.size>maxBytes) console.warn('Image still above target after shrink:',blob.size,'bytes');
+  return blob;
+}
+
+// Upload a Blob to Supabase Storage, return its public URL
+async function sbUploadImage(blob,path){
+  const{error}=await _sb.storage.from(SB_IMAGE_BUCKET).upload(path,blob,{
+    contentType:'image/jpeg',
+    upsert:true
+  });
+  if(error) throw new Error(error.message||'Storage upload failed');
+  const{data}=_sb.storage.from(SB_IMAGE_BUCKET).getPublicUrl(path);
+  if(!data||!data.publicUrl) throw new Error('Could not get public URL');
+  return data.publicUrl;
+}
+
 // Delete student from Supabase
 async function sbDeleteStudent(studentId){
   try{
@@ -519,12 +586,10 @@ const COLOR_BRAND2  = "#FF7100";   // ← secondary brand color (orange)
 const COLOR_GRAD_DIR = "135deg";
 
 // ── 5. MODULE BANNER IMAGES ──────────────────────────────────────────────────
-// Paste any image URL (from Imgur, Google Drive, Dropbox, etc.) next to the day.
 // Leave as "" to show the default dark gradient placeholder.
-//
-// HOW TO GET A FREE IMAGE URL:
-//   • Go to https://imgur.com → upload your image → right-click → Copy image address
-//   • Use that URL (ending in .jpg or .png) below
+// To set an image, use the 📁 Upload button in the admin Images tab or the
+// Classes & Videos edit modal — it shrinks your photo under 1MB and stores it
+// in Supabase Storage automatically. You can also paste any direct image URL here.
 //
 const MODULE_IMAGES = {
    1: "",    // Day 1  — Foundational Phonetics
@@ -1126,7 +1191,7 @@ function sidebarHtml(active){
   return `
   <div id="sidebar">
     <!-- BRAND -->
-    <div class="sb-brand" onclick="navigate('dashboard')">
+    <div class="sb-brand" onclick="closeSidebar();navigate('dashboard')">
       <div class="sb-logo">
         <div class="sb-mark" style="overflow:hidden;padding:0;flex-shrink:0">
           <img src="${getLogoSrc()}" style="width:34px;height:34px;object-fit:contain;border-radius:9px" onerror="this.style.display='none'"/>
@@ -1157,20 +1222,37 @@ function sidebarHtml(active){
       </div>
     </div>
 
+    <!-- CURRENT LESSON BANNER -->
+    ${(function(){
+      var al=typeof activeLesson!=="undefined"?activeLesson:null;
+      if(!al) return "";
+      var vm=loadVideos()[al.order]||{};
+      var thumb=vm.thumb||"";
+      if(!thumb) return "";
+      return "<div style=\"margin:10px 12px;border-radius:12px;overflow:hidden;position:relative;height:90px;cursor:pointer;border:1px solid rgba(255,255,255,.1)\" onclick=\"navigate(\'lesson\',{id:\'"+al.id+"\'})\">"+
+        "<img src=\""+thumb+"\" style=\"width:100%;height:100%;object-fit:cover\" onerror=\"this.parentElement.style.display=\'none\'\"/>"+
+        "<div style=\"position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 60%)\"></div>"+
+        "<div style=\"position:absolute;bottom:6px;left:8px;right:8px\">"+
+          "<div style=\"font-size:8px;color:rgba(255,255,255,.6);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em\">NOW PLAYING</div>"+
+          "<div style=\"font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">"+al.title+"</div>"+
+        "</div>"+
+      "</div>";
+    })()}
+
     <!-- NAV -->
     <nav class="sb-nav">
       <div class="sb-sec">Core</div>
-      <div class="sb-item ${active==='dashboard'?'active':''}" onclick="navigate('dashboard')">
+      <div class="sb-item ${active==='dashboard'?'active':''}" onclick="closeSidebar();navigate('dashboard')">
         <div class="sb-icon">⌂</div><div class="sb-lbl">Dashboard</div>
       </div>
-      <div class="sb-item ${active==='courses'?'active':''}" onclick="navigate('courses')">
+      <div class="sb-item ${active==='courses'?'active':''}" onclick="closeSidebar();navigate('courses')">
         <div class="sb-icon">🎯</div><div class="sb-lbl">Accent Journey</div>
       </div>
-      <div class="sb-item ${active==='wordvault'?'active':''}" onclick="navigate('wordvault')">
+      <div class="sb-item ${active==='wordvault'?'active':''}" onclick="closeSidebar();navigate('wordvault')">
         <div class="sb-icon">🔊</div><div class="sb-lbl">Word Vault</div>
       </div>
       <div class="sb-sec">You</div>
-      <div class="sb-item ${active==='achievements'?'active':''}" onclick="navigate('achievements')">
+      <div class="sb-item ${active==='achievements'?'active':''}" onclick="closeSidebar();navigate('achievements')">
         <div class="sb-icon">🏅</div><div class="sb-lbl">Achievements</div>
         <div class="sb-bdg">${earnedBadges||BADGES.filter(b=>b.check&&b.check({completed:completedCount,quizzes:0})).length}</div>
       </div>
@@ -1178,7 +1260,7 @@ function sidebarHtml(active){
 
     <!-- FOOTER USER -->
     <div class="sb-foot">
-      <div class="sb-user" onclick="navigate('profile')">
+      <div class="sb-user" onclick="closeSidebar();navigate('profile')">
         <div style="overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0">${stu?avatarSmallHtml(stu):'<div style=\"width:32px;height:32px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0\">?</div>'}</div>
         <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:var(--text)">${uName}</div>
         <div onclick="event.stopPropagation();currentSession=null;navigate('login')" title="Sign out" style="color:var(--muted);cursor:pointer;font-size:16px;flex-shrink:0;padding:4px;transition:color .15s" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'">⇥</div>
@@ -1421,7 +1503,7 @@ function validityBadge(student){
 }
 
 function adminTopBar(tab){
-  const tabs=[{id:'students',label:'Students'},{id:'classes',label:'Classes & Videos'},{id:'settings',label:'Settings'}];
+  const tabs=[{id:'students',label:'Students'},{id:'classes',label:'Classes & Videos'},{id:'images',label:'🖼 Images'},{id:'settings',label:'Settings'}];
   return`<div class="admin-top-bar">
     <div style="display:flex;align-items:center;gap:12px">
       <div class="sb-mark" style="overflow:hidden;padding:0;flex-shrink:0;width:34px;height:34px">
@@ -1452,6 +1534,7 @@ function glassBtn(label,onclick,variant='ghost'){
 function renderAdmin(tab){
   if(tab==='classes') return renderAdminClasses();
   if(tab==='settings') return renderAdminSettings();
+  if(tab==='images')   return renderAdminImages();
 
   const students=loadStudents();
   const list=Object.values(students);
@@ -1770,9 +1853,15 @@ function renderAdminClasses(){
               </div>
 
               <div style="margin-bottom:11px">
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Thumbnail / Panel Image URL</label>
-                <input id="vm-thumb" type="text" placeholder="https://i.imgur.com/..." class="glass-input" oninput="updateVmPreview()"/>
-                <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px">Upload to <a href="https://imgur.com" target="_blank" style="color:var(--brand-2)">imgur.com</a> → right-click image → Copy image address</p>
+                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Thumbnail / Panel Image</label>
+                <div style="display:flex;gap:8px;align-items:flex-start">
+                  <input id="vm-thumb" type="text" placeholder="https://..." class="glass-input" oninput="updateVmPreview()" style="flex:1"/>
+                  <label id="vm-thumb-upload-label" style="flex-shrink:0;padding:9px 12px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);border-radius:8px;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif">
+                    📁 Upload
+                    <input type="file" accept="image/*" style="display:none" onchange="handleVmThumbUpload(event)"/>
+                  </label>
+                </div>
+                <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px">Upload a photo (auto-shrunk under 1MB) or paste an image URL.</p>
               </div>
 
               <div>
@@ -1909,6 +1998,29 @@ function renderAdminClasses(){
       else{previewBg.style.backgroundImage='';previewBg.style.background='linear-gradient(135deg,#1a1a2e,#16213e)';}
     }
   };
+  // File upload for vm-thumb — shrink under 1MB, push to Supabase Storage, fill the URL field
+  window.handleVmThumbUpload=async function(evt){
+    var file=evt.target.files[0];
+    if(!file) return;
+    var label=document.getElementById('vm-thumb-upload-label');
+    var origHtml=label?label.innerHTML:'';
+    if(label){label.textContent='⏳ Uploading…';}
+
+    try{
+      var order=document.getElementById('vm-order').value||Date.now();
+      var shrunkBlob=await sbShrinkImageToBlob(file,1*1024*1024); // <1MB
+      var path='modules/'+order+'-'+Date.now()+'.jpg';
+      var publicUrl=await sbUploadImage(shrunkBlob,path);
+
+      document.getElementById('vm-thumb').value=publicUrl;
+      updateVmPreview();
+    }catch(e){
+      console.error('Supabase image upload error:',e);
+      alert('Image upload failed: '+e.message);
+    }finally{
+      if(label){label.innerHTML=origHtml;}
+    }
+  };
   window.saveVideo=()=>{
     const order=Number(document.getElementById('vm-order').value);
     const vids=loadVideos();
@@ -1930,6 +2042,135 @@ function renderAdminClasses(){
 }
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
+function renderAdminImages(){
+  const videos=loadVideos();
+
+  // Build rows for all 30 lessons
+  var rows='';
+  ALL_LESSONS.forEach(function(l){
+    var v=videos[l.order]||{};
+    var thumb=v.thumb||'';
+    rows+='<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'\'">'+
+      // Thumbnail preview
+      '<div style="width:120px;height:68px;border-radius:10px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);position:relative">'+
+        (thumb
+          ?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'"/>'
+          :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px">📷</div>'
+        )+
+        '<div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">D'+String(l.order).padStart(2,'0')+'</div>'+
+      '</div>'+
+      // Title + URL input
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+l.title+'</div>'+
+        '<div style="display:flex;gap:8px;align-items:center">'+
+          '<input id="img-url-'+l.order+'" type="text" value="'+thumb+'" placeholder="Paste image URL or upload below…"'+
+            ' style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;min-width:0"'+
+            ' onfocus="this.style.borderColor=\'rgba(255,45,120,.4)\'" onblur="this.style.borderColor=\'rgba(255,255,255,.12)\'"'+
+          '/>'+
+          '<button onclick="saveImgUrl('+l.order+')" style="padding:7px 14px;background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">Save</button>'+
+          '<label style="padding:7px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--muted);font-size:11px;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">'+
+            '📁 Upload'+
+            '<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+l.order+')"/>'+
+          '</label>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  });
+
+  // WV rows
+  var wvRows='';
+  WV_DATA.forEach(function(f,i){
+    var wvOrder=100+i+1;
+    var v=videos[wvOrder]||{};
+    var thumb=v.thumb||'';
+    wvRows+='<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'\'">'+
+      '<div style="width:120px;height:68px;border-radius:10px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);position:relative">'+
+        (thumb
+          ?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'"/>'
+          :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px">'+f.icon+'</div>'
+        )+
+        '<div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">WV'+(i+1)+'</div>'+
+      '</div>'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+f.icon+' '+f.title+'</div>'+
+        '<div style="display:flex;gap:8px;align-items:center">'+
+          '<input id="img-url-'+wvOrder+'" type="text" value="'+thumb+'" placeholder="Paste image URL…"'+
+            ' style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;min-width:0"'+
+            ' onfocus="this.style.borderColor=\'rgba(255,45,120,.4)\'" onblur="this.style.borderColor=\'rgba(255,255,255,.12)\'"'+
+          '/>'+
+          '<button onclick="saveImgUrl('+wvOrder+')" style="padding:7px 14px;background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">Save</button>'+
+          '<label style="padding:7px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--muted);font-size:11px;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">'+
+            '📁 Upload'+
+            '<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+wvOrder+')"/>'+
+          '</label>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  });
+
+  app.innerHTML=adminTopBar('images')+`
+  <div id="main-content" style="padding:24px 28px 80px">
+    <h2 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">Class Images</h2>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Paste an image URL or upload a file for each class. Shown in lesson view, sidebar, and dashboard cards.</p>
+
+    <!-- ACCENT JOURNEY -->
+    <div style="margin-bottom:28px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-family:JetBrains Mono,monospace">ACCENT JOURNEY — 20 Classes</div>
+      <div class="lg" style="overflow:hidden;border-radius:16px">${rows}</div>
+    </div>
+
+    <!-- WORD VAULT -->
+    <div style="margin-bottom:28px">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-family:JetBrains Mono,monospace">WORD VAULT — 10 Classes</div>
+      <div class="lg" style="overflow:hidden;border-radius:16px">${wvRows}</div>
+    </div>
+  </div>`;
+
+  // Save URL helper
+  window.saveImgUrl=function(order){
+    var inp=document.getElementById('img-url-'+order);
+    if(!inp) return;
+    var url=inp.value.trim();
+    var vids=loadVideos();
+    if(!vids[order]) vids[order]={};
+    vids[order].thumb=url;
+    saveVideos(vids);
+    // Flash feedback
+    var btn=inp.nextElementSibling;
+    if(btn){var orig=btn.textContent;btn.textContent='✓ Saved';btn.style.background='rgba(34,197,94,.8)';setTimeout(function(){btn.textContent=orig;btn.style.background='var(--grad)';},1500);}
+    // Refresh preview
+    var preview=inp.closest('div[style*="display:flex"]').previousElementSibling;
+    if(preview){
+      var img=preview.querySelector('img');
+      if(img){img.src=url;}
+      else if(url){preview.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">'+preview.querySelector('div[style*="position:absolute"]').textContent+'</div>';}
+    }
+  };
+
+  // File upload — shrink under 1MB, push real file to Supabase Storage, get back public URL
+  window.handleImgUpload=async function(evt,order){
+    var file=evt.target.files[0];
+    if(!file) return;
+    var label=evt.target.closest('label');
+    if(label){label.textContent='⏳ Uploading…';label.style.color='var(--g3)';}
+
+    try{
+      var shrunkBlob=await sbShrinkImageToBlob(file,1*1024*1024); // <1MB
+      var path='modules/'+order+'-'+Date.now()+'.jpg';
+      var publicUrl=await sbUploadImage(shrunkBlob,path);
+
+      var inp=document.getElementById('img-url-'+order);
+      if(inp){inp.value=publicUrl;}
+      saveImgUrl(order);
+      if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
+    }catch(e){
+      console.error('Supabase image upload error:',e);
+      if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
+      alert('Image upload failed: '+e.message);
+    }
+  };
+}
+
 function renderAdminSettings(){
   app.innerHTML=adminTopBar('settings')+`
   <div style="padding:24px;max-width:600px;position:relative;z-index:1">
@@ -2636,15 +2877,15 @@ function renderLesson(lessonId){
     +'<div id="main-content" style="display:flex;flex-direction:column;min-height:100vh">'
     +'<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(13,13,28,.85);backdrop-filter:blur(20px);position:sticky;top:0;z-index:50;flex-shrink:0">'
       +'<button type="button" onclick="navigate(\'dashboard\')" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;backdrop-filter:blur(10px);font-family:JetBrains Mono,monospace;white-space:nowrap" onmouseover="this.style.borderColor=\'rgba(255,45,120,.3)\';this.style.color=\'var(--text)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">← Back</button>'
-      +'<div style="font-size:12px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:JetBrains Mono,monospace">'+section.title+' → <span style="color:var(--text)">Day '+lesson.order+'</span></div>'
-      +'<div style="display:flex;gap:8px;flex-shrink:0">'
+      +'<div style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:JetBrains Mono,monospace;min-width:0">Day '+lesson.order+': <span style="color:var(--text)">'+lesson.title.slice(0,20)+(lesson.title.length>20?"…":"")+'</span></div>'
+      +'<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">'
         +(prevL&&isUnlocked(prevL)?'<button type="button" onclick="navigate(\'lesson\',{id:\''+prevL.id+'\'})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;font-family:JetBrains Mono,monospace">← Prev</button>':'')
-        +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':'background:var(--grad);color:#fff;border:none;box-shadow:0 4px 14px rgba(255,45,120,.3)')+';padding:6px 16px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">'+(completed?'Completed ✓':'Mark Complete ✓')+'</button>'
+        +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':'background:var(--grad);color:#fff;border:none;box-shadow:0 4px 14px rgba(255,45,120,.3)')+';padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;white-space:nowrap">'+(completed?'Completed ✓':'Mark Complete ✓')+'</button>'
         +(nextL&&isUnlocked(nextL)?'<button type="button" onclick="navigate(\'lesson\',{id:\''+nextL.id+'\'})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;font-family:JetBrains Mono,monospace">Next →</button>':'')
       +'</div>'
     +'</div>'
     +'<div style="display:flex;flex:1;min-height:0;overflow:hidden">'
-      +'<div style="flex:1;overflow-y:auto;min-width:0">'
+      +'<div style="flex:1;overflow-y:auto;min-width:0;padding-bottom:80px">'
         +'<div style="background:#000;position:relative">'
           +'<div id="player-wrapper" class="no-select" style="position:relative;width:100%;max-height:60vh;aspect-ratio:16/9;background:#000;overflow:hidden">'
             +videoHtml
@@ -2677,7 +2918,7 @@ function renderLesson(lessonId){
         +'</div>'
         +'<div id="quiz-cta"></div>'
       +'</div>'
-      +'<div style="width:280px;flex-shrink:0;border-left:1px solid var(--border);background:rgba(13,13,28,.6);overflow-y:auto;padding:16px 0;backdrop-filter:blur(20px)" id="mp-right">'
+      +'<div style="width:280px;flex-shrink:0;border-left:1px solid var(--border);background:rgba(13,13,28,.6);overflow-y:auto;padding:16px 0;backdrop-filter:blur(20px);display:flex;flex-direction:column" id="mp-right" class="mp-right-panel">'
         +'<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:0 16px 12px;font-family:JetBrains Mono,monospace">All Missions</div>'
         +missionList
       +'</div>'
