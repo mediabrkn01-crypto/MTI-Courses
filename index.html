@@ -2143,7 +2143,11 @@ function renderAdminImages(){
     if(preview){
       var img=preview.querySelector('img');
       if(img){img.src=url;}
-      else if(url){preview.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">'+preview.querySelector('div[style*="position:absolute"]').textContent+'</div>';}
+      else if(url){
+        var labelEl=preview.querySelector('div[style*="position:absolute"]');
+        var labelText=labelEl?labelEl.textContent:'';
+        preview.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">'+labelText+'</div>';
+      }
     }
   };
 
