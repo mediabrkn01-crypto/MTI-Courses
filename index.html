@@ -1103,6 +1103,9 @@ function hasRealQuiz(l){return!!QUIZ_BANK[l.dayNumber];}
 
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 const app=document.getElementById("app");
+// Safe getElementById + addEventListener helper
+function $on(id,evt,fn){var el=document.getElementById(id);if(el)el.addEventListener(evt,fn);}
+
 function navigate(screen,params){render(screen,params||{});window.scrollTo(0,0);}
 function render(screen,params){
   if(screen==="login")        return renderLogin();
@@ -1153,9 +1156,7 @@ function sidebarHtml(active){
     <!-- BRAND -->
     <div class="sb-brand" onclick="closeSidebar();navigate('dashboard')">
       <div class="sb-logo">
-        <div class="sb-mark" style="overflow:hidden;padding:0;flex-shrink:0">
-          <img src="${getLogoSrc()}" style="width:34px;height:34px;object-fit:contain;border-radius:9px" onerror="this.style.display='none'"/>
-        </div>
+        <img src="${getLogoSrc()}" style="max-height:32px;max-width:130px;object-fit:contain;display:block;flex-shrink:0" onerror="this.style.display='none'"/>
         <div>
           <div class="sb-name">${SITE_NAME}</div>
           <div class="sb-tag">VOICE OS</div>
@@ -1275,33 +1276,11 @@ function renderLogin(){
       padding:48px 40px 40px;backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
       box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,45,120,.1),inset 0 1px 0 rgba(255,255,255,.15)">
       <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);border-radius:28px 28px 0 0"></div>
-      <div style="display:flex;align-items:center;gap:13px;margin-bottom:34px">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--grad);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,45,120,.45);flex-shrink:0;overflow:hidden">
-          <img src="${getLogoSrc()}" style="width:44px;height:44px;object-fit:contain;border-radius:12px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><span style="display:none;font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px;color:#fff">BE</span>
-        </div>
-        <div>
-          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${SITE_NAME}</div>
-          <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.1em;margin-top:2px">VOICE OPERATING SYSTEM</div>
-        </div>
-      </div>
-      <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:var(--text);margin-bottom:5px">Sign In</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.5">Enter your credentials to access your classes.</p>
-      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Email</label>
-      <input id="login-email" type="email" autocomplete="email" placeholder="your@email.com" class="glass-input" style="margin-bottom:14px"/>
-      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Password</label>
-      <input id="login-pass" type="password" autocomplete="current-password" placeholder="••••••••" class="glass-input" style="margin-bottom:8px"/>
-      <p id="login-err" style="display:none;color:var(--g1);font-size:13px;margin-bottom:8px">Incorrect email or password.</p>
-      <button id="login-btn-main" onclick="doStudentLogin()" class="btn-primary" style="margin-top:8px">Sign In</button>
-      <p style="margin-top:20px;text-align:center;font-size:12px;color:var(--muted)">Accounts are created by the course admin.</p>
-      <p style="margin-top:8px;text-align:center">
-        <button onclick="navigate('admin-login')" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer" onmouseover="this.style.color='var(--g3)'" onmouseout="this.style.color='var(--muted)'">Admin portal</button>
-      </p>
-      <p style="margin-top:8px;text-align:center">
-        <button onclick="const s=JSON.parse(localStorage.getItem('be_students')||'{}');const list=Object.values(s);alert(list.length===0?'No students in database. Go to Admin portal to add one.':'Students in database:\n\n'+list.map(x=>'Email: '+x.email+'\nPassword: '+x.password).join('\n\n'));" style="font-size:10px;color:rgba(255,255,255,.15);background:none;border:none;cursor:pointer">Having trouble? Check accounts</button>
-      </p>
-    </div>
-  </div>`;
-  document.getElementById("login-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
+      <div style="text-align:center;margin-bottom:28px">
+        <img src="${getLogoSrc()}" style="max-height:80px;max-width:220px;object-fit:contain;display:inline-block" onerror="this.style.display='none'"/>
+        <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.12em;margin-top:8px;text-transform:uppercase">VOICE OPERATING SYSTEM</div>
+      </div>`;
+  var lp=document.getElementById("login-pass");if(lp)lp.addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
 }
 
 window.doStudentLogin=async()=>{
@@ -1420,7 +1399,7 @@ function renderAdminLogin(){
       </p>
     </div>
   </div>`;
-  document.getElementById("adm-pass").addEventListener("keydown",e=>{if(e.key==="Enter")doAdminLogin();});
+  var ap=document.getElementById("adm-pass");if(ap)ap.addEventListener("keydown",e=>{if(e.key==="Enter")doAdminLogin();});
 }
 window.doAdminLogin=()=>{
   const email=document.getElementById("adm-email").value.trim().toLowerCase();
@@ -2928,7 +2907,7 @@ function getBunnyEmbedUrl(url){
   return null;
 }
 
-function setupPlayer(lesson,student){
+function setupPlayer(lesson,student){try{
   const wrapper=document.getElementById("player-wrapper");
   const videoMeta=loadVideos()[lesson.order]||{};
   const realSrc=videoMeta.src||SAMPLE_VIDEO;
@@ -3081,9 +3060,9 @@ function setupPlayer(lesson,student){
   }
   video.addEventListener("ended",markComplete);
   markBtn.addEventListener("click",markComplete);
-}
+}catch(e){console.warn("setupPlayer error:",e);}}
 
-function renderQuizCta(lesson,completed){
+function renderQuizCta(lesson,completed){try{
   const el=document.getElementById("quiz-cta");
   if(!hasRealQuiz(lesson)){el.innerHTML='';return;}
   const lessonDone=completed||isCompleted(lesson.id);
@@ -3114,7 +3093,7 @@ function renderQuizCta(lesson,completed){
       <button onclick="navigate('quiz',{lessonId:'${lesson.id}'})" style="flex-shrink:0;background:var(--grad);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(255,45,120,.3);font-family:'Montserrat',sans-serif">Start Quiz</button>
     </div>`;
   }
-}
+}catch(e){console.warn("renderQuizCta error:",e);}}
 
 // ─── QUIZ ─────────────────────────────────────────────────────────────────────
 function renderQuiz(lessonId){
