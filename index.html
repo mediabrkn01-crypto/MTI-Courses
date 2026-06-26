@@ -1185,7 +1185,17 @@ function render(screen,params){
   if(screen==="achievements") return renderAchievements();
   if(screen==="wordvault")    return renderWordVault();
   if(screen==="profile")      return renderProfile();
-  if(screen==="lesson")       return renderLesson(params.id);
+  if(screen==="lesson"){
+    // Ensure videos loaded from Supabase before rendering lesson
+    if(typeof _sb!=="undefined"){
+      sbLoadVideos().catch(function(){}).finally(function(){
+        renderLesson(params.id);
+      });
+    } else {
+      renderLesson(params.id);
+    }
+    return;
+  }
   if(screen==="quiz")         return renderQuiz(params.lessonId);
 }
 
@@ -1444,7 +1454,10 @@ window.doStudentLogin=async()=>{
   currentSession={role:"student",studentId:byEmail.id};
   // Sync progress from Supabase in background
   sbLoadProgress(byEmail.id);
-  sbLoadVideos(); // sync video metadata across devices
+  // Load videos first so lesson page has correct src on any device
+  if(typeof _sb!=="undefined"){
+    sbLoadVideos().catch(function(){});
+  }
   try{
     navigate("dashboard");
   }catch(e){
@@ -2987,14 +3000,33 @@ function getYouTubeId(url){
 
 // Convert any Bunny.net URL to embed format
 function getBunnyEmbedUrl(url){
-  if(!url)return null;
-  if(!url.includes('mediadelivery.net'))return null;
-  // Extract library ID and video ID from any Bunny URL format
-  const m=url.match(/\/(\d+)\/([a-f0-9-]{36})/i);
-  if(m){
-    // Use iframe.mediadelivery.net with required params
-    return`https://iframe.mediadelivery.net/embed/${m[1]}/${m[2]}?autoplay=false&loop=false&muted=false&preload=true&responsive=true`;
+  if(!url) return null;
+  url = url.trim();
+
+  // Already an embed iframe URL — return as-is
+  if(url.includes('iframe.mediadelivery.net/embed')) return url;
+
+  // Format: https://iframe.mediadelivery.net/play/LIBID/VIDEOID
+  // Format: https://video.bunnycdn.com/play/LIBID/VIDEOID
+  var m = url.match(/(?:iframe\.mediadelivery\.net\/play|video\.bunnycdn\.com\/play)\/(\d+)\/([a-f0-9-]{36})/i);
+  if(m) return 'https://iframe.mediadelivery.net/embed/'+m[1]+'/'+m[2]+'?autoplay=false&loop=false&muted=false&preload=true&responsive=true';
+
+  // Format: https://PULLZONE.b-cdn.net/VIDEOID/play_... or playlist.m3u8
+  // Extract GUID from b-cdn.net URLs
+  var m2 = url.match(/b-cdn\.net\/([a-f0-9-]{36})\//i);
+  if(m2){
+    // Can't get library ID from CDN URL — store as direct video source
+    return null; // fallback to <video> tag
   }
+
+  // Format: mediadelivery.net with /LIBID/VIDEOID path
+  var m3 = url.match(/mediadelivery\.net[^?]*\/(\d+)\/([a-f0-9-]{36})/i);
+  if(m3) return 'https://iframe.mediadelivery.net/embed/'+m3[1]+'/'+m3[2]+'?autoplay=false&loop=false&muted=false&preload=true&responsive=true';
+
+  // Any URL containing a UUID-style video ID and a library number
+  var m4 = url.match(/\/(\d{4,8})\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
+  if(m4) return 'https://iframe.mediadelivery.net/embed/'+m4[1]+'/'+m4[2]+'?autoplay=false&loop=false&muted=false&preload=true&responsive=true';
+
   return null;
 }
 
