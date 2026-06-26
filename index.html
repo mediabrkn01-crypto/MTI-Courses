@@ -303,7 +303,8 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
   .jd-dot{width:22px!important;height:22px!important;font-size:8px!important}
 }
 
-</style></head>
+</style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
 <body>
 
 <!-- BOOT SCREEN -->
@@ -387,6 +388,77 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 })();
 </script>
 <div id="app"></div>
+
+<script>
+// ─── SUPABASE ────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://rbhxufnfzsmkzenqavmf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJiaHh1Zm5menNta3plbnFhdm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NjMyOTcsImV4cCI6MjA5ODAzOTI5N30.JTZd6bNmsOrqclSuB44ezsCB542OrqdYxtvXvHzAlF0';
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── Supabase helpers ──────────────────────────────────────────────────────────
+// Save student progress to Supabase (non-blocking, fires and forgets)
+async function sbSaveProgress(studentId, lessonId){
+  try{
+    const{error}=await _sb.from('student_progress').upsert({
+      student_id: studentId,
+      lesson_id: lessonId,
+      completed_at: new Date().toISOString()
+    }, {onConflict:'student_id,lesson_id'});
+    if(error) console.warn('Supabase progress save error:', error.message);
+  }catch(e){console.warn('Supabase error:', e);}
+}
+
+// Save full student record to Supabase
+async function sbSaveStudent(student){
+  try{
+    const{error}=await _sb.from('students').upsert({
+      id: student.id,
+      name: student.name,
+      email: student.email,
+      password_hash: student.password,
+      valid_until: student.validUntil||null,
+      created_at: student.createdAt||new Date().toISOString()
+    }, {onConflict:'id'});
+    if(error) console.warn('Supabase student save error:', error.message);
+  }catch(e){console.warn('Supabase error:', e);}
+}
+
+// Delete student from Supabase
+async function sbDeleteStudent(studentId){
+  try{
+    await _sb.from('students').delete().eq('id', studentId);
+    await _sb.from('student_progress').delete().eq('student_id', studentId);
+  }catch(e){console.warn('Supabase error:', e);}
+}
+
+// Load all progress for a student from Supabase (sync to localStorage)
+async function sbLoadProgress(studentId){
+  try{
+    const{data,error}=await _sb.from('student_progress').select('lesson_id').eq('student_id', studentId);
+    if(error||!data) return;
+    const ids=data.map(r=>r.lesson_id);
+    const key='brokeneng_progress_'+studentId;
+    const existing=new Set(JSON.parse(localStorage.getItem(key)||'[]'));
+    ids.forEach(id=>existing.add(id));
+    localStorage.setItem(key, JSON.stringify([...existing]));
+  }catch(e){console.warn('Supabase load error:', e);}
+}
+
+// Log quiz score to Supabase
+async function sbSaveQuizScore(studentId, lessonId, score, total){
+  try{
+    const{error}=await _sb.from('quiz_scores').upsert({
+      student_id: studentId,
+      lesson_id: lessonId,
+      score: score,
+      total: total,
+      pct: Math.round(score/total*100),
+      submitted_at: new Date().toISOString()
+    }, {onConflict:'student_id,lesson_id'});
+    if(error) console.warn('Supabase quiz save error:', error.message);
+  }catch(e){console.warn('Supabase error:', e);}
+}
+</script>
 
 <script>
 // ─── DATA ────────────────────────────────────────────────────────────────────
@@ -903,6 +975,8 @@ function markLessonComplete(lessonId){
   const p=loadProgress(currentSession.studentId);
   p.add(lessonId);
   saveProgress(currentSession.studentId,p);
+  // Sync to Supabase
+  sbSaveProgress(currentSession.studentId, lessonId);
 }
 
 // ─── PROFILE PHOTO ────────────────────────────────────────────────────────────
@@ -1206,6 +1280,8 @@ window.doStudentLogin=()=>{
 
   errEl.style.display="none";
   currentSession={role:"student",studentId:byEmail.id};
+  // Sync progress from Supabase in background
+  sbLoadProgress(byEmail.id);
   try{
     navigate("dashboard");
   }catch(e){
@@ -1474,7 +1550,8 @@ function renderAdmin(tab){
       localStorage.removeItem('brokeneng_quizlock_'+id);
       localStorage.removeItem(getProgressKey(id));
       localStorage.removeItem('brokeneng_logout_'+id);
-      modal.style.display='none';navigate('admin',{tab:'students'});
+      
+      sbDeleteStudent(id);modal.style.display='none';navigate('admin',{tab:'students'});
     };
   };
 }
