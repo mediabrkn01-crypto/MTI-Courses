@@ -321,9 +321,7 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 
 <!-- BOOT SCREEN -->
 <div id="boot-screen">
-  <div class="boot-logo" id="boot-logo-el"><img src="" id="boot-logo-img" style="max-height:80px;max-width:200px;object-fit:contain;display:none"/><span id="boot-logo-text" style="display:none">BE</span></div>
-  <div class="boot-title" id="boot-site-name">Broken English</div>
-  <div class="boot-sub">VOICE OS · INITIALISING</div>
+  <div class="boot-logo" id="boot-logo-el"><img src="" id="boot-logo-img" style="max-height:110px;max-width:260px;object-fit:contain;display:none"/></div>
   <div class="boot-bar-wrap">
     <div class="boot-status" id="boot-status">Loading...</div>
     <div class="boot-bar"><div class="boot-fill" id="boot-fill"></div></div>
@@ -457,6 +455,59 @@ async function sbLoadProgress(studentId){
     ids.forEach(id=>existing.add(id));
     localStorage.setItem(key, JSON.stringify([...existing]));
   }catch(e){console.warn('Supabase load error:', e);}
+}
+
+// Save all video metadata to Supabase (admin action)
+async function sbSaveVideos(videos){
+  try{
+    const{error}=await _sb.from('course_config').upsert({
+      id:'videos',
+      data: videos,
+      updated_at: new Date().toISOString()
+    },{onConflict:'id'});
+    if(error) console.warn('Supabase videos save error:',error.message);
+    else console.log('Videos synced to Supabase');
+  }catch(e){console.warn('Supabase error:',e);}
+}
+
+// Load video metadata from Supabase → merge into localStorage → re-render if needed
+async function sbLoadVideos(){
+  try{
+    const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
+    if(error||!data||!data.data) return;
+    const local=loadVideos();
+    const merged=Object.assign({},local,data.data);
+    localStorage.setItem('brokeneng_videos',JSON.stringify(merged));
+    console.log('Videos + thumbnails loaded from Supabase');
+    // If currently on lesson page, refresh thumbnails without full re-render
+    refreshLessonThumbs();
+  }catch(e){console.warn('Supabase load videos error:',e);}
+}
+
+// After videos sync, update any visible thumbs/images without re-rendering
+function refreshLessonThumbs(){
+  try{
+    // Update right panel thumbnails (mp-item images)
+    document.querySelectorAll('[data-lesson-order]').forEach(function(el){
+      var order=parseInt(el.dataset.lessonOrder);
+      var v=loadVideos()[order]||{};
+      if(v.thumb&&el.tagName==='IMG') el.src=v.thumb;
+    });
+    // Update video player thumb if showing placeholder
+    var playerWrap=document.getElementById('player-wrapper');
+    if(playerWrap){
+      var lessonOrder=playerWrap.dataset.lessonOrder;
+      if(lessonOrder){
+        var v=loadVideos()[lessonOrder]||{};
+        if(v.src){
+          // Re-render lesson to get the video
+          if(currentSession&&currentSession.lessonId){
+            renderLesson(currentSession.lessonId);
+          }
+        }
+      }
+    }
+  }catch(e){}
 }
 
 // Log quiz score to Supabase
@@ -666,7 +717,7 @@ function getLogoSrc(){ return (typeof LOGO_URL!=="undefined"&&LOGO_URL)?LOGO_URL
     var bt = document.getElementById('boot-logo-text');
     if(bt) bt.style.display = 'block';
   }
-  document.getElementById('boot-site-name').textContent = SITE_NAME;
+  // boot-site-name element removed
 
   const steps = [
     'Initialising Voice OS...',
@@ -695,6 +746,16 @@ function getLogoSrc(){ return (typeof LOGO_URL!=="undefined"&&LOGO_URL)?LOGO_URL
   }
   setTimeout(step, 300);
 })();
+
+// Load videos from Supabase on page load — await so first render has video data
+if(typeof _sb!=="undefined"){
+  sbLoadVideos().catch(function(){}).finally(function(){
+    // Re-render current view if it's a lesson to pick up newly loaded thumb/src
+    if(currentSession&&currentSession.lessonId){
+      try{ renderLesson(currentSession.lessonId); }catch(e){}
+    }
+  });
+}
 
 // ── ACHIEVEMENTS ──────────────────────────────────────────────────────────────
 const BADGES = [
@@ -1159,12 +1220,7 @@ function sidebarHtml(active){
   <div id="sidebar">
     <!-- BRAND -->
     <div class="sb-brand" onclick="closeSidebar();navigate('dashboard')">
-      <div class="sb-logo">
-        <img src="${getLogoSrc()}" style="max-height:32px;max-width:130px;object-fit:contain;display:block;flex-shrink:0" onerror="this.style.display='none'"/>
-        <div>
-          <div class="sb-name">${SITE_NAME}</div>
-          <div class="sb-tag">VOICE OS</div>
-        </div>
+      <div <div class="sb-logo"><img src="${getLogoSrc()}" style="max-height:36px;max-width:160px;object-fit:contain;display:block" onerror="this.style.display='none'"/></div>
       </div>
     </div>
 
@@ -1387,6 +1443,7 @@ window.doStudentLogin=async()=>{
   currentSession={role:"student",studentId:byEmail.id};
   // Sync progress from Supabase in background
   sbLoadProgress(byEmail.id);
+  sbLoadVideos(); // sync video metadata across devices
   try{
     navigate("dashboard");
   }catch(e){
@@ -1441,7 +1498,10 @@ window.doAdminLogin=()=>{
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
 function loadVideos(){try{return JSON.parse(localStorage.getItem("brokeneng_videos")||"{}");}catch{return{};}}
-function saveVideos(v){localStorage.setItem("brokeneng_videos",JSON.stringify(v));}
+function saveVideos(v){
+  localStorage.setItem("brokeneng_videos",JSON.stringify(v));
+  if(typeof _sb!=="undefined") sbSaveVideos(v);
+}
 function getLockedVideos(sid){try{return JSON.parse(localStorage.getItem("brokeneng_locked_"+sid)||"[]");}catch{return[];}}
 function saveLockedVideos(sid,arr){localStorage.setItem("brokeneng_locked_"+sid,JSON.stringify(arr));}
 function getLockedQuizzes(sid){try{return JSON.parse(localStorage.getItem("brokeneng_quizlock_"+sid)||"[]");}catch{return[];}}
@@ -2792,6 +2852,7 @@ function renderLesson(lessonId){
     app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:340px;padding:24px"><div style="width:52px;height:52px;border-radius:14px;background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.25);display:flex;align-items:center;justify-content:center;margin:0 auto 16px"><svg style="width:24px;height:24px;color:#fbbf24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg></div><h2 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Video Temporarily Locked</h2><p style="color:var(--muted);font-size:13px;margin-bottom:24px;line-height:1.6">Your admin has temporarily locked this video.</p><button onclick="navigate(\'dashboard\')" class="btn-primary" style="width:auto;padding:10px 24px">Back</button></div></div>';
     return;
   }
+  if(currentSession) currentSession.lessonId=lesson.id;
   var completed=isCompleted(lesson.id);
   var section=SECTIONS.find(function(s){return s.id===lesson.sectionId;});
   var realQuiz=hasRealQuiz(lesson);
@@ -2864,7 +2925,7 @@ function renderLesson(lessonId){
     +'<div style="display:flex;flex:1;min-height:0;overflow:hidden">'
       +'<div style="flex:1;overflow-y:auto;min-width:0;padding-bottom:80px">'
         +'<div style="background:#000;position:relative">'
-          +'<div id="player-wrapper" class="no-select" style="position:relative;width:100%;max-height:60vh;aspect-ratio:16/9;background:#000;overflow:hidden">'
+          +'<div id="player-wrapper" class="no-select" data-lesson-order="'+lesson.order+'" style="position:relative;width:100%;max-height:60vh;aspect-ratio:16/9;background:#000;overflow:hidden">'
             +videoHtml
             +'<div id="wm-container" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:99">'
               +'<div id="wm-1" style="position:absolute;font-family:monospace;font-size:11px;font-weight:600;color:rgba(255,255,255,.18);white-space:nowrap;user-select:none"></div>'
