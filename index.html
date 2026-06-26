@@ -2046,9 +2046,36 @@ function renderAdminClasses(){
       // keep legacy title field for lesson page compat
       title:      document.getElementById('vm-panelTitle').value.trim(),
     };
-    saveVideos(vids);
-    document.getElementById('video-modal').style.display='none';
-    renderAdminClasses();
+    // Save to localStorage immediately
+    localStorage.setItem('brokeneng_videos', JSON.stringify(vids));
+
+    // Push to Supabase with visible feedback
+    const saveBtn = document.getElementById('vm-save-btn');
+    const origText = saveBtn ? saveBtn.textContent : '';
+    if(saveBtn){ saveBtn.textContent='Saving...'; saveBtn.disabled=true; }
+
+    async function doSave(){
+      try{
+        if(typeof _sb !== 'undefined'){
+          const{error} = await _sb.from('course_config').upsert({
+            id: 'videos',
+            data: vids,
+            updated_at: new Date().toISOString()
+          }, {onConflict:'id'});
+          if(error){
+            alert('Supabase save error: ' + error.message + '\n\nVideo saved locally only.');
+          } else {
+            console.log('✓ Video saved to Supabase');
+          }
+        }
+      } catch(e){
+        alert('Save failed: ' + e.message + '\n\nVideo saved locally only.');
+      }
+      if(saveBtn){ saveBtn.textContent=origText; saveBtn.disabled=false; }
+      document.getElementById('video-modal').style.display='none';
+      renderAdminClasses();
+    }
+    doSave();
   };
 }
 
