@@ -2319,25 +2319,31 @@ function renderMyCourses(){
       const diff=l.order<=4?'Beginner':l.order<=12?'Intermediate':'Advanced';
       const xp=l.order*10+90;
       const isActive=unlocked&&!completed;
-      return '<div style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-radius:14px;'
-        +(completed?'background:rgba(255,255,255,.04)':isActive?'background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.25)':'opacity:.45')
-        +';cursor:'+(unlocked?'pointer':'default')
-        +';transition:all .2s;position:relative" '
-        +(unlocked?'onclick="navigate(\'lesson\',{id:\''+l.id+'\'})"':'')
-        +' onmouseover="if(this.dataset.u)this.style.background=\'rgba(255,255,255,.07)\'" onmouseout="this.style.background=\''+(completed?'rgba(255,255,255,.04)':isActive?'rgba(255,45,120,.07)':'transparent')+'\';" data-u="'+(unlocked?'1':'')+'">'
-        +(thumb
-          ?'<div style="width:60px;height:40px;border-radius:8px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.06)"><img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover"/></div>'
-          :'<div style="width:52px;height:36px;border-radius:8px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:10px;font-weight:700;color:var(--muted);font-family:\'JetBrains Mono\',monospace">D'+String(l.order).padStart(2,'0')+'</div>')
-        +'<div style="flex:1;min-width:0">'
-        +'<div style="font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:15px;color:'+(unlocked?'#fff':'var(--muted)')+';margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+l.title+'</div>'
-        +'<div style="font-size:11px;color:var(--muted);display:flex;gap:10px">'
-        +'<span>'+dur+'</span><span>'+diff+'</span>'
-        +(unlocked?'<span style="color:var(--g3);font-weight:600">+'+xp+' XP</span>':'')
+      const lonclick=unlocked?"navigate('lesson',{id:'"+l.id+"'})":'';
+      return '<div style="border-radius:14px;overflow:hidden;cursor:'+(unlocked?'pointer':'default')
+        +';opacity:'+(unlocked?'1':'.45')+';transition:transform .18s,box-shadow .18s;margin-bottom:4px"'
+        +' onclick="'+lonclick+'"'
+        +' onmouseover="this.style.transform=\'scale(1.02)\';this.style.boxShadow=\'0 6px 24px rgba(0,0,0,.4)\'"'
+        +' onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">'
+        +'<div style="position:relative;width:100%;height:80px;background:rgba(255,255,255,.06);overflow:hidden">'
+          +(thumb?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;display:block"/>'
+            :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center">'
+              +'<span style="font-size:9px;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.2);text-transform:uppercase;letter-spacing:.1em">D'+String(l.order).padStart(2,'0')+'</span></div>')
+          +'<div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(13,13,28,.92) 0%,rgba(13,13,28,.2) 60%,transparent 100%)"></div>'
+          +(isActive?'<div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--gradh)"></div>':'')
+          +'<div style="position:absolute;bottom:7px;left:10px;right:10px;display:flex;align-items:flex-end;justify-content:space-between">'
+            +'<div style="min-width:0">'
+              +'<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:'+(unlocked?'#fff':'rgba(255,255,255,.5)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px">'+l.title+'</div>'
+              +'<div style="font-size:10px;color:rgba(255,255,255,.45);display:flex;gap:8px;margin-top:2px">'
+                +'<span>'+dur+'</span><span>'+diff+'</span>'
+                +(unlocked?'<span style="color:var(--g3);font-weight:600">+'+xp+' XP</span>':'')
+              +'</div>'
+            +'</div>'
+            +(completed?'<span style="font-size:13px;color:var(--g1);flex-shrink:0">✓</span>'
+              :unlocked?'<span style="font-size:16px;color:var(--g3);flex-shrink:0">▶</span>'
+              :'<span style="font-size:12px;color:rgba(255,255,255,.25);flex-shrink:0">🔒</span>')
+          +'</div>'
         +'</div>'
-        +'</div>'
-        +(completed?'<div style="font-size:14px;color:var(--g1);flex-shrink:0">✓</div>'
-          :unlocked?'<div style="font-size:18px;color:var(--g3);flex-shrink:0">▶</div>'
-          :'<div style="font-size:13px;color:var(--muted);flex-shrink:0">🔒</div>')
         +'</div>';
     }).join('');
     return '<div style="margin-bottom:32px">'
