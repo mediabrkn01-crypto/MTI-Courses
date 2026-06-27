@@ -3067,9 +3067,51 @@ function setupPlayer(lesson,student){try{
   const videoMeta=loadVideos()[lesson.order]||{};
   const realSrc=videoMeta.src||SAMPLE_VIDEO;
 
-  // If YouTube or Bunny.net — iframe handles playback, watermark overlay handles protection
+  // Mark complete + auto quiz setup (works for ALL video types)
+  const markBtn2=document.getElementById("mark-complete-btn");
+  var autoCompleted=false;
+
+  function doMarkAndQuiz(){
+    if(autoCompleted||isCompleted(lesson.id)) return;
+    autoCompleted=true;
+    markLessonComplete(lesson.id);
+    if(markBtn2){
+      markBtn2.disabled=true;
+      markBtn2.textContent='Completed ✓';
+      markBtn2.style.background='rgba(34,197,94,.1)';
+      markBtn2.style.color='#4ade80';
+      markBtn2.style.border='1px solid rgba(34,197,94,.25)';
+      markBtn2.style.cursor='default';
+      markBtn2.style.boxShadow='none';
+    }
+    renderQuizCta(lesson,true);
+    if(hasRealQuiz(lesson)){
+      setTimeout(function(){navigate('quiz',{lessonId:lesson.id});},1500);
+    }
+  }
+
+  // If YouTube or Bunny.net — use timer (90% of duration)
   if(getYouTubeId(realSrc)||getBunnyEmbedUrl(realSrc)){
     wrapper.addEventListener("contextmenu",e=>e.preventDefault());
+    const vmeta2=loadVideos()[lesson.order]||{};
+    const durStr2=vmeta2.duration||'18 min';
+    const mins2=parseFloat(durStr2)||18;
+    // Unlock button at 80% of duration
+    setTimeout(function(){
+      if(markBtn2&&!isCompleted(lesson.id)){
+        markBtn2.disabled=false;
+        markBtn2.textContent='Mark Complete ✓';
+        markBtn2.style.background='var(--grad)';
+        markBtn2.style.color='#fff';
+        markBtn2.style.border='none';
+        markBtn2.style.cursor='pointer';
+        markBtn2.style.boxShadow='0 4px 14px rgba(255,45,120,.3)';
+      }
+    }, Math.round(mins2*60*0.80)*1000);
+    // Auto mark+quiz at 95%
+    setTimeout(function(){
+      if(!isCompleted(lesson.id)) doMarkAndQuiz();
+    }, Math.round(mins2*60*0.95)*1000);
     return;
   }
 
@@ -3236,6 +3278,24 @@ function setupPlayer(lesson,student){try{
       }
     }
   }
+  // Auto-complete at 95% for MP4
+  video.addEventListener("timeupdate",function(){
+    if(!video.duration) return;
+    const pct=video.currentTime/video.duration;
+    if(pct>=0.80&&markBtn&&!isCompleted(lesson.id)){
+      markBtn.disabled=false;
+      markBtn.textContent='Mark Complete ✓';
+      markBtn.style.background='var(--grad)';
+      markBtn.style.color='#fff';
+      markBtn.style.border='none';
+      markBtn.style.cursor='pointer';
+      markBtn.style.boxShadow='0 4px 14px rgba(255,45,120,.3)';
+    }
+    if(pct>=0.95&&!isCompleted(lesson.id)) doMarkAndQuiz();
+  });
+  video.addEventListener("ended",function(){
+    if(!isCompleted(lesson.id)) doMarkAndQuiz();
+  });
   video.addEventListener("ended",markComplete);
   markBtn.addEventListener("click",markComplete);
 }catch(e){console.warn("setupPlayer error:",e);}}
