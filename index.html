@@ -2965,7 +2965,7 @@ function renderLesson(lessonId){
       +'<div style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:JetBrains Mono,monospace;min-width:0">Day '+lesson.order+': <span style="color:var(--text)">'+lesson.title.slice(0,20)+(lesson.title.length>20?"…":"")+'</span></div>'
       +'<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">'
         +(prevL&&isUnlocked(prevL)?'<button type="button" onclick="navigate(\'lesson\',{id:\''+prevL.id+'\'})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;font-family:JetBrains Mono,monospace">← Prev</button>':'')
-        +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':'background:rgba(255,255,255,.08);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1);cursor:not-allowed')+';padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif">'+(completed?'Completed ✓':'🔒 Watch to unlock')+'</button>'
+        +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':(ytId||bunnyUrl)?'background:var(--grad);color:#fff;border:none;box-shadow:0 4px 14px rgba(255,45,120,.3);cursor:pointer':'background:rgba(255,255,255,.08);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1);cursor:not-allowed')+';padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif">'+(completed?'Completed ✓':(ytId||bunnyUrl)?'Mark Complete ✓':'🔒 Watch to unlock')+'</button>'
         +(nextL&&isUnlocked(nextL)?'<button type="button" onclick="navigate(\'lesson\',{id:\''+nextL.id+'\'})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;font-family:JetBrains Mono,monospace">Next →</button>':'')
       +'</div>'
     +'</div>'
@@ -3090,29 +3090,63 @@ function setupPlayer(lesson,student){try{
     }
   }
 
-  // If YouTube or Bunny.net — use timer (90% of duration)
+  // If YouTube or Bunny.net iframe
   if(getYouTubeId(realSrc)||getBunnyEmbedUrl(realSrc)){
     wrapper.addEventListener("contextmenu",e=>e.preventDefault());
+    // Wire manual click for iframes
+    if(markBtn2&&!isCompleted(lesson.id)){
+      markBtn2.addEventListener('click',function(){doMarkAndQuiz();});
+    }
     const vmeta2=loadVideos()[lesson.order]||{};
     const durStr2=vmeta2.duration||'18 min';
     const mins2=parseFloat(durStr2)||18;
-    // Unlock button at 80% of duration
-    setTimeout(function(){
-      if(markBtn2&&!isCompleted(lesson.id)){
-        markBtn2.disabled=false;
-        markBtn2.textContent='Mark Complete ✓';
-        markBtn2.style.background='var(--grad)';
-        markBtn2.style.color='#fff';
-        markBtn2.style.border='none';
-        markBtn2.style.cursor='pointer';
-        markBtn2.style.boxShadow='0 4px 14px rgba(255,45,120,.3)';
-      }
-    }, Math.round(mins2*60*0.80)*1000);
-    // Auto mark+quiz at 95%
-    setTimeout(function(){
+    const totalSec=mins2*60;
+
+    // Listen for Bunny postMessage events
+    function onBunnyMsg(e){
+      try{
+        var d=typeof e.data==='string'?JSON.parse(e.data):e.data;
+        if(!d||!d.event) return;
+        // Time progress — unlock button at 80%
+        if(d.event==='onTimeUpdate'&&d.seconds&&totalSec>0){
+          var pct=d.seconds/totalSec;
+          if(pct>=0.80&&markBtn2&&!isCompleted(lesson.id)){
+            unlockBtn();
+          }
+          if(pct>=0.95&&!isCompleted(lesson.id)){
+            doMarkAndQuiz();
+          }
+        }
+        // Video ended
+        if(d.event==='onVideoEnd'||d.event==='ended'){
+          if(!isCompleted(lesson.id)) doMarkAndQuiz();
+        }
+      }catch(ex){}
+    }
+    window.addEventListener('message', onBunnyMsg);
+
+    // Fallback timer — unlock button after 80% of duration regardless
+    var unlockTimer=setTimeout(function(){
+      if(markBtn2&&!isCompleted(lesson.id)) unlockBtn();
+    }, Math.round(totalSec*0.80)*1000);
+
+    // Fallback auto-complete after 95% of duration
+    var autoTimer=setTimeout(function(){
       if(!isCompleted(lesson.id)) doMarkAndQuiz();
-    }, Math.round(mins2*60*0.95)*1000);
+    }, Math.round(totalSec*0.95)*1000);
+
     return;
+  }
+
+  function unlockBtn(){
+    if(!markBtn2||isCompleted(lesson.id)) return;
+    markBtn2.disabled=false;
+    markBtn2.textContent='Mark Complete ✓';
+    markBtn2.style.background='var(--grad)';
+    markBtn2.style.color='#fff';
+    markBtn2.style.border='none';
+    markBtn2.style.cursor='pointer';
+    markBtn2.style.boxShadow='0 4px 14px rgba(255,45,120,.3)';
   }
 
   const video=document.getElementById("video");
