@@ -2965,7 +2965,7 @@ function renderLesson(lessonId){
       +'<div style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:JetBrains Mono,monospace;min-width:0">Day '+lesson.order+': <span style="color:var(--text)">'+lesson.title.slice(0,20)+(lesson.title.length>20?"…":"")+'</span></div>'
       +'<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">'
         +(prevL&&isUnlocked(prevL)?'<button type="button" onclick="navigate(\'lesson\',{id:\''+prevL.id+'\'})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;font-family:JetBrains Mono,monospace">← Prev</button>':'')
-        +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':'background:var(--grad);color:#fff;border:none;box-shadow:0 4px 14px rgba(255,45,120,.3)')+';padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif;white-space:nowrap">'+(completed?'Completed ✓':'Mark Complete ✓')+'</button>'
+        +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':'background:rgba(255,255,255,.08);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1);cursor:not-allowed')+';padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif">'+(completed?'Completed ✓':'🔒 Watch to unlock')+'</button>'
         +(nextL&&isUnlocked(nextL)?'<button type="button" onclick="navigate(\'lesson\',{id:\''+nextL.id+'\'})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;font-family:JetBrains Mono,monospace">Next →</button>':'')
       +'</div>'
     +'</div>'
@@ -3184,6 +3184,29 @@ function setupPlayer(lesson,student){try{
     markBtn.innerHTML=`<svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> Completed`;
     markBtn.className="shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-green-50 text-green-600 border border-green-200 cursor-default transition";
     renderQuizCta(lesson, true);
+
+    // Update right panel to show newly unlocked lesson
+    const newStudent=loadStudents()[currentSession.studentId];
+    const newUnlocked=newStudent?getUnlockedSet(newStudent):null;
+    if(newUnlocked){
+      // Refresh the mission list panel
+      const nextLesson=ALL_LESSONS.find(l=>newUnlocked.has(l.order)&&!isCompleted(l.id));
+      // Update right panel items
+      document.querySelectorAll('[data-lesson-order]').forEach(function(el){
+        const order=parseInt(el.dataset.lessonOrder);
+        if(newUnlocked.has(order)){
+          el.style.opacity='1';
+          el.style.cursor='pointer';
+        }
+      });
+    }
+
+    // Auto-open quiz if lesson has one
+    if(hasRealQuiz(lesson)){
+      setTimeout(function(){
+        navigate('quiz', {lessonId: lesson.id});
+      }, 1200);
+    }
 
     if(currentSession?.role==="student"){
       const students=loadStudents();
