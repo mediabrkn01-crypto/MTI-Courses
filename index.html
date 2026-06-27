@@ -2891,6 +2891,7 @@ function renderDashboard(){
 
 function renderLesson(lessonId){
   var lesson=ALL_LESSONS.find(function(l){return l.id===lessonId;});
+  if(lesson) activeLesson=lesson; // update NOW PLAYING in sidebar
   if(!lesson||!isUnlocked(lesson)){
     app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:340px;padding:24px"><p style="color:var(--g1);font-size:14px;margin-bottom:16px">This class is not unlocked yet.</p><button onclick="navigate(\'dashboard\')" class="btn-primary" style="width:auto;padding:10px 24px">Dashboard</button></div></div>';
     return;
