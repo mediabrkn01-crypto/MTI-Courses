@@ -2164,7 +2164,7 @@ function renderAdminImages(){
       '</div>'+
       // Title + URL input
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+l.title+'</div>'+
+        '<div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getLessonTitle(l)+'</div>'+
         '<div style="display:flex;gap:8px;align-items:center">'+
           '<input id="img-url-'+l.order+'" type="text" value="'+thumb+'" placeholder="Paste image URL or upload below…"'+
             ' style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;min-width:0"'+
@@ -2914,7 +2914,7 @@ function renderDashboard(){
           '<span style="width:6px;height:6px;border-radius:50%;background:var(--g1);animation:blink 1.5s ease-in-out infinite;display:inline-block"></span>'+
           '🎯 Today\'s Mission · Day '+nextLesson.order+
         '</div>'+
-        '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">'+nextLesson.title+'</div>'+
+        '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">'+getLessonTitle(nextLesson)+'</div>'+
         '<div style="font-size:12px;color:var(--muted2);margin-bottom:20px;display:flex;gap:14px;flex-wrap:wrap">'+
           '<span>⏱ '+cmDur+'</span><span>⚡ +'+cmXp+' XP</span><span>📊 '+cmDiff+'</span>'+
         '</div>'+
@@ -3034,7 +3034,7 @@ function renderLesson(lessonId){
         +'<div style="position:absolute;bottom:7px;left:9px;right:9px;display:flex;align-items:flex-end;justify-content:space-between">'
           +'<div style="min-width:0">'
             +'<div style="font-size:8px;font-weight:700;color:rgba(255,255,255,.45);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">DAY '+l.order+'</div>'
-            +'<div style="font-size:12px;font-weight:700;color:'+titleColor+';line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">'+l.title+'</div>'
+            +'<div style="font-size:12px;font-weight:700;color:'+titleColor+';line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">'+getLessonTitle(l)+'</div>'
           +'</div>'
           +(lDone?'<div style="font-size:12px;color:var(--g1);flex-shrink:0;margin-left:6px">✓</div>':'')
         +'</div>'
@@ -3047,7 +3047,7 @@ function renderLesson(lessonId){
     +'<div id="main-content" style="display:flex;flex-direction:column;min-height:100vh">'
     +'<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(13,13,28,.85);backdrop-filter:blur(20px);position:sticky;top:0;z-index:50;flex-shrink:0">'
       +'<button type="button" onclick="navigate(\'dashboard\')" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;backdrop-filter:blur(10px);font-family:JetBrains Mono,monospace;white-space:nowrap" onmouseover="this.style.borderColor=\'rgba(255,45,120,.3)\';this.style.color=\'var(--text)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">← Back</button>'
-      +'<div style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:JetBrains Mono,monospace;min-width:0">Day '+lesson.order+': <span style="color:var(--text)">'+lesson.title.slice(0,20)+(lesson.title.length>20?"…":"")+'</span></div>'
+      +'<div style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:JetBrains Mono,monospace;min-width:0">Day '+lesson.order+': <span style="color:var(--text)">'+getLessonTitle(lesson).slice(0,20)+(getLessonTitle(lesson).length>20?"…":"")+'</span></div>'
       +'<div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">'
         +(prevL&&isUnlocked(prevL)?'<button type="button" onclick="navigate(\'lesson\',{id:\''+prevL.id+'\'})" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;font-family:JetBrains Mono,monospace">← Prev</button>':'')
         +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':(ytId||bunnyUrl)?'background:var(--grad);color:#fff;border:none;box-shadow:0 4px 14px rgba(255,45,120,.3);cursor:pointer':'background:rgba(255,255,255,.08);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1);cursor:not-allowed')+';padding:6px 12px;border-radius:8px;font-size:11px;font-weight:700;font-family:Montserrat,sans-serif">'+(completed?'Completed ✓':(ytId||bunnyUrl)?'Mark Complete ✓':'🔒 Watch to unlock')+'</button>'
@@ -3477,7 +3477,7 @@ function renderQuiz(lessonId){
         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         Back to Lesson
       </button>
-      <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px" style="color:var(--g3);font-family:'JetBrains Mono',monospace">${"Day "+lesson.order+" · "+lesson.title}</p>
+      <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px" style="color:var(--g3);font-family:'JetBrains Mono',monospace">${"Day "+lesson.order+" · "+getLessonTitle(lesson)}</p>
       <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:20px;color:#fff;margin-bottom:24px">Class Quiz</h1>
 
       <div class="mb-6">
