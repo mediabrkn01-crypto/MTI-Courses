@@ -2356,7 +2356,7 @@ function renderMyCourses(){
           +(isActive?'<div style="position:absolute;top:0;left:0;right:0;height:2px;background:var(--gradh)"></div>':'')
           +'<div style="position:absolute;bottom:7px;left:10px;right:10px;display:flex;align-items:flex-end;justify-content:space-between">'
             +'<div style="min-width:0">'
-              +'<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:'+(unlocked?'#fff':'rgba(255,255,255,.5)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px">'+l.title+'</div>'
+              +'<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:'+(unlocked?'#fff':'rgba(255,255,255,.5)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px">'+getLessonTitle(l)+'</div>'
               +'<div style="font-size:10px;color:rgba(255,255,255,.45);display:flex;gap:8px;margin-top:2px">'
                 +'<span>'+dur+'</span><span>'+diff+'</span>'
                 +(unlocked?'<span style="color:var(--g3);font-weight:600">+'+xp+' XP</span>':'')
@@ -2713,6 +2713,13 @@ let activeSectionId=SECTIONS[0].id;
 let activeLesson=null;
 let currentPage=0;
 const PAGE_SIZE=5;
+
+// Get admin-set title for a lesson (falls back to lesson.title)
+function getLessonTitle(lesson){
+  if(!lesson) return '';
+  var vm=loadVideos()[lesson.order]||{};
+  return vm.panelTitle||vm.title||lesson.title;
+}
 
 function renderDashboard(){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
