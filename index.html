@@ -1574,7 +1574,11 @@ function glassBtn(label,onclick,variant='ghost'){
 
 // ── STUDENTS TAB ──────────────────────────────────────────────────────────────
 function renderAdmin(tab){
-  if(tab==='classes') return renderAdminClasses();
+  if(tab==='classes'){
+    if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){}).finally(function(){renderAdminClasses();});
+    else renderAdminClasses();
+    return;
+  }
   if(tab==='settings') return renderAdminSettings();
   if(tab==='images')   return renderAdminImages();
 
@@ -2928,6 +2932,7 @@ function renderLesson(lessonId){
   var videoMeta=loadVideos()[lesson.order]||{};
   var videoSrc=videoMeta.src||SAMPLE_VIDEO;
   var videoDur=videoMeta.duration||"18 min";
+  var videoTitle=videoMeta.panelTitle||videoMeta.title||lesson.title; // use admin-set title
   var videoDesc=videoMeta.desc||lesson.description;
   var bullets=videoMeta.bullets?videoMeta.bullets.split("\n").filter(function(b){return b.trim();}):["Pronunciation patterns","Stress & intonation","Common mistakes","Real-world examples"];
   var thumbUrl=videoMeta.thumb||lesson.thumbnailUrl||"";
@@ -3003,7 +3008,7 @@ function renderLesson(lessonId){
         +'</div>'
         +'<div style="padding:24px 28px">'
           +'<div style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,45,120,.1);border:1px solid rgba(255,45,120,.2);border-radius:6px;padding:4px 10px;font-size:10px;font-family:JetBrains Mono,monospace;color:var(--g1);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">🎯 MISSION '+lesson.order+'</div>'
-          +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:8px;line-height:1.2">'+lesson.title+'</h1>'
+          +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:8px;line-height:1.2">'+videoTitle+'</h1>'
           +'<p style="font-size:14px;color:var(--muted2);line-height:1.7;margin-bottom:22px">'+videoDesc+'</p>'
           +'<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;margin-bottom:12px">Mission Objectives</div>'
           +'<div style="display:flex;flex-direction:column;gap:9px;margin-bottom:24px">'
