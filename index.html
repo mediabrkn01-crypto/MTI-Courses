@@ -1263,14 +1263,13 @@ function sidebarHtml(active){
       var al=typeof activeLesson!=="undefined"?activeLesson:null;
       if(!al) return "";
       var vm=loadVideos()[al.order]||{};
-      var thumb=vm.thumb||"";
-      if(!thumb) return "";
+      var thumb=vm.thumb||al.thumbnailUrl||"";
       return "<div style=\"margin:10px 12px;border-radius:12px;overflow:hidden;position:relative;height:90px;cursor:pointer;border:1px solid rgba(255,255,255,.1)\" onclick=\"navigate(\'lesson\',{id:\'"+al.id+"\'})\">"+
         "<img src=\""+thumb+"\" style=\"width:100%;height:100%;object-fit:cover\" onerror=\"this.parentElement.style.display=\'none\'\"/>"+
         "<div style=\"position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 60%)\"></div>"+
         "<div style=\"position:absolute;bottom:6px;left:8px;right:8px\">"+
           "<div style=\"font-size:8px;color:rgba(255,255,255,.6);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em\">NOW PLAYING</div>"+
-          "<div style=\"font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">"+al.title+"</div>"+
+          "<div style=\"font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">"+((loadVideos()[al.order]||{}).panelTitle||(loadVideos()[al.order]||{}).title||al.title)+"</div>"+
         "</div>"+
       "</div>";
     })()}
@@ -2049,7 +2048,7 @@ function renderAdminClasses(){
     const lesson=ALL_LESSONS.find(l=>l.order===order);
     document.getElementById('vm-order').value=order;
     document.getElementById('vm-class-label').textContent=`Day ${order} — ${lesson?.title||''}`;
-    document.getElementById('vm-panelTitle').value=v.panelTitle||'';
+    document.getElementById('vm-panelTitle').value=v.panelTitle||(lesson?lesson.title:'');
     document.getElementById('vm-instructor').value=v.instructor||'';
     document.getElementById('vm-src').value=v.src||'';
     document.getElementById('vm-dur').value=v.duration||'';
@@ -2084,7 +2083,7 @@ function renderAdminClasses(){
     const order=Number(document.getElementById('vm-order').value);
     const vids=loadVideos();
     vids[order]={
-      panelTitle: document.getElementById('vm-panelTitle').value.trim(),
+      panelTitle: document.getElementById('vm-panelTitle').value.trim()||document.getElementById('vm-class-label').textContent.split('—')[1]?.trim()||'',
       instructor: document.getElementById('vm-instructor').value.trim(),
       src:        document.getElementById('vm-src').value.trim(),
       duration:   document.getElementById('vm-dur').value.trim(),
