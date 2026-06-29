@@ -475,11 +475,9 @@ async function sbLoadVideos(){
   try{
     const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
     if(error||!data||!data.data) return;
-    const local=loadVideos();
-    const merged=Object.assign({},local,data.data);
-    localStorage.setItem('brokeneng_videos',JSON.stringify(merged));
-    console.log('Videos + thumbnails loaded from Supabase');
-    // If currently on lesson page, refresh thumbnails without full re-render
+    // Supabase ALWAYS wins — overwrite local completely so admin changes propagate
+    localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));
+    console.log('Videos synced from Supabase ✓');
     refreshLessonThumbs();
   }catch(e){console.warn('Supabase load videos error:',e);}
 }
@@ -1179,7 +1177,11 @@ function render(screen,params){
   if(screen==="admin-login")  return renderAdminLogin();
   if(screen==="admin")        return renderAdmin(params.tab||"students");
   if(screen==="admin-student")return renderAdminStudent(params.id);
-  if(screen==="dashboard")    return renderDashboard();
+  if(screen==="dashboard"){
+    // Refresh videos from Supabase so thumbnails/titles are current
+    if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){});
+    return renderDashboard();
+  }
   if(screen==="courses")      return renderMyCourses();
   if(screen==="quizzes")      return renderQuizzes();
   if(screen==="achievements") return renderAchievements();
@@ -2063,15 +2065,32 @@ function renderAdminClasses(){
             updated_at: new Date().toISOString()
           }, {onConflict:'id'});
           if(error){
-            alert('Supabase save error: ' + error.message + '\n\nVideo saved locally only.');
+            if(saveBtn){ saveBtn.textContent='✗ Error'; saveBtn.style.background='rgba(237,31,81,.6)'; }
+            setTimeout(function(){
+              if(saveBtn){ saveBtn.textContent=origText; saveBtn.style.background=''; saveBtn.disabled=false; }
+            }, 2000);
+            console.error('Supabase save error:', error.message);
+            alert('Supabase error: '+error.message+' - Make sure RLS is disabled on course_config table.');
+            return;
           } else {
-            console.log('✓ Video saved to Supabase');
+            if(saveBtn){ saveBtn.textContent='✓ Saved!'; saveBtn.style.background='rgba(34,197,94,.7)'; }
+            setTimeout(function(){
+              if(saveBtn){ saveBtn.textContent=origText; saveBtn.style.background=''; saveBtn.disabled=false; }
+            }, 1500);
+            console.log('✓ Video saved to Supabase — students will see changes immediately');
           }
+        } else {
+          // No Supabase — local only
+          if(saveBtn){ saveBtn.textContent='✓ Saved locally'; }
+          setTimeout(function(){
+            if(saveBtn){ saveBtn.textContent=origText; saveBtn.disabled=false; }
+          }, 1500);
         }
       } catch(e){
-        alert('Save failed: ' + e.message + '\n\nVideo saved locally only.');
+        alert('Save failed: ' + e.message);
+        if(saveBtn){ saveBtn.textContent=origText; saveBtn.disabled=false; }
+        return;
       }
-      if(saveBtn){ saveBtn.textContent=origText; saveBtn.disabled=false; }
       document.getElementById('video-modal').style.display='none';
       renderAdminClasses();
     }
