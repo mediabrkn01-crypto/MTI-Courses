@@ -477,7 +477,8 @@ async function sbLoadVideos(){
     if(error||!data||!data.data) return;
     // Supabase ALWAYS wins — overwrite local completely so admin changes propagate
     localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));
-    console.log('Videos synced from Supabase ✓');
+    var keys=Object.keys(data.data||{});
+    console.log('Videos synced from Supabase ✓ —',keys.length,'entries. Sample key 1:',JSON.stringify(data.data[1]||{}));
     refreshLessonThumbs();
   }catch(e){console.warn('Supabase load videos error:',e);}
 }
@@ -747,14 +748,9 @@ function getSymbolSrc(){ return (typeof SITE_IMAGES!=="undefined"&&SITE_IMAGES.s
   setTimeout(step, 300);
 })();
 
-// Load videos from Supabase on page load — await so first render has video data
+// Load videos from Supabase on BOOT before anything renders
 if(typeof _sb!=="undefined"){
-  sbLoadVideos().catch(function(){}).finally(function(){
-    // Re-render current view if it's a lesson to pick up newly loaded thumb/src
-    if(currentSession&&currentSession.lessonId){
-      try{ renderLesson(currentSession.lessonId); }catch(e){}
-    }
-  });
+  sbLoadVideos().catch(function(e){ console.warn('Boot video load failed:',e); });
 }
 
 // ── ACHIEVEMENTS ──────────────────────────────────────────────────────────────
@@ -1178,11 +1174,17 @@ function render(screen,params){
   if(screen==="admin")        return renderAdmin(params.tab||"students");
   if(screen==="admin-student")return renderAdminStudent(params.id);
   if(screen==="dashboard"){
-    // Refresh videos from Supabase so thumbnails/titles are current
-    if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){});
-    return renderDashboard();
+    if(typeof _sb!=="undefined"){
+      sbLoadVideos().catch(function(){}).finally(function(){ renderDashboard(); });
+    } else { renderDashboard(); }
+    return;
   }
-  if(screen==="courses")      return renderMyCourses();
+  if(screen==="courses"){
+    if(typeof _sb!=="undefined"){
+      sbLoadVideos().catch(function(){}).finally(function(){ renderMyCourses(); });
+    } else { renderMyCourses(); }
+    return;
+  }
   if(screen==="quizzes")      return renderQuizzes();
   if(screen==="achievements") return renderAchievements();
   if(screen==="wordvault")    return renderWordVault();
