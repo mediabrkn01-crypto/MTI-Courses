@@ -1743,6 +1743,46 @@ function renderAdmin(tab){
 }
 
 // ── PER-STUDENT MANAGE ────────────────────────────────────────────────────────
+window.checkSupabaseSync = async function(){
+  var el = document.getElementById('sync-status');
+  if(!el) return;
+  el.textContent = 'Checking...';
+  try{
+    var r = await _sb.from('course_config').select('id,updated_at,data').eq('id','videos').single();
+    if(r.error){ el.textContent = '✗ Error: '+r.error.message; el.style.color='#f87171'; return; }
+    if(!r.data){ el.textContent = '✗ No data in Supabase. Click "Force Push Videos".'; el.style.color='#fbbf24'; return; }
+    var keys = Object.keys(r.data.data||{});
+    el.textContent = '✓ Supabase has '+keys.length+' video entries. Last updated: '+(r.data.updated_at||'unknown');
+    el.style.color='#4ade80';
+    console.log('Supabase video data:', r.data.data);
+  }catch(e){ el.textContent='✗ '+e.message; el.style.color='#f87171'; }
+};
+
+window.forcePushVideos = async function(){
+  var el = document.getElementById('sync-status');
+  var vids = loadVideos();
+  var keys = Object.keys(vids);
+  if(keys.length===0){ if(el) el.textContent='No videos in localStorage to push.'; return; }
+  if(el) el.textContent = 'Pushing '+keys.length+' entries...';
+  try{
+    var r = await _sb.from('course_config').upsert({id:'videos',data:vids,updated_at:new Date().toISOString()},{onConflict:'id'});
+    if(r.error){ if(el){el.textContent='✗ Push failed: '+r.error.message;el.style.color='#f87171';} return; }
+    if(el){el.textContent='✓ Pushed '+keys.length+' videos to Supabase!';el.style.color='#4ade80';}
+  }catch(e){ if(el){el.textContent='✗ '+e.message;el.style.color='#f87171';} }
+};
+
+window.forcePullVideos = async function(){
+  var el = document.getElementById('sync-status');
+  if(el) el.textContent = 'Pulling from Supabase...';
+  try{
+    var r = await _sb.from('course_config').select('data').eq('id','videos').single();
+    if(r.error||!r.data||!r.data.data){ if(el){el.textContent='✗ Nothing to pull: '+(r.error?r.error.message:'empty');el.style.color='#fbbf24';} return; }
+    localStorage.setItem('brokeneng_videos',JSON.stringify(r.data.data));
+    var keys=Object.keys(r.data.data);
+    if(el){el.textContent='✓ Pulled '+keys.length+' entries from Supabase into localStorage!';el.style.color='#4ade80';}
+  }catch(e){ if(el){el.textContent='✗ '+e.message;el.style.color='#f87171';} }
+};
+
 function renderAdminStudent(id){
   const students=loadStudents();
   const s=students[id];
@@ -2266,6 +2306,17 @@ function renderAdminSettings(){
   <div style="padding:24px;max-width:600px;position:relative;z-index:1">
     <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;font-family:'Montserrat',sans-serif">Settings</h1>
     <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Global course configuration.</p>
+
+      <!-- SUPABASE SYNC SECTION -->
+      <div class="lg" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,165,0,.25);background:rgba(255,165,0,.05)">
+        <p style="font-weight:700;font-size:15px;color:var(--g3);margin-bottom:8px">🔄 Supabase Sync</p>
+        <div id="sync-status" style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Click Check to verify connection...</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button onclick="checkSupabaseSync()" class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px">Check Supabase</button>
+          <button onclick="forcePushVideos()" style="padding:8px 16px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#4ade80;font-size:12px;cursor:pointer;font-weight:600">⬆ Push Videos to Supabase</button>
+          <button onclick="forcePullVideos()" style="padding:8px 16px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:8px;color:#60a5fa;font-size:12px;cursor:pointer;font-weight:600">⬇ Pull from Supabase</button>
+        </div>
+      </div>
 
     ${[
       {
