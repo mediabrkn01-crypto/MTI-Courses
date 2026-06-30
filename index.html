@@ -137,6 +137,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .panel-card:hover{transform:scale(1.02) translateY(-1px)}
 /* BUTTONS */
 .btn-primary{background:var(--grad);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:14px 20px;font-size:15px;font-weight:700;color:#fff;cursor:pointer;width:100%;box-shadow:0 4px 24px rgba(255,45,120,.4),inset 0 1px 0 rgba(255,255,255,.2);transition:all .18s;position:relative;overflow:hidden;font-family:'Montserrat',sans-serif;letter-spacing:.02em}
+.btn-primary::before,.btn-primary::after{content:'';position:absolute;width:300%;height:50%;border-radius:50%;z-index:0;pointer-events:none;opacity:.6}
+.btn-primary::before{bottom:-12px;right:-250%;background:radial-gradient(circle,#FF2D78,transparent 10%);animation:star-movement-bottom 6s linear infinite alternate}
+.btn-primary::after{top:-12px;left:-250%;background:radial-gradient(circle,#FF8C00,transparent 10%);animation:star-movement-top 6s linear infinite alternate}
 .btn-primary:hover{opacity:.9;transform:scale(1.03) translateY(-1px);box-shadow:0 8px 32px rgba(255,45,120,.55)}
 .btn-primary::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);transition:left .4s}
 .btn-primary:hover::before{left:100%}
@@ -3043,7 +3046,7 @@ function renderDashboard(){
         '<div style="font-size:12px;color:var(--muted2);margin-bottom:20px;display:flex;gap:14px;flex-wrap:wrap">'+
           '<span>⏱ '+cmDur+'</span><span>⚡ +'+cmXp+' XP</span><span>📊 '+cmDiff+'</span>'+
         '</div>'+
-        '<button id="cm-btn" type="button" style="display:inline-flex;align-items:center;gap:10px;padding:13px 26px;background:var(--grad);border:none;border-radius:10px;color:#fff;font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(255,45,120,.4);letter-spacing:.02em">Continue Mission →</button>'+
+        '<div class="star-border-container" style="border-radius:10px"><div class="border-gradient-bottom"></div><div class="border-gradient-top"></div><button id="cm-btn" type="button" class="star-border-inner" style="display:inline-flex;align-items:center;gap:10px;padding:13px 26px;background:var(--grad);border:1px solid #222;border-radius:10px;color:#fff;font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(255,45,120,.4);letter-spacing:.02em">Continue Mission →</button></div>'+
       '</div>'
     :'')+
 
@@ -3721,5 +3724,7 @@ function setupTopBar(student){
 
 navigate("login");
 </script>
+
+
 </body>
 </html>
