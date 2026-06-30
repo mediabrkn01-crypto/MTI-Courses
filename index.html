@@ -393,10 +393,10 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
     0 0 50px 2px var(--glow-color-10);
 }
 /* Global loading overlay — shown briefly on navigation while content/data loads */
-#app-loader{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(8,8,16,.5);backdrop-filter:blur(3px);opacity:0;transition:opacity .15s ease}
+#app-loader{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(8,8,16,.75);backdrop-filter:blur(4px);opacity:0;transition:opacity .15s ease}
 #app-loader.show{display:flex;opacity:1}
 #app-loader .spin{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--brand,#ff2d78);animation:app-spin .7s linear infinite}
-#app-loader .loader-vid{width:140px;height:140px;object-fit:contain;border-radius:20px}
+#app-loader .loader-vid{width:min(60vw,420px);height:min(60vw,420px);object-fit:contain;border-radius:20px}
 @keyframes app-spin{to{transform:rotate(360deg)}}
 #app-loader-bar{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--brand,#ff2d78),#ff7a45);z-index:100000;opacity:0;transition:width .25s ease,opacity .2s ease}
 #app-loader-bar.show{opacity:1}
