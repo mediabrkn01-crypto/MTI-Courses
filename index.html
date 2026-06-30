@@ -208,10 +208,10 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 .avatar-upload:hover .avatar-overlay{opacity:1}
 .avatar-overlay{position:absolute;inset:0;border-radius:1rem;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
 /* JOURNEY */
-.journey-strip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;margin-bottom:16px;overflow:hidden}
+.journey-strip{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px 18px;margin-bottom:16px;overflow:visible}
 .journey-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .journey-title{font-size:12px;font-weight:700;color:#fff;font-family:'Montserrat',sans-serif}
-.journey-dots{display:flex;align-items:center;overflow-x:auto;padding-bottom:2px;gap:0}
+.journey-dots{display:flex;align-items:center;overflow-x:auto;overflow-y:visible;padding:20px 14px 14px;margin:-20px -14px -10px;gap:0}
 .journey-dots::-webkit-scrollbar{display:none}
 .jd-item{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;padding:0 5px;transition:transform .2s}
 .jd-item:hover{transform:scale(1.15)}
@@ -3140,26 +3140,26 @@ function renderDashboard(){
     '</div>'+
 
     // JOURNEY PROGRESS
-    '<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:22px;overflow:hidden">'+
+    '<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:22px;overflow:visible">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
         '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px">Journey Progress</div>'+
         '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'courses\')">View all →</div>'+
       '</div>'+
-      '<div class="journey-dots">'+dots+'</div>'+
+      '<div class="journey-dots dock-row" id="jp-dots">'+dots+'</div>'+
     '</div>'+
 
     // PHASES
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Your Journey Phases</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px 16px;" class="dock-row">'+phaseCards+'</div>'+
+    '<div style="display:flex;gap:24px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px 16px;" class="dock-row">'+phaseCards+'</div>'+
 
     // WORD VAULT PREVIEW
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Word Vault</div>'+
       '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'wordvault\')">Browse all →</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px -6px" class="dock-row">'+wvCards+'</div>'+
+    '<div style="display:flex;gap:24px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px -6px" class="dock-row">'+wvCards+'</div>'+
 
     '</div></div>';
 
@@ -3804,7 +3804,7 @@ function initDockMagnify(row, mode){
   row.dataset.dockInit = '1';
   mode = mode || 'row'; // 'row' = horizontal strip, 'col' = vertical list
 
-  var maxScale = mode === 'col' ? 1.16 : 1.28; // stronger pop on hover
+  var maxScale = mode === 'col' ? 1.16 : 1.20; // stronger pop on hover
   var influence = mode === 'col' ? 150 : 170; // wider reach so neighbors join in
   var maxLift = mode === 'col' ? 10 : 14; // px the hovered item shifts by, dock-style
   var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
