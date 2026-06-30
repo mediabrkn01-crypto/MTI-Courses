@@ -3831,6 +3831,9 @@ function initBorderGlow(el){
   if(!el || el.dataset.glowInit) return;
   el.dataset.glowInit = '1';
   el.classList.add('border-glow-card');
+  // The outer glow layer extends beyond the card's own box (negative inset).
+  // overflow:hidden on the card would clip it invisible, so force it visible.
+  if(el.style.overflow === 'hidden') el.style.overflow = 'visible';
   var span = document.createElement('span');
   span.className = 'edge-light';
   el.appendChild(span);
