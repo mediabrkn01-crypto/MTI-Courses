@@ -2607,7 +2607,7 @@ function renderMyCourses(){
       +(isPhaseComplete?'<div style="font-size:14px;color:#4ade80">✓</div>':'')
       +'<div style="border-radius:99px;padding:3px 10px;font-size:10px;font-weight:700;background:'+(isPhaseComplete?'rgba(34,197,94,.12)':'rgba(255,255,255,.08)')+';border:1px solid '+(isPhaseComplete?'rgba(34,197,94,.3)':'rgba(255,255,255,.12)')+';color:'+(isPhaseComplete?'#4ade80':'var(--muted)')+';font-family:\'JetBrains Mono\',monospace;white-space:nowrap">'+ph.days+'</div>'
       +'</div>'
-      +'<div style="display:flex;flex-direction:column;gap:4px">'+rows+'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:4px;padding-right:8px" class="dock-col">'+rows+'</div>'
       +'</div>';
   }).join('');
 
@@ -3152,14 +3152,14 @@ function renderDashboard(){
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Your Journey Phases</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:16px 4px 8px;margin-bottom:22px" class="dock-row">'+phaseCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:28px 4px 8px;margin-bottom:22px" class="dock-row">'+phaseCards+'</div>'+
 
     // WORD VAULT PREVIEW
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Word Vault</div>'+
       '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'wordvault\')">Browse all →</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:16px 4px 8px" class="dock-row">'+wvCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:28px 4px 8px" class="dock-row">'+wvCards+'</div>'+
 
     '</div></div>';
 
@@ -3799,14 +3799,15 @@ navigate("login");
 // ── BORDER GLOW (cursor-tracking edge effect) ──────────────────────────────
 
 // ── DOCK MAGNIFICATION (macOS-style hover scaling) ──────────────────────────
-function initDockMagnify(row){
+function initDockMagnify(row, mode){
   if(!row || row.dataset.dockInit) return;
   row.dataset.dockInit = '1';
+  mode = mode || 'row'; // 'row' = horizontal strip, 'col' = vertical list
 
-  var maxScale = 1.15;
-  var influence = 130; // px — gaussian sigma-ish radius of effect
+  var maxScale = mode === 'col' ? 1.04 : 1.15; // subtler for full-width vertical rows
+  var influence = mode === 'col' ? 90 : 130;
   var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
-  var origin = isSingleRow ? 'bottom center' : 'center center';
+  var origin = mode === 'col' ? 'center left' : (isSingleRow ? 'bottom center' : 'center center');
 
   var children = Array.prototype.slice.call(row.children);
   var state = children.map(function(){ return {current: 1, target: 1}; });
@@ -3834,9 +3835,15 @@ function initDockMagnify(row){
       var rect = child.getBoundingClientRect();
       var cx = rect.left + rect.width / 2;
       var cy = rect.top + rect.height / 2;
-      var dx = mouseX - cx;
-      var dy = isSingleRow ? 0 : (mouseY - cy);
-      var dist = Math.sqrt(dx*dx + dy*dy);
+      var dist;
+      if(mode === 'col'){
+        // Vertical list — only vertical distance matters, ignore horizontal mouse position
+        dist = Math.abs(mouseY - cy);
+      } else {
+        var dx = mouseX - cx;
+        var dy = isSingleRow ? 0 : (mouseY - cy);
+        dist = Math.sqrt(dx*dx + dy*dy);
+      }
       var t = falloff(dist, influence);
       state[i].target = 1 + (maxScale - 1) * t;
     });
@@ -3852,7 +3859,7 @@ function initDockMagnify(row){
       if(Math.abs(diff) > 0.001) stillMoving = true;
       else s.current = s.target;
       child.style.transform = 'scale(' + s.current.toFixed(4) + ')';
-      child.style.zIndex = s.current > 1.01 ? '5' : '1';
+      child.style.zIndex = s.current > 1.01 ? '40' : '1';
     });
     if(stillMoving){
       rafId = requestAnimationFrame(animate);
@@ -3887,7 +3894,8 @@ function initDockMagnify(row){
 }
 
 function applyDockMagnifyToAll(){
-  document.querySelectorAll('.dock-row:not([data-dock-init])').forEach(initDockMagnify);
+  document.querySelectorAll('.dock-row:not([data-dock-init])').forEach(function(el){ initDockMagnify(el, 'row'); });
+  document.querySelectorAll('.dock-col:not([data-dock-init])').forEach(function(el){ initDockMagnify(el, 'col'); });
 }
 
 function initBorderGlow(el){
