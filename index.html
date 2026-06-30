@@ -3152,14 +3152,14 @@ function renderDashboard(){
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Your Journey Phases</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:34px 22px 10px;margin:-6px -18px 20px;" class="dock-row">'+phaseCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px 16px;" class="dock-row">'+phaseCards+'</div>'+
 
     // WORD VAULT PREVIEW
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Word Vault</div>'+
       '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'wordvault\')">Browse all →</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:34px 22px 10px;margin:-6px -18px -2px" class="dock-row">'+wvCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px -6px" class="dock-row">'+wvCards+'</div>'+
 
     '</div></div>';
 
@@ -3804,8 +3804,9 @@ function initDockMagnify(row, mode){
   row.dataset.dockInit = '1';
   mode = mode || 'row'; // 'row' = horizontal strip, 'col' = vertical list
 
-  var maxScale = mode === 'col' ? 1.04 : 1.15; // subtler for full-width vertical rows
-  var influence = mode === 'col' ? 90 : 130;
+  var maxScale = mode === 'col' ? 1.07 : 1.28; // stronger pop on hover
+  var influence = mode === 'col' ? 110 : 170; // wider reach so neighbors join in
+  var maxLift = mode === 'col' ? 0 : 14; // px the hovered card rises by, dock-style
   var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
   var origin = mode === 'col' ? 'center left' : (isSingleRow ? 'bottom center' : 'center center');
 
@@ -3854,11 +3855,13 @@ function initDockMagnify(row, mode){
     children.forEach(function(child, i){
       var s = state[i];
       var diff = s.target - s.current;
-      // Spring-like lerp — fast catch-up, gentle settle (mimics dock's springy ease)
-      s.current += diff * 0.22;
+      // Spring-like lerp — fast catch-up, snappy settle (mimics dock's springy ease)
+      s.current += diff * 0.3;
       if(Math.abs(diff) > 0.001) stillMoving = true;
       else s.current = s.target;
-      child.style.transform = 'scale(' + s.current.toFixed(4) + ')';
+      var liftT = (s.current - 1) / (maxScale - 1); // 0..1 progress toward full scale
+      var lift = maxLift * liftT;
+      child.style.transform = 'translateY(-' + lift.toFixed(2) + 'px) scale(' + s.current.toFixed(4) + ')';
       child.style.zIndex = s.current > 1.01 ? '40' : '1';
     });
     if(stillMoving){
