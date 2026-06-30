@@ -2681,11 +2681,7 @@ function renderWordVault(){
     wvGridEl.innerHTML = cards || '<div style="color:var(--muted);font-size:14px;padding:32px">No results found.</div>';
     delete wvGridEl.dataset.dockInit; // re-attach dock magnify listeners to new cards
 
-    // Add hover magnification
-    document.querySelectorAll('.wv-card').forEach(function(card){
-      card.addEventListener('mouseenter',function(){this.style.transform='translateY(-3px)';this.style.borderColor='var(--border-glow)';this.style.boxShadow='0 12px 32px rgba(255,45,120,.1)';});
-      card.addEventListener('mouseleave',function(){this.style.transform='';this.style.borderColor='rgba(255,255,255,.09)';this.style.boxShadow='';});
-    });
+    // (hover magnification now handled by dock-row magnify engine on #wv-grid)
   }
 
   app.innerHTML=sidebarHtml("wordvault")+`
@@ -2712,7 +2708,7 @@ function renderWordVault(){
       </div>
 
       <!-- GRID -->
-      <div id="wv-grid" class="dock-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
+      <div id="wv-grid" class="dock-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:16px 4px"></div>
     </div>
   </div>`;
 
@@ -3052,7 +3048,7 @@ function renderDashboard(){
   var wvCards='';
   if(typeof WV_DATA!=='undefined'){
     WV_DATA.forEach(function(f){
-      wvCards+='<div style="min-width:150px;max-width:150px;border-radius:12px;padding:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);flex-shrink:0;cursor:pointer;position:relative;transition:all .2s" onclick="navigate(\'wordvault\')" onmouseover="this.style.transform=\'translateY(-3px)\';this.style.borderColor=\'rgba(255,45,120,.3)\';" onmouseout="this.style.transform=\'\';this.style.borderColor=\'rgba(255,255,255,.09)\';">'+
+      wvCards+='<div style="min-width:150px;max-width:150px;border-radius:12px;padding:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);flex-shrink:0;cursor:pointer;position:relative" onclick="navigate(\'wordvault\')">'+
         '<div style="position:absolute;top:10px;right:10px;font-size:11px;color:var(--muted)">🔒</div>'+
         '<div style="font-size:26px;margin-bottom:8px">'+f.icon+'</div>'+
         '<div style="font-size:9px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">'+f.cat+'</div>'+
@@ -3156,14 +3152,14 @@ function renderDashboard(){
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Your Journey Phases</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-bottom:22px" class="dock-row">'+phaseCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:16px 4px 8px;margin-bottom:22px" class="dock-row">'+phaseCards+'</div>'+
 
     // WORD VAULT PREVIEW
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Word Vault</div>'+
       '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'wordvault\')">Browse all →</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px" class="dock-row">'+wvCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;overflow-y:visible;padding:16px 4px 8px" class="dock-row">'+wvCards+'</div>'+
 
     '</div></div>';
 
@@ -3806,8 +3802,8 @@ navigate("login");
 function initDockMagnify(row){
   if(!row || row.dataset.dockInit) return;
   row.dataset.dockInit = '1';
-  var maxScale = 1.18;
-  var influence = 140; // px radius of influence around cursor
+  var maxScale = 1.12;
+  var influence = 110; // px radius of influence around cursor
 
   function update(mouseX){
     var children = Array.prototype.slice.call(row.children);
@@ -3838,9 +3834,12 @@ function initDockMagnify(row){
   row.addEventListener('mouseleave', reset);
 
   // Ensure smooth transitions + transform-origin for natural scaling
+  // Use "center center" for grid layouts (multiple rows) so cards don't grow off-screen at the top,
+  // and "bottom center" only for single-row horizontal scroll strips (dock-like rows).
+  var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
   Array.prototype.slice.call(row.children).forEach(function(child){
     child.style.transition = 'transform .18s cubic-bezier(.34,1.56,.64,1)';
-    child.style.transformOrigin = 'bottom center';
+    child.style.transformOrigin = isSingleRow ? 'bottom center' : 'center center';
     child.style.willChange = 'transform';
   });
 }
