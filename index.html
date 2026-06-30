@@ -318,6 +318,108 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
   .jd-dot{width:22px!important;height:22px!important;font-size:8px!important}
 }
 
+
+/* ══ ADVANCED MESH BORDER GLOW (cursor-tracking edge effect) ══ */
+.border-glow-card{
+  --edge-proximity:0;--cursor-angle:45deg;--edge-sensitivity:30;
+  --color-sensitivity:calc(var(--edge-sensitivity) + 20);
+  --glow-padding:30px;--cone-spread:25;--fill-opacity:.5;
+  --gradient-one: radial-gradient(at 80% 55%, rgba(255,45,120,1) 0px, transparent 50%);
+  --gradient-two: radial-gradient(at 69% 34%, rgba(255,140,0,1) 0px, transparent 50%);
+  --gradient-three: radial-gradient(at 8% 6%, rgba(255,90,160,1) 0px, transparent 50%);
+  --gradient-four: radial-gradient(at 41% 38%, rgba(255,45,120,1) 0px, transparent 50%);
+  --gradient-five: radial-gradient(at 86% 85%, rgba(255,140,0,1) 0px, transparent 50%);
+  --gradient-six: radial-gradient(at 82% 18%, rgba(255,90,160,1) 0px, transparent 50%);
+  --gradient-seven: radial-gradient(at 51% 4%, rgba(255,45,120,1) 0px, transparent 50%);
+  --gradient-base: linear-gradient(rgba(255,45,120,1) 0 100%);
+  --glow-color: rgba(255,45,120,1);
+  --glow-color-60: rgba(255,45,120,.6);
+  --glow-color-50: rgba(255,45,120,.5);
+  --glow-color-40: rgba(255,45,120,.4);
+  --glow-color-30: rgba(255,45,120,.3);
+  --glow-color-20: rgba(255,45,120,.2);
+  --glow-color-10: rgba(255,45,120,.1);
+  position:relative;isolation:isolate;
+}
+.border-glow-card::before,.border-glow-card::after,.border-glow-card>.edge-light{
+  content:"";position:absolute;inset:0;border-radius:inherit;transition:opacity .25s ease-out;z-index:-1;pointer-events:none;
+}
+.border-glow-card:not(:hover):not(.sweep-active)::before,
+.border-glow-card:not(:hover):not(.sweep-active)::after,
+.border-glow-card:not(:hover):not(.sweep-active)>.edge-light{
+  opacity:0;transition:opacity .75s ease-in-out;
+}
+.border-glow-card::before{
+  border:1px solid transparent;
+  background:
+    var(--gradient-one) border-box,
+    var(--gradient-two) border-box,
+    var(--gradient-three) border-box,
+    var(--gradient-four) border-box,
+    var(--gradient-five) border-box,
+    var(--gradient-six) border-box,
+    var(--gradient-seven) border-box,
+    var(--gradient-base) border-box;
+  opacity:calc((var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity)));
+  -webkit-mask-image:conic-gradient(from var(--cursor-angle) at center,black calc(var(--cone-spread) * 1%),transparent calc((var(--cone-spread) + 15) * 1%),transparent calc((100 - var(--cone-spread) - 15) * 1%),black calc((100 - var(--cone-spread)) * 1%));
+  mask-image:conic-gradient(from var(--cursor-angle) at center,black calc(var(--cone-spread) * 1%),transparent calc((var(--cone-spread) + 15) * 1%),transparent calc((100 - var(--cone-spread) - 15) * 1%),black calc((100 - var(--cone-spread)) * 1%));
+}
+.border-glow-card::after{
+  border:1px solid transparent;
+  background:
+    var(--gradient-one) padding-box,
+    var(--gradient-two) padding-box,
+    var(--gradient-three) padding-box,
+    var(--gradient-four) padding-box,
+    var(--gradient-five) padding-box,
+    var(--gradient-six) padding-box,
+    var(--gradient-seven) padding-box,
+    var(--gradient-base) padding-box;
+  -webkit-mask-image:
+    linear-gradient(to bottom, black, black),
+    radial-gradient(ellipse at 50% 50%, black 40%, transparent 65%),
+    radial-gradient(ellipse at 66% 66%, black 5%, transparent 40%),
+    radial-gradient(ellipse at 33% 33%, black 5%, transparent 40%),
+    radial-gradient(ellipse at 66% 33%, black 5%, transparent 40%),
+    radial-gradient(ellipse at 33% 66%, black 5%, transparent 40%),
+    conic-gradient(from var(--cursor-angle) at center, transparent 5%, black 15%, black 85%, transparent 95%);
+  mask-image:
+    linear-gradient(to bottom, black, black),
+    radial-gradient(ellipse at 50% 50%, black 40%, transparent 65%),
+    radial-gradient(ellipse at 66% 66%, black 5%, transparent 40%),
+    radial-gradient(ellipse at 33% 33%, black 5%, transparent 40%),
+    radial-gradient(ellipse at 66% 33%, black 5%, transparent 40%),
+    radial-gradient(ellipse at 33% 66%, black 5%, transparent 40%),
+    conic-gradient(from var(--cursor-angle) at center, transparent 5%, black 15%, black 85%, transparent 95%);
+  mask-composite:subtract,add,add,add,add,add;
+  -webkit-mask-composite:xor;
+  opacity:calc(var(--fill-opacity) * (var(--edge-proximity) - var(--color-sensitivity)) / (100 - var(--color-sensitivity)));
+  mix-blend-mode:soft-light;
+}
+.border-glow-card>.edge-light{
+  inset:calc(var(--glow-padding) * -1);pointer-events:none;z-index:1;
+  -webkit-mask-image:conic-gradient(from var(--cursor-angle) at center, black 2.5%, transparent 10%, transparent 90%, black 97.5%);
+  mask-image:conic-gradient(from var(--cursor-angle) at center, black 2.5%, transparent 10%, transparent 90%, black 97.5%);
+  opacity:calc((var(--edge-proximity) - var(--edge-sensitivity)) / (100 - var(--edge-sensitivity)));
+  mix-blend-mode:plus-lighter;
+}
+.border-glow-card>.edge-light::before{
+  content:"";position:absolute;inset:var(--glow-padding);border-radius:inherit;
+  box-shadow:
+    inset 0 0 0 1px var(--glow-color),
+    inset 0 0 1px 0 var(--glow-color-60),
+    inset 0 0 3px 0 var(--glow-color-50),
+    inset 0 0 6px 0 var(--glow-color-40),
+    inset 0 0 15px 0 var(--glow-color-30),
+    inset 0 0 25px 2px var(--glow-color-20),
+    inset 0 0 50px 2px var(--glow-color-10),
+    0 0 1px 0 var(--glow-color-60),
+    0 0 3px 0 var(--glow-color-50),
+    0 0 6px 0 var(--glow-color-40),
+    0 0 15px 0 var(--glow-color-30),
+    0 0 25px 2px var(--glow-color-20),
+    0 0 50px 2px var(--glow-color-10);
+}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -1448,7 +1550,7 @@ function renderLogin(){
   app.innerHTML=`
   <div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:16px">
     <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
-    <div style="position:relative;z-index:2;width:420px;max-width:100%;
+    <div data-glow-init="1" style="position:relative;z-index:2;width:420px;max-width:100%;
       background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:28px;
       padding:48px 40px 40px;backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
       box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,45,120,.1),inset 0 1px 0 rgba(255,255,255,.15)">
@@ -1578,7 +1680,7 @@ function renderAdminLogin(){
   app.innerHTML=`
   <div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:16px">
     <div class="orb o1"></div><div class="orb o2"></div>
-    <div style="position:relative;z-index:2;width:420px;max-width:100%;
+    <div data-glow-init="1" style="position:relative;z-index:2;width:420px;max-width:100%;
       background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:28px;
       padding:48px 40px 40px;backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
       box-shadow:0 40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.15)">
