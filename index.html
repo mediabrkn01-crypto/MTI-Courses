@@ -3840,9 +3840,9 @@ function initDockMagnify(row, mode){
   row.dataset.dockInit = '1';
   mode = mode || 'row'; // 'row' = horizontal strip, 'col' = vertical list
 
-  var maxScale = mode === 'col' ? 1.16 : 1.20; // stronger pop on hover
-  var influence = mode === 'col' ? 150 : 170; // wider reach so neighbors join in
-  var maxLift = mode === 'col' ? 10 : 14; // px the hovered item shifts by, dock-style
+  var maxScale = mode === 'col' ? 1.06 : 1.08; // gentle pop — avoids overlapping neighbors
+  var influence = mode === 'col' ? 110 : 120; // reach
+  var maxLift = mode === 'col' ? 4 : 6; // px the hovered item shifts by, dock-style
   var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
   var origin = mode === 'col' ? 'center left' : (isSingleRow ? 'bottom center' : 'center center');
 
