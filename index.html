@@ -2677,7 +2677,9 @@ function renderWordVault(){
         +(locked?'':'<div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:transparent;transition:background .2s" class="wv-underline"></div>')
         +'</div>';
     }).join('');
-    document.getElementById('wv-grid').innerHTML=cards||'<div style="color:var(--muted);font-size:14px;padding:32px">No results found.</div>';
+    var wvGridEl = document.getElementById('wv-grid');
+    wvGridEl.innerHTML = cards || '<div style="color:var(--muted);font-size:14px;padding:32px">No results found.</div>';
+    delete wvGridEl.dataset.dockInit; // re-attach dock magnify listeners to new cards
 
     // Add hover magnification
     document.querySelectorAll('.wv-card').forEach(function(card){
@@ -2710,7 +2712,7 @@ function renderWordVault(){
       </div>
 
       <!-- GRID -->
-      <div id="wv-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
+      <div id="wv-grid" class="dock-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px"></div>
     </div>
   </div>`;
 
@@ -3154,14 +3156,14 @@ function renderDashboard(){
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Your Journey Phases</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-bottom:22px">'+phaseCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-bottom:22px" class="dock-row">'+phaseCards+'</div>'+
 
     // WORD VAULT PREVIEW
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
       '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Word Vault</div>'+
       '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'wordvault\')">Browse all →</div>'+
     '</div>'+
-    '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px">'+wvCards+'</div>'+
+    '<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px" class="dock-row">'+wvCards+'</div>'+
 
     '</div></div>';
 
@@ -3799,6 +3801,54 @@ function setupTopBar(student){
 navigate("login");
 
 // ── BORDER GLOW (cursor-tracking edge effect) ──────────────────────────────
+
+// ── DOCK MAGNIFICATION (macOS-style hover scaling) ──────────────────────────
+function initDockMagnify(row){
+  if(!row || row.dataset.dockInit) return;
+  row.dataset.dockInit = '1';
+  var maxScale = 1.18;
+  var influence = 140; // px radius of influence around cursor
+
+  function update(mouseX){
+    var children = Array.prototype.slice.call(row.children);
+    var rowRect = row.getBoundingClientRect();
+    children.forEach(function(child){
+      var rect = child.getBoundingClientRect();
+      var childCenter = rect.left + rect.width/2;
+      var dist = Math.abs(mouseX - childCenter);
+      var scale = 1;
+      if(dist < influence){
+        scale = 1 + (maxScale - 1) * (1 - dist/influence);
+      }
+      child.style.transform = 'scale(' + scale.toFixed(3) + ')';
+      child.style.zIndex = scale > 1.02 ? '5' : '1';
+    });
+  }
+
+  function reset(){
+    Array.prototype.slice.call(row.children).forEach(function(child){
+      child.style.transform = 'scale(1)';
+      child.style.zIndex = '1';
+    });
+  }
+
+  row.addEventListener('mousemove', function(e){
+    update(e.clientX);
+  });
+  row.addEventListener('mouseleave', reset);
+
+  // Ensure smooth transitions + transform-origin for natural scaling
+  Array.prototype.slice.call(row.children).forEach(function(child){
+    child.style.transition = 'transform .18s cubic-bezier(.34,1.56,.64,1)';
+    child.style.transformOrigin = 'bottom center';
+    child.style.willChange = 'transform';
+  });
+}
+
+function applyDockMagnifyToAll(){
+  document.querySelectorAll('.dock-row:not([data-dock-init])').forEach(initDockMagnify);
+}
+
 function initBorderGlow(el){
   if(!el || el.dataset.glowInit) return;
   el.dataset.glowInit = '1';
@@ -3841,18 +3891,32 @@ function initBorderGlow(el){
 }
 
 // Auto-apply to .lg cards AND any element with a visible rounded border (inline-styled cards)
+function removeBorderGlowFromAdmin(){
+  document.querySelectorAll('.border-glow-card[data-glow-init]').forEach(function(el){
+    el.classList.remove('border-glow-card');
+    delete el.dataset.glowInit;
+    var span = el.querySelector(':scope > .edge-light');
+    if(span) span.remove();
+  });
+}
+
 function applyBorderGlowToAll(){
+  // Student-only effect — skip entirely (and clean up) when in admin role/views
+  if(currentSession && currentSession.role === 'admin'){
+    removeBorderGlowFromAdmin();
+    return;
+  }
+
   // Explicit .lg cards
   document.querySelectorAll('.lg:not([data-glow-init])').forEach(initBorderGlow);
 
   // Any div with both border-radius and a border in its inline style (covers stat cards,
-  // phase cards, mission rows, admin cards, sidebar widgets etc rendered via inline CSS)
+  // phase cards, mission rows, sidebar widgets etc rendered via inline CSS)
   document.querySelectorAll('div[style]:not([data-glow-init])').forEach(function(el){
     var s = el.getAttribute('style') || '';
     var hasBorder = /border\s*:\s*1px solid/i.test(s);
     var hasRadius = /border-radius\s*:/i.test(s);
     var hasBg = /background\s*:/i.test(s);
-    // Skip tiny elements (icons, dots, badges) and elements without real card dimensions
     var rect = el.getBoundingClientRect();
     if(hasBorder && hasRadius && hasBg && rect.width > 60 && rect.height > 30){
       initBorderGlow(el);
@@ -3867,14 +3931,21 @@ function applyBorderGlowToAll(){
   var debounceTimer = null;
   var observer = new MutationObserver(function(){
     clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(applyBorderGlowToAll, 150);
+    debounceTimer = setTimeout(function(){
+      applyBorderGlowToAll();
+      applyDockMagnifyToAll();
+    }, 150);
   });
   observer.observe(appEl, {childList:true, subtree:true});
   // Run immediately, then again after a short delay to catch the initial boot render
   applyBorderGlowToAll();
+  applyDockMagnifyToAll();
   setTimeout(applyBorderGlowToAll, 300);
+  setTimeout(applyDockMagnifyToAll, 300);
   setTimeout(applyBorderGlowToAll, 1500);
+  setTimeout(applyDockMagnifyToAll, 1500);
   setTimeout(applyBorderGlowToAll, 3000);
+  setTimeout(applyDockMagnifyToAll, 3000);
 })();
 
 </script>
