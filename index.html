@@ -3296,7 +3296,7 @@ function renderLesson(lessonId){
       +'<div style="width:280px;flex-shrink:0;border-left:1px solid var(--border);background:rgba(13,13,28,.6);overflow-y:auto;padding:16px 0;backdrop-filter:blur(20px);display:flex;flex-direction:column" id="mp-right" class="mp-right-panel">'
         
         +'<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:12px 16px 8px;font-family:JetBrains Mono,monospace">All Missions</div>'
-        +'<div class="dock-col" style="display:flex;flex-direction:column;padding:0 6px">'+missionList+'</div>'
+        +'<div class="dock-col" style="display:flex;flex-direction:column;padding:6px 6px 6px 20px;margin-left:-14px">'+missionList+'</div>'
       +'</div>'
     +'</div>'
     +'</div>';
@@ -3804,9 +3804,9 @@ function initDockMagnify(row, mode){
   row.dataset.dockInit = '1';
   mode = mode || 'row'; // 'row' = horizontal strip, 'col' = vertical list
 
-  var maxScale = mode === 'col' ? 1.07 : 1.28; // stronger pop on hover
-  var influence = mode === 'col' ? 110 : 170; // wider reach so neighbors join in
-  var maxLift = mode === 'col' ? 0 : 14; // px the hovered card rises by, dock-style
+  var maxScale = mode === 'col' ? 1.16 : 1.28; // stronger pop on hover
+  var influence = mode === 'col' ? 150 : 170; // wider reach so neighbors join in
+  var maxLift = mode === 'col' ? 10 : 14; // px the hovered item shifts by, dock-style
   var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
   var origin = mode === 'col' ? 'center left' : (isSingleRow ? 'bottom center' : 'center center');
 
@@ -3861,7 +3861,9 @@ function initDockMagnify(row, mode){
       else s.current = s.target;
       var liftT = (s.current - 1) / (maxScale - 1); // 0..1 progress toward full scale
       var lift = maxLift * liftT;
-      child.style.transform = 'translateY(-' + lift.toFixed(2) + 'px) scale(' + s.current.toFixed(4) + ')';
+      child.style.transform = mode === 'col'
+        ? 'translateX(' + lift.toFixed(2) + 'px) scale(' + s.current.toFixed(4) + ')'
+        : 'translateY(-' + lift.toFixed(2) + 'px) scale(' + s.current.toFixed(4) + ')';
       child.style.zIndex = s.current > 1.01 ? '40' : '1';
     });
     if(stillMoving){
