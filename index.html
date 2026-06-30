@@ -398,13 +398,10 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 #app-loader .spin{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--brand,#ff2d78);animation:app-spin .7s linear infinite}
 #app-loader .loader-vid{width:min(60vw,420px);height:min(60vw,420px);object-fit:contain;border-radius:20px}
 @keyframes app-spin{to{transform:rotate(360deg)}}
-#app-loader-bar{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--brand,#ff2d78),#ff7a45);z-index:100000;opacity:0;transition:width .25s ease,opacity .2s ease}
-#app-loader-bar.show{opacity:1}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
-<div id="app-loader-bar"></div>
 <div id="app-loader"><img class="loader-vid" src="https://github.com/mediabrkn01-crypto/MTI-Courses/raw/refs/heads/main/Comp1_1-ezgif.com-video-to-webp-converter.webp" alt="loading" /></div>
 
 <!-- BOOT SCREEN -->
@@ -2646,7 +2643,7 @@ function renderMyCourses(){
       +(isPhaseComplete?'<div style="font-size:14px;color:#4ade80">✓</div>':'')
       +'<div style="border-radius:99px;padding:3px 10px;font-size:10px;font-weight:700;background:'+(isPhaseComplete?'rgba(34,197,94,.12)':'rgba(255,255,255,.08)')+';border:1px solid '+(isPhaseComplete?'rgba(34,197,94,.3)':'rgba(255,255,255,.12)')+';color:'+(isPhaseComplete?'#4ade80':'var(--muted)')+';font-family:\'JetBrains Mono\',monospace;white-space:nowrap">'+ph.days+'</div>'
       +'</div>'
-      +'<div style="display:flex;flex-direction:column;gap:4px;padding-right:8px" class="dock-col">'+rows+'</div>'
+      +'<div style="display:flex;flex-direction:column;gap:18px;padding:18px 8px 18px 24px;margin:-12px -8px -12px -18px" class="dock-col">'+rows+'</div>'
       +'</div>';
   }).join('');
 
@@ -2747,7 +2744,7 @@ function renderWordVault(){
       </div>
 
       <!-- GRID -->
-      <div id="wv-grid" class="dock-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;padding:16px 4px"></div>
+      <div id="wv-grid" class="dock-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:34px;padding:50px 40px 24px;margin:-30px -36px -10px"></div>
     </div>
   </div>`;
 
