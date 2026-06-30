@@ -392,9 +392,19 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
     0 0 25px 2px var(--glow-color-20),
     0 0 50px 2px var(--glow-color-10);
 }
+/* Global loading overlay — shown briefly on navigation while content/data loads */
+#app-loader{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(8,8,16,.5);backdrop-filter:blur(3px);opacity:0;transition:opacity .15s ease}
+#app-loader.show{display:flex;opacity:1}
+#app-loader .spin{width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,.15);border-top-color:var(--brand,#ff2d78);animation:app-spin .7s linear infinite}
+@keyframes app-spin{to{transform:rotate(360deg)}}
+#app-loader-bar{position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,var(--brand,#ff2d78),#ff7a45);z-index:100000;opacity:0;transition:width .25s ease,opacity .2s ease}
+#app-loader-bar.show{opacity:1}
 </style><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<div id="app-loader-bar"></div>
+<div id="app-loader"><div class="spin"></div></div>
 
 <!-- BOOT SCREEN -->
 <div id="boot-screen">
@@ -1264,40 +1274,68 @@ const app=document.getElementById("app");
 // Safe getElementById + addEventListener helper
 function $on(id,evt,fn){var el=document.getElementById(id);if(el)el.addEventListener(evt,fn);}
 
-function navigate(screen,params){render(screen,params||{});window.scrollTo(0,0);}
+function showAppLoader(){
+  var bar=document.getElementById('app-loader-bar');
+  var ov=document.getElementById('app-loader');
+  if(bar){ bar.style.width='0%'; bar.classList.add('show'); requestAnimationFrame(function(){ bar.style.width='70%'; }); }
+  if(ov){
+    clearTimeout(window.__loaderShowT);
+    // tiny delay avoids a flash for instant renders
+    window.__loaderShowT=setTimeout(function(){ ov.classList.add('show'); },120);
+  }
+}
+function hideAppLoader(){
+  var bar=document.getElementById('app-loader-bar');
+  var ov=document.getElementById('app-loader');
+  clearTimeout(window.__loaderShowT);
+  if(bar){ bar.style.width='100%'; setTimeout(function(){ bar.classList.remove('show'); bar.style.width='0%'; },200); }
+  if(ov) ov.classList.remove('show');
+}
+function navigate(screen,params){
+  showAppLoader();
+  render(screen,params||{});
+  window.scrollTo(0,0);
+  // Sync render paths: hide right after paint. Async paths (Supabase loads)
+  // call hideAppLoader() themselves once done; this is just a safety fallback
+  // so the loader never gets stuck if something goes wrong.
+  clearTimeout(window.__loaderHideT);
+  window.__loaderHideT=setTimeout(hideAppLoader,4000);
+}
 function render(screen,params){
-  if(screen==="login")        return renderLogin();
-  if(screen==="admin-login")  return renderAdminLogin();
-  if(screen==="admin")        return renderAdmin(params.tab||"students");
-  if(screen==="admin-student")return renderAdminStudent(params.id);
+  if(screen==="login")        { renderLogin(); hideAppLoader(); return; }
+  if(screen==="admin-login")  { renderAdminLogin(); hideAppLoader(); return; }
+  if(screen==="admin")        { renderAdmin(params.tab||"students"); hideAppLoader(); return; }
+  if(screen==="admin-student"){ renderAdminStudent(params.id); hideAppLoader(); return; }
   if(screen==="dashboard"){
     if(typeof _sb!=="undefined"){
-      sbLoadVideos().catch(function(){}).finally(function(){ renderDashboard(); });
-    } else { renderDashboard(); }
+      sbLoadVideos().catch(function(){}).finally(function(){ renderDashboard(); hideAppLoader(); });
+    } else { renderDashboard(); hideAppLoader(); }
     return;
   }
   if(screen==="courses"){
     if(typeof _sb!=="undefined"){
-      sbLoadVideos().catch(function(){}).finally(function(){ renderMyCourses(); });
-    } else { renderMyCourses(); }
+      sbLoadVideos().catch(function(){}).finally(function(){ renderMyCourses(); hideAppLoader(); });
+    } else { renderMyCourses(); hideAppLoader(); }
     return;
   }
-  if(screen==="quizzes")      return renderQuizzes();
-  if(screen==="achievements") return renderAchievements();
-  if(screen==="wordvault")    return renderWordVault();
-  if(screen==="profile")      return renderProfile();
+  if(screen==="quizzes")      { renderQuizzes(); hideAppLoader(); return; }
+  if(screen==="achievements") { renderAchievements(); hideAppLoader(); return; }
+  if(screen==="wordvault")    { renderWordVault(); hideAppLoader(); return; }
+  if(screen==="profile")      { renderProfile(); hideAppLoader(); return; }
   if(screen==="lesson"){
     // Ensure videos loaded from Supabase before rendering lesson
     if(typeof _sb!=="undefined"){
       sbLoadVideos().catch(function(){}).finally(function(){
         renderLesson(params.id);
+        hideAppLoader();
       });
     } else {
       renderLesson(params.id);
+      hideAppLoader();
     }
     return;
   }
-  if(screen==="quiz")         return renderQuiz(params.lessonId);
+  if(screen==="quiz")         { renderQuiz(params.lessonId); hideAppLoader(); return; }
 }
 
 // ─── SIDEBAR HTML ────────────────────────────────────────────────────────────
