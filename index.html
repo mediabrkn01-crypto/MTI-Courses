@@ -3723,6 +3723,79 @@ function setupTopBar(student){
 }
 
 navigate("login");
+
+// ── BORDER GLOW (cursor-tracking edge effect) ──────────────────────────────
+function initBorderGlow(el){
+  if(!el || el.dataset.glowInit) return;
+  el.dataset.glowInit = '1';
+  el.classList.add('border-glow-card');
+  var span = document.createElement('span');
+  span.className = 'edge-light';
+  el.appendChild(span);
+
+  function getCenter(){
+    var r = el.getBoundingClientRect();
+    return [r.width/2, r.height/2];
+  }
+  function getEdgeProximity(x,y){
+    var c = getCenter(); var cx=c[0], cy=c[1];
+    var dx = x-cx, dy = y-cy;
+    var kx = Infinity, ky = Infinity;
+    if(dx!==0) kx = cx/Math.abs(dx);
+    if(dy!==0) ky = cy/Math.abs(dy);
+    return Math.min(Math.max(1/Math.min(kx,ky),0),1);
+  }
+  function getCursorAngle(x,y){
+    var c = getCenter(); var cx=c[0], cy=c[1];
+    var dx=x-cx, dy=y-cy;
+    if(dx===0&&dy===0) return 0;
+    var deg = Math.atan2(dy,dx)*(180/Math.PI)+90;
+    if(deg<0) deg+=360;
+    return deg;
+  }
+  el.addEventListener('pointermove', function(e){
+    var r = el.getBoundingClientRect();
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    var edge = getEdgeProximity(x,y);
+    var angle = getCursorAngle(x,y);
+    el.style.setProperty('--edge-proximity', (edge*100).toFixed(3));
+    el.style.setProperty('--cursor-angle', angle.toFixed(3)+'deg');
+  });
+}
+
+// Auto-apply to .lg cards AND any element with a visible rounded border (inline-styled cards)
+function applyBorderGlowToAll(){
+  // Explicit .lg cards
+  document.querySelectorAll('.lg:not([data-glow-init])').forEach(initBorderGlow);
+
+  // Any div with both border-radius and a border in its inline style (covers stat cards,
+  // phase cards, mission rows, admin cards, sidebar widgets etc rendered via inline CSS)
+  document.querySelectorAll('div[style]:not([data-glow-init])').forEach(function(el){
+    var s = el.getAttribute('style') || '';
+    var hasBorder = /border\s*:\s*1px solid/i.test(s);
+    var hasRadius = /border-radius\s*:/i.test(s);
+    var hasBg = /background\s*:/i.test(s);
+    // Skip tiny elements (icons, dots, badges) and elements without real card dimensions
+    var rect = el.getBoundingClientRect();
+    if(hasBorder && hasRadius && hasBg && rect.width > 60 && rect.height > 30){
+      initBorderGlow(el);
+    }
+  });
+}
+
+// Run after each render via MutationObserver on #app
+(function(){
+  var appEl = document.getElementById('app');
+  if(!appEl) return;
+  var debounceTimer = null;
+  var observer = new MutationObserver(function(){
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(applyBorderGlowToAll, 150);
+  });
+  observer.observe(appEl, {childList:true, subtree:true});
+  applyBorderGlowToAll();
+})();
+
 </script>
 
 
