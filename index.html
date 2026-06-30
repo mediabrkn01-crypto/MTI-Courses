@@ -3793,7 +3793,11 @@ function applyBorderGlowToAll(){
     debounceTimer = setTimeout(applyBorderGlowToAll, 150);
   });
   observer.observe(appEl, {childList:true, subtree:true});
+  // Run immediately, then again after a short delay to catch the initial boot render
   applyBorderGlowToAll();
+  setTimeout(applyBorderGlowToAll, 300);
+  setTimeout(applyBorderGlowToAll, 1500);
+  setTimeout(applyBorderGlowToAll, 3000);
 })();
 
 </script>
