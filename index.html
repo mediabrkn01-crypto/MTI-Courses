@@ -3802,45 +3802,87 @@ navigate("login");
 function initDockMagnify(row){
   if(!row || row.dataset.dockInit) return;
   row.dataset.dockInit = '1';
-  var maxScale = 1.12;
-  var influence = 110; // px radius of influence around cursor
 
-  function update(mouseX){
-    var children = Array.prototype.slice.call(row.children);
-    var rowRect = row.getBoundingClientRect();
-    children.forEach(function(child){
+  var maxScale = 1.15;
+  var influence = 130; // px — gaussian sigma-ish radius of effect
+  var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
+  var origin = isSingleRow ? 'bottom center' : 'center center';
+
+  var children = Array.prototype.slice.call(row.children);
+  var state = children.map(function(){ return {current: 1, target: 1}; });
+  var mouseX = null, mouseY = null, rafId = null, isAnimating = false;
+
+  children.forEach(function(child){
+    child.style.transformOrigin = origin;
+    child.style.willChange = 'transform';
+    // No CSS transition — animation is driven by JS rAF loop for true dock-like spring motion
+    child.style.transition = 'none';
+  });
+
+  // Gaussian-like falloff: smooth bell curve, not a hard linear cutoff —
+  // this is what gives the Dock its soft "wave" look instead of a sharp pop.
+  function falloff(dist, radius){
+    if(dist >= radius) return 0;
+    var x = dist / radius;
+    // Smoothstep-based bell curve, eases in and out softly
+    var t = 1 - x;
+    return t * t * (3 - 2 * t);
+  }
+
+  function computeTargets(){
+    children.forEach(function(child, i){
       var rect = child.getBoundingClientRect();
-      var childCenter = rect.left + rect.width/2;
-      var dist = Math.abs(mouseX - childCenter);
-      var scale = 1;
-      if(dist < influence){
-        scale = 1 + (maxScale - 1) * (1 - dist/influence);
-      }
-      child.style.transform = 'scale(' + scale.toFixed(3) + ')';
-      child.style.zIndex = scale > 1.02 ? '5' : '1';
+      var cx = rect.left + rect.width / 2;
+      var cy = rect.top + rect.height / 2;
+      var dx = mouseX - cx;
+      var dy = isSingleRow ? 0 : (mouseY - cy);
+      var dist = Math.sqrt(dx*dx + dy*dy);
+      var t = falloff(dist, influence);
+      state[i].target = 1 + (maxScale - 1) * t;
     });
   }
 
-  function reset(){
-    Array.prototype.slice.call(row.children).forEach(function(child){
-      child.style.transform = 'scale(1)';
-      child.style.zIndex = '1';
+  function animate(){
+    var stillMoving = false;
+    children.forEach(function(child, i){
+      var s = state[i];
+      var diff = s.target - s.current;
+      // Spring-like lerp — fast catch-up, gentle settle (mimics dock's springy ease)
+      s.current += diff * 0.22;
+      if(Math.abs(diff) > 0.001) stillMoving = true;
+      else s.current = s.target;
+      child.style.transform = 'scale(' + s.current.toFixed(4) + ')';
+      child.style.zIndex = s.current > 1.01 ? '5' : '1';
     });
+    if(stillMoving){
+      rafId = requestAnimationFrame(animate);
+    } else {
+      isAnimating = false;
+    }
+  }
+
+  function kickAnimation(){
+    if(!isAnimating){
+      isAnimating = true;
+      rafId = requestAnimationFrame(animate);
+    }
   }
 
   row.addEventListener('mousemove', function(e){
-    update(e.clientX);
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    computeTargets();
+    kickAnimation();
   });
-  row.addEventListener('mouseleave', reset);
 
-  // Ensure smooth transitions + transform-origin for natural scaling
-  // Use "center center" for grid layouts (multiple rows) so cards don't grow off-screen at the top,
-  // and "bottom center" only for single-row horizontal scroll strips (dock-like rows).
-  var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
-  Array.prototype.slice.call(row.children).forEach(function(child){
-    child.style.transition = 'transform .18s cubic-bezier(.34,1.56,.64,1)';
-    child.style.transformOrigin = isSingleRow ? 'bottom center' : 'center center';
-    child.style.willChange = 'transform';
+  row.addEventListener('mouseleave', function(){
+    children.forEach(function(_, i){ state[i].target = 1; });
+    kickAnimation();
+  });
+
+  // Recompute on scroll too, since card positions shift under a static cursor
+  row.addEventListener('scroll', function(){
+    if(mouseX !== null){ computeTargets(); kickAnimation(); }
   });
 }
 
