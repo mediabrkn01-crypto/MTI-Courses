@@ -1106,36 +1106,51 @@ function avatarSmallHtml(student){
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 // 3-per-day drip unlock logic:
 function getUnlockedSet(student){
-  const explicit=new Set(student.accessList||[]);
-  const done=new Set(
-    ALL_LESSONS
-      .filter(l=>loadProgress(student.id).has(l.id))
-      .map(l=>l.order)
-  );
-  const unlocked=new Set(explicit);
-  unlocked.add(1);
+  const explicit = new Set(student.accessList||[]);
+  const progress = loadProgress(student.id);
+  const done = new Set(ALL_LESSONS.filter(l=>progress.has(l.id)).map(l=>l.order));
 
-  const todayStr=today.toISOString().slice(0,10);
-  const key="brokeneng_drip_"+student.id+"_"+todayStr;
-  let dripped;
-  try{dripped=new Set(JSON.parse(localStorage.getItem(key)||"[]"));}
-  catch{dripped=new Set();}
-
-  for(let i=1;i<ALL_LESSONS.length;i++){
-    const lesson=ALL_LESSONS[i];
-    const prev=ALL_LESSONS[i-1];
-    if(!done.has(prev.order)) break; 
-    if(unlocked.has(lesson.order)) continue; 
-    if(dripped.has(lesson.order)){unlocked.add(lesson.order);continue;}
-    if(dripped.size<DAILY_DRIP){
-      dripped.add(lesson.order);
-      unlocked.add(lesson.order);
-      localStorage.setItem(key,JSON.stringify([...dripped]));
-    } else {
-      break; 
+  // Carry-over: gather ALL previously unlocked lessons from every past day's drip key
+  const allUnlocked = new Set(explicit);
+  allUnlocked.add(1);
+  for(let ki=0; ki<localStorage.length; ki++){
+    const k = localStorage.key(ki);
+    if(k && k.startsWith('brokeneng_drip_'+student.id+'_')){
+      try{
+        const orders = JSON.parse(localStorage.getItem(k)||'[]');
+        orders.forEach(o => allUnlocked.add(o));
+      }catch(e){}
     }
   }
-  return unlocked;
+
+  // Check today's quota for NEW unlocks
+  const todayStr = new Date().toISOString().slice(0,10);
+  const dripKey = 'brokeneng_drip_'+student.id+'_'+todayStr;
+  let todayNewUnlocks;
+  try{ todayNewUnlocks = new Set(JSON.parse(localStorage.getItem(dripKey)||'[]')); }
+  catch{ todayNewUnlocks = new Set(); }
+
+  for(let i=1; i<ALL_LESSONS.length; i++){
+    const lesson = ALL_LESSONS[i];
+    const prev   = ALL_LESSONS[i-1];
+
+    if(!done.has(prev.order)) break; // previous must be completed
+
+    if(allUnlocked.has(lesson.order)){
+      allUnlocked.add(lesson.order);
+      continue;
+    }
+
+    if(todayNewUnlocks.size < DAILY_DRIP){
+      todayNewUnlocks.add(lesson.order);
+      allUnlocked.add(lesson.order);
+      localStorage.setItem(dripKey, JSON.stringify([...todayNewUnlocks]));
+    } else {
+      break;
+    }
+  }
+
+  return allUnlocked;
 }
 
 function isUnlocked(lesson){
