@@ -1298,6 +1298,7 @@ function hideAppLoader(){
   if(ov) ov.classList.remove('show');
 }
 function navigate(screen,params){
+  document.body.style.overflow=''; // restore scroll when leaving lesson
   showAppLoader();
   render(screen,params||{});
   window.scrollTo(0,0);
@@ -3216,6 +3217,7 @@ function renderDashboard(){
 }
 
 function renderLesson(lessonId){
+  document.body.style.overflow='hidden'; // freeze page scroll — lesson uses internal scrolling
   var lesson=ALL_LESSONS.find(function(l){return l.id===lessonId;});
   if(lesson){
     activeLesson=lesson; // update NOW PLAYING in sidebar
@@ -3292,7 +3294,7 @@ function renderLesson(lessonId){
 
 
   app.innerHTML=sidebarHtml("")
-    +'<div id="main-content" style="display:flex;flex-direction:column;min-height:100vh">'
+    +'<div id="main-content" style="display:flex;flex-direction:column;height:100vh;overflow:hidden">'
     +'<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);background:rgba(13,13,28,.85);backdrop-filter:blur(20px);position:sticky;top:0;z-index:50;flex-shrink:0">'
       +'<button type="button" onclick="navigate(\'dashboard\')" style="padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--muted);font-size:12px;cursor:pointer;backdrop-filter:blur(10px);font-family:JetBrains Mono,monospace;white-space:nowrap" onmouseover="this.style.borderColor=\'rgba(255,45,120,.3)\';this.style.color=\'var(--text)\'" onmouseout="this.style.borderColor=\'var(--border)\';this.style.color=\'var(--muted)\'">← Back</button>'
       +'<div style="font-size:11px;color:var(--muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:JetBrains Mono,monospace;min-width:0">Day '+lesson.order+': <span style="color:var(--text)">'+getLessonTitle(lesson).slice(0,20)+(getLessonTitle(lesson).length>20?"…":"")+'</span></div>'
