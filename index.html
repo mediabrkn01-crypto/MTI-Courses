@@ -1627,36 +1627,59 @@ window.doStudentLogin=async()=>{
 };
 
 function showBootSplash(student, cb){
-  var initials=(student.name||"?").split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);
-  app.innerHTML='<div id="boot-splash" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99998;animation:boot-fade-in .4s ease">'
-    +'<style>'
-    +'@keyframes boot-fade-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}'
-    +'@keyframes boot-fade-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.04)}}'
-    +'@keyframes boot-bar{from{width:0%}to{width:100%}}'
-    +'@keyframes boot-ping{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.85}}'
+  var steps=[
+    {txt:'Initialising Voice OS...',       pct:0},
+    {txt:'Loading accent engine...',        pct:25},
+    {txt:'Calibrating phoneme matrix...',   pct:55},
+    {txt:'Preparing your journey...',       pct:80},
+    {txt:'Welcome, '+(student.name||'Student').split(' ')[0]+'.', pct:100}
+  ];
+  var logo=getLogoSrc();
+  app.innerHTML=
+    '<style>'
+    +'@keyframes bf-in{from{opacity:0}to{opacity:1}}'
+    +'@keyframes bf-out{from{opacity:1}to{opacity:0}}'
+    +'@keyframes bf-fill{from{width:0%}to{width:var(--w)}}'
+    +'#boot-splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99998;animation:bf-in .35s ease;gap:0}'
+    +'#boot-splash .bs-logo{display:flex;align-items:center;justify-content:center;margin-bottom:28px}'
+    +'#boot-splash .bs-logo img{max-height:72px;max-width:180px;object-fit:contain;mix-blend-mode:screen}'
+    +'#boot-splash .bs-logo .bs-wordmark{font-family:Montserrat,sans-serif;font-weight:900;font-size:28px;letter-spacing:.02em;color:#fff;line-height:1}'
+    +'#boot-splash .bs-wordmark span{color:var(--g1)}'
+    +'#boot-splash .bs-status{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.06em;color:var(--muted);text-align:center;min-height:16px;margin-bottom:10px;transition:opacity .2s}'
+    +'#boot-splash .bs-track{width:260px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-bottom:8px}'
+    +'#boot-splash .bs-fill{height:100%;background:var(--gradh);border-radius:2px;width:0%;transition:width .4s cubic-bezier(.4,0,.2,1)}'
+    +'#boot-splash .bs-pct{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--g1);text-align:center}'
     +'</style>'
-    +'<div style="display:flex;flex-direction:column;align-items:center;gap:28px">'
-      +'<div style="position:relative">'
-        +'<div style="width:90px;height:90px;border-radius:24px;background:var(--grad);display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(255,45,120,.4);animation:boot-ping 1.8s ease-in-out infinite">'
-          +'<span style="font-family:Montserrat,sans-serif;font-weight:900;font-size:32px;color:#fff">BE</span>'
-        +'</div>'
+    +'<div id="boot-splash">'
+      +'<div class="bs-logo">'
+        +(logo
+          ?'<img src="'+logo+'" onerror="this.style.display=\'none\';document.querySelector(\'.bs-wordmark\').style.display=\'block\'">'
+          :'')
+        +'<div class="bs-wordmark" style="'+(logo?'display:none':'')+'"><span>BROK</span>EN<br>ENGLISH</div>'
       +'</div>'
-      +'<div style="text-align:center">'
-        +'<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">Welcome back, '+((student.name||"Student").split(" ")[0])+'</div>'
-        +'<div style="font-size:13px;color:var(--muted)">Loading your journey...</div>'
-      +'</div>'
-      +'<div style="width:200px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden">'
-        +'<div style="height:100%;background:var(--grad);border-radius:2px;animation:boot-bar 1.5s cubic-bezier(.4,0,.2,1) forwards"></div>'
-      +'</div>'
-    +'</div>'
-  +'</div>';
-  setTimeout(function(){
-    var splash=document.getElementById("boot-splash");
-    if(splash){
-      splash.style.animation="boot-fade-out .35s ease forwards";
-      setTimeout(cb, 320);
-    } else { cb(); }
-  }, 1600);
+      +'<div class="bs-status" id="bs-status">Loading...</div>'
+      +'<div class="bs-track"><div class="bs-fill" id="bs-fill"></div></div>'
+      +'<div class="bs-pct" id="bs-pct">0%</div>'
+    +'</div>';
+
+  var i=0;
+  function step(){
+    if(i>=steps.length){
+      setTimeout(function(){
+        var el=document.getElementById('boot-splash');
+        if(el){ el.style.animation='bf-out .4s ease forwards'; setTimeout(cb,380); }
+        else cb();
+      },300);
+      return;
+    }
+    var s=steps[i];
+    document.getElementById('bs-status').textContent=s.txt;
+    document.getElementById('bs-fill').style.width=s.pct+'%';
+    document.getElementById('bs-pct').textContent=s.pct+'%';
+    i++;
+    setTimeout(step, i===steps.length ? 500 : 480+Math.random()*200);
+  }
+  setTimeout(step, 300);
 }
 
 // ─── ADMIN LOGIN ─────────────────────────────────────────────────────────────
