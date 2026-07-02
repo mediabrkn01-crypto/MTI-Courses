@@ -2789,7 +2789,10 @@ function renderWordVault(){
     +mobileNavHtml("wordvault")
     +'<div style="padding:28px 32px 80px">'
     +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Word Vault</h1>'
-    +'<p style="font-size:14px;color:var(--muted);margin-bottom:24px">Fix the words you&#39;ve been saying wrong your entire life.</p>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">'
+      +'<p style="font-size:14px;color:var(--muted);margin:0">Fix the words you&#39;ve been saying wrong your entire life.</p>'
+      +'<button onclick="wvShowKeySettings()" title="ElevenLabs API settings" style="background:rgba(255,45,120,.12);border:1px solid rgba(255,45,120,.25);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--g1);cursor:pointer;font-family:JetBrains Mono,monospace;white-space:nowrap;transition:all .15s" onmouseover="this.style.background=\'rgba(255,45,120,.2)\'" onmouseout="this.style.background=\'rgba(255,45,120,.12)\'">🎙 ElevenLabs</button>'
+    +'</div>'
 
     // ── PRONUNCIATION SEARCH BAR ──
     +'<div style="margin-bottom:20px">'
@@ -3963,7 +3966,15 @@ function setupTopBar(student){
 navigate("login");
 
 // ── WORD VAULT PRONUNCIATION CHECKER ──────────────────────────────────────────
+// ── ELEVENLABS PRONUNCIATION ENGINE ──────────────────────────────────────────
 var _wvAudio=null,_wvSpeechWord='',_wvTimer=null;
+
+// ElevenLabs voice — Rachel (natural British/American accent, great for pronunciation)
+var EL_VOICE='21m00Tcm4TlvDq8ikWAM';
+
+function wvGetKey(){ return localStorage.getItem('brokeneng_el_key')||''; }
+function wvSetKey(k){ localStorage.setItem('brokeneng_el_key',k.trim()); }
+
 function wvSpeakWord(){
   if(_wvAudio){ _wvAudio.currentTime=0; _wvAudio.play(); return; }
   if(window.speechSynthesis&&_wvSpeechWord){
@@ -3971,6 +3982,49 @@ function wvSpeakWord(){
     u.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
   }
 }
+
+function wvPlayElevenLabs(word, onSuccess, onFail){
+  var key=wvGetKey();
+  if(!key){ onFail(); return; }
+  fetch('https://api.elevenlabs.io/v1/text-to-speech/'+EL_VOICE,{
+    method:'POST',
+    headers:{'xi-api-key':key,'Content-Type':'application/json','Accept':'audio/mpeg'},
+    body:JSON.stringify({text:word,model_id:'eleven_monolingual_v1',voice_settings:{stability:0.5,similarity_boost:0.75}})
+  })
+  .then(function(r){
+    if(!r.ok) throw new Error('ElevenLabs error '+r.status);
+    return r.arrayBuffer();
+  })
+  .then(function(buf){
+    var blob=new Blob([buf],{type:'audio/mpeg'});
+    var url=URL.createObjectURL(blob);
+    _wvAudio=new Audio(url);
+    _wvAudio.play();
+    onSuccess();
+  })
+  .catch(function(e){ console.warn('ElevenLabs:',e); onFail(); });
+}
+
+// Show API key settings panel
+function wvShowKeySettings(){
+  var cur=wvGetKey();
+  var el=document.getElementById('wv-el-settings');
+  if(el){ el.remove(); return; }
+  var panel=document.createElement('div');
+  panel.id='wv-el-settings';
+  panel.style.cssText='position:fixed;bottom:80px;right:24px;z-index:9999;background:rgba(13,13,28,.98);border:1px solid rgba(255,45,120,.3);border-radius:14px;padding:16px;width:320px;backdrop-filter:blur(30px);box-shadow:0 8px 32px rgba(0,0,0,.5)';
+  panel.innerHTML='<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:#fff;margin-bottom:10px">🎙 ElevenLabs API Key</div>'
+    +'<input id="wv-el-key-input" type="password" placeholder="Paste your ElevenLabs API key..." value="'+cur+'"'
+    +' style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:9px 12px;outline:none;box-sizing:border-box;font-family:JetBrains Mono,monospace"/>'
+    +'<div style="display:flex;gap:8px;margin-top:10px">'
+      +'<button onclick="var k=document.getElementById(\'wv-el-key-input\').value;wvSetKey(k);document.getElementById(\'wv-el-settings\').remove();var s=document.getElementById(\'wv-pron-status\');if(s)s.textContent=\'ElevenLabs key saved ✓\';" style="flex:1;background:var(--grad);border:none;border-radius:8px;padding:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:Montserrat,sans-serif">Save</button>'
+      +'<button onclick="document.getElementById(\'wv-el-settings\').remove()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:var(--muted);font-size:12px;cursor:pointer">✕</button>'
+    +'</div>'
+    +'<div style="font-size:10px;color:var(--muted);margin-top:8px">Key stored locally in your browser only. Get yours at elevenlabs.io</div>';
+  document.body.appendChild(panel);
+  document.getElementById('wv-el-key-input').focus();
+}
+
 function wvPronounce(word){
   clearTimeout(_wvTimer);
   var btn=document.getElementById('wv-speak-btn');
@@ -3984,46 +4038,51 @@ function wvPronounce(word){
   if(btn){ btn.style.display='inline-flex'; btn.style.visibility='visible'; }
   _wvTimer=setTimeout(function(){
     var status=document.getElementById('wv-pron-status');
-    if(status) status.textContent='Looking up pronunciation...';
+    if(status) status.textContent='Loading...';
     if(info) info.style.display='block';
     document.getElementById('wv-pron-word').textContent=word;
     document.getElementById('wv-pron-ipa').textContent='';
-    document.getElementById('wv-pron-syl').textContent='';
+
+    // 1. Fetch IPA from Free Dictionary (display only)
     fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(word))
       .then(function(r){return r.json();})
       .then(function(data){
-        if(!Array.isArray(data)||!data[0]) throw new Error('not found');
-        var entry=data[0], ipa='', audioUrl='';
-        (entry.phonetics||[]).forEach(function(p){
-          if(p.text&&!ipa) ipa=p.text;
-          if(p.audio&&!audioUrl) audioUrl=p.audio;
-        });
-        if(!ipa&&entry.phonetic) ipa=entry.phonetic;
-        document.getElementById('wv-pron-ipa').textContent=ipa||'';
-        if(audioUrl){
-          var url=audioUrl.startsWith('http')?audioUrl:'https:'+audioUrl;
-          _wvAudio=new Audio(url); _wvAudio.play();
-          if(status) status.textContent='▶ Playing pronunciation';
-        } else {
+        if(Array.isArray(data)&&data[0]){
+          var entry=data[0], ipa='';
+          (entry.phonetics||[]).forEach(function(p){ if(p.text&&!ipa) ipa=p.text; });
+          if(!ipa&&entry.phonetic) ipa=entry.phonetic;
+          document.getElementById('wv-pron-ipa').textContent=ipa||'';
+        }
+      }).catch(function(){});
+
+    // 2. Play via ElevenLabs if key set, else browser TTS
+    var key=wvGetKey();
+    if(key){
+      if(status) status.textContent='Generating with ElevenLabs...';
+      wvPlayElevenLabs(word,
+        function(){ if(status) status.textContent='🔊 Playing · ElevenLabs'; },
+        function(){
+          // Fallback
           _wvAudio=null;
           if(window.speechSynthesis){
             var u=new SpeechSynthesisUtterance(word); u.lang='en-US';
             window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
-            if(status) status.textContent='▶ Playing (browser voice)';
+            if(status) status.textContent='▶ Browser voice (check API key)';
           }
         }
-      })
-      .catch(function(){
-        _wvAudio=null;
-        document.getElementById('wv-pron-ipa').textContent='';
-        if(window.speechSynthesis){
-          var u=new SpeechSynthesisUtterance(word); u.lang='en-US';
-          window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
-          if(status) status.textContent='▶ Playing (browser voice)';
-        } else { if(status) status.textContent='Word not found'; }
-      });
-  },600);
+      );
+    } else {
+      // No key — use browser TTS and nudge to add key
+      _wvAudio=null;
+      if(window.speechSynthesis){
+        var u=new SpeechSynthesisUtterance(word); u.lang='en-US';
+        window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+        if(status) status.innerHTML='▶ Browser voice &nbsp;<button onclick="wvShowKeySettings()" style="background:var(--grad);border:none;border-radius:6px;color:#fff;font-size:10px;font-weight:700;padding:3px 8px;cursor:pointer">Add ElevenLabs key</button>';
+      }
+    }
+  },500);
 }
+
 
 
 // ── DOCK MAGNIFICATION (macOS-style hover scaling) ──────────────────────────
