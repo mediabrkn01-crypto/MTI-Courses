@@ -2735,7 +2735,7 @@ function renderWordVault(){
             onfocus="this.style.borderColor='var(--g1)';this.style.boxShadow='0 0 0 3px rgba(255,45,120,.1)'"
             onblur="this.style.borderColor='rgba(255,255,255,.1)';this.style.boxShadow='none'"/>
           <button id="wv-speak-btn" onclick="wvSpeakWord()" title="Hear pronunciation"
-            style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--grad);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px;color:#fff;align-items:center;justify-content:center;transition:opacity .15s"
+            style="visibility:hidden;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--grad);border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:18px;color:#fff;display:inline-flex;align-items:center;justify-content:center;transition:opacity .15s"
             onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">🔊</button>
         </div>
         <!-- PRONUNCIATION INFO -->
@@ -3896,12 +3896,12 @@ function wvPronounce(word){
   var btn=document.getElementById('wv-speak-btn');
   var info=document.getElementById('wv-proninfo');
   if(!word||word.length<2){
-    if(btn) btn.style.display='none';
+    if(btn){ btn.style.display='none'; btn.style.visibility='hidden'; }
     if(info) info.style.display='none';
     _wvAudio=null; _wvSpeechWord=''; return;
   }
   _wvSpeechWord=word;
-  if(btn) btn.style.display='flex';
+  if(btn){ btn.style.display='inline-flex'; btn.style.visibility='visible'; }
   _wvTimer=setTimeout(function(){
     var status=document.getElementById('wv-pron-status');
     if(status) status.textContent='Looking up pronunciation...';
