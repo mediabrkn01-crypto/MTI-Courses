@@ -3081,9 +3081,12 @@ function renderDashboard(){
   // Word Vault preview — all 10 WV_DATA cards
   var wvCards='';
   if(typeof WV_DATA!=='undefined'){
+    var _day5=ALL_LESSONS.find(function(l){return l.order===5;});
+    var _wvUnlocked=!!(_day5&&isCompleted(_day5.id));
     WV_DATA.forEach(function(f){
-      wvCards+='<div style="min-width:150px;max-width:150px;border-radius:12px;padding:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);flex-shrink:0;cursor:pointer;position:relative" onclick="navigate(\'wordvault\')">'+
-        '<div style="position:absolute;top:10px;right:10px;font-size:11px;color:var(--muted)">🔒</div>'+
+      var _click=_wvUnlocked?'onclick="navigate(\'lesson\',{id:\''+f.id+'\'})"':'';
+      wvCards+='<div style="min-width:150px;max-width:150px;border-radius:12px;padding:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);flex-shrink:0;cursor:'+(_wvUnlocked?'pointer':'default')+';position:relative;opacity:'+(_wvUnlocked?'1':'.5')+'" '+_click+'>'+
+        (!_wvUnlocked?'<div style="position:absolute;top:10px;right:10px;font-size:11px;color:var(--muted)">🔒</div>':'')+
         '<div style="font-size:26px;margin-bottom:8px">'+f.icon+'</div>'+
         '<div style="font-size:9px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">'+f.cat+'</div>'+
         '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:12px;color:#fff;line-height:1.3">'+f.title+'</div>'+
