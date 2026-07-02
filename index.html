@@ -2725,15 +2725,30 @@ function renderWordVault(){
       <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Word Vault</h1>
       <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Fix the words you've been saying wrong your entire life.</p>
 
-      <!-- SEARCH -->
-      <div style="position:relative;margin-bottom:20px">
-        <div style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none">🔍</div>
-        <input id="wv-search" type="text" placeholder="Search any word... e.g. comfortable, queue, genre"
-          style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:14px 14px 14px 46px;outline:none;backdrop-filter:blur(16px);transition:all .2s;box-sizing:border-box"
-          oninput="searchTerm=this.value.toLowerCase();buildGrid()"
-          onfocus="this.style.borderColor='var(--g1)';this.style.boxShadow='0 0 0 3px rgba(255,45,120,.1)'"
-          onblur="this.style.borderColor='rgba(255,255,255,.1)';this.style.boxShadow='none'"/>
+      <!-- SEARCH + PRONUNCIATION CHECKER -->
+      <div style="margin-bottom:20px">
+        <div style="position:relative">
+          <div style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none">🔍</div>
+          <input id="wv-search" type="text" placeholder="Search any word... e.g. comfortable, queue, genre"
+            style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:14px 56px 14px 46px;outline:none;backdrop-filter:blur(16px);transition:all .2s;box-sizing:border-box"
+            oninput="searchTerm=this.value.toLowerCase();buildGrid();wvPronounce(this.value.trim())"
+            onfocus="this.style.borderColor='var(--g1)';this.style.boxShadow='0 0 0 3px rgba(255,45,120,.1)'"
+            onblur="this.style.borderColor='rgba(255,255,255,.1)';this.style.boxShadow='none'"/>
+          <button id="wv-speak-btn" onclick="wvSpeakWord()" title="Hear pronunciation"
+            style="display:none;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--grad);border:none;border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:16px;color:#fff;align-items:center;justify-content:center;transition:opacity .15s"
+            onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">🔊</button>
+        </div>
+        <!-- PRONUNCIATION INFO -->
+        <div id="wv-proninfo" style="display:none;margin-top:10px;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;backdrop-filter:blur(16px)">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span id="wv-pron-word" style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px;color:#fff"></span>
+            <span id="wv-pron-ipa" style="font-size:13px;color:var(--g1);font-family:'JetBrains Mono',monospace"></span>
+            <span id="wv-pron-syl" style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace"></span>
+          </div>
+          <div id="wv-pron-status" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
+        </div>
       </div>
+
 
       <!-- FILTER CHIPS -->
       <div id="wv-filters" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px">
@@ -3867,7 +3882,69 @@ function setupTopBar(student){
 
 navigate("login");
 
-// ── BORDER GLOW (cursor-tracking edge effect) ──────────────────────────────
+// ── WORD VAULT PRONUNCIATION CHECKER ──────────────────────────────────────────
+var _wvAudio=null,_wvSpeechWord='',_wvTimer=null;
+function wvSpeakWord(){
+  if(_wvAudio){ _wvAudio.currentTime=0; _wvAudio.play(); return; }
+  if(window.speechSynthesis&&_wvSpeechWord){
+    var u=new SpeechSynthesisUtterance(_wvSpeechWord);
+    u.lang='en-US'; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+  }
+}
+function wvPronounce(word){
+  clearTimeout(_wvTimer);
+  var btn=document.getElementById('wv-speak-btn');
+  var info=document.getElementById('wv-proninfo');
+  if(!word||word.length<2){
+    if(btn) btn.style.display='none';
+    if(info) info.style.display='none';
+    _wvAudio=null; _wvSpeechWord=''; return;
+  }
+  _wvSpeechWord=word;
+  if(btn) btn.style.display='flex';
+  _wvTimer=setTimeout(function(){
+    var status=document.getElementById('wv-pron-status');
+    if(status) status.textContent='Looking up pronunciation...';
+    if(info) info.style.display='block';
+    document.getElementById('wv-pron-word').textContent=word;
+    document.getElementById('wv-pron-ipa').textContent='';
+    document.getElementById('wv-pron-syl').textContent='';
+    fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(word))
+      .then(function(r){return r.json();})
+      .then(function(data){
+        if(!Array.isArray(data)||!data[0]) throw new Error('not found');
+        var entry=data[0], ipa='', audioUrl='';
+        (entry.phonetics||[]).forEach(function(p){
+          if(p.text&&!ipa) ipa=p.text;
+          if(p.audio&&!audioUrl) audioUrl=p.audio;
+        });
+        if(!ipa&&entry.phonetic) ipa=entry.phonetic;
+        document.getElementById('wv-pron-ipa').textContent=ipa||'';
+        if(audioUrl){
+          var url=audioUrl.startsWith('http')?audioUrl:'https:'+audioUrl;
+          _wvAudio=new Audio(url); _wvAudio.play();
+          if(status) status.textContent='▶ Playing pronunciation';
+        } else {
+          _wvAudio=null;
+          if(window.speechSynthesis){
+            var u=new SpeechSynthesisUtterance(word); u.lang='en-US';
+            window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+            if(status) status.textContent='▶ Playing (browser voice)';
+          }
+        }
+      })
+      .catch(function(){
+        _wvAudio=null;
+        document.getElementById('wv-pron-ipa').textContent='';
+        if(window.speechSynthesis){
+          var u=new SpeechSynthesisUtterance(word); u.lang='en-US';
+          window.speechSynthesis.cancel(); window.speechSynthesis.speak(u);
+          if(status) status.textContent='▶ Playing (browser voice)';
+        } else { if(status) status.textContent='Word not found'; }
+      });
+  },600);
+}
+
 
 // ── DOCK MAGNIFICATION (macOS-style hover scaling) ──────────────────────────
 function initDockMagnify(row, mode){
