@@ -1227,15 +1227,14 @@ function $on(id,evt,fn){var el=document.getElementById(id);if(el)el.addEventList
 function showAppLoader(){
   var ov=document.getElementById('app-loader');
   if(!ov)return;
-  clearTimeout(window.__loaderShowT);
-  window.__loaderShowT=setTimeout(function(){ ov.style.display='flex'; requestAnimationFrame(function(){ ov.style.opacity='1'; }); },80);
+  ov.style.display='flex';
+  requestAnimationFrame(function(){ ov.style.opacity='1'; });
 }
 function hideAppLoader(){
   var ov=document.getElementById('app-loader');
   if(!ov)return;
-  clearTimeout(window.__loaderShowT);
   ov.style.opacity='0';
-  setTimeout(function(){ ov.style.display='none'; },160);
+  setTimeout(function(){ ov.style.display='none'; },120);
 }
 var ASYNC_SCREENS=['dashboard','courses','lesson'];
 function navigate(screen,params){
@@ -1243,6 +1242,8 @@ function navigate(screen,params){
   if(ASYNC_SCREENS.indexOf(screen)!==-1) showAppLoader();
   render(screen,params||{});
   window.scrollTo(0,0);
+  // Render is now instant — hide loader on next paint
+  requestAnimationFrame(function(){ requestAnimationFrame(hideAppLoader); });
 }
 function render(screen,params){
   if(screen==="login")        { renderLogin(); return; }
@@ -1251,13 +1252,13 @@ function render(screen,params){
   if(screen==="admin-student"){ renderAdminStudent(params.id); return; }
   if(screen==="dashboard"){
     if(typeof _sb!=="undefined"){
-      sbLoadVideos().catch(function(){}).finally(function(){ renderDashboard(); hideAppLoader(); });
+      renderDashboard(); hideAppLoader(); sbLoadVideos().catch(function(){});
     } else { renderDashboard(); hideAppLoader(); }
     return;
   }
   if(screen==="courses"){
     if(typeof _sb!=="undefined"){
-      sbLoadVideos().catch(function(){}).finally(function(){ renderMyCourses(); hideAppLoader(); });
+      renderMyCourses(); hideAppLoader(); sbLoadVideos().catch(function(){});
     } else { renderMyCourses(); hideAppLoader(); }
     return;
   }
@@ -1268,10 +1269,7 @@ function render(screen,params){
   if(screen==="lesson"){
     // Ensure videos loaded from Supabase before rendering lesson
     if(typeof _sb!=="undefined"){
-      sbLoadVideos().catch(function(){}).finally(function(){
-        renderLesson(params.id);
-        hideAppLoader();
-      });
+      renderLesson(params.id); hideAppLoader(); sbLoadVideos().catch(function(){});
     } else {
       renderLesson(params.id);
       hideAppLoader();
