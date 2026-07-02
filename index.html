@@ -2675,102 +2675,167 @@ const WV_DATA=[
   {id:'f10',cat:'Everyday',icon:'🗣️',title:'50 Everyday Words Fixed',dur:'15 min',xp:80,desc:'"comfortable", "vegetable", "breakfast" and 47 more words Indians consistently mispronounce.'},
 ];
 
+// ─── WORD VAULT PLAYER ───────────────────────────────────────────────────────
+function renderWVPlayer(wvItem){
+  if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
+  var student=loadStudents()[currentSession.studentId];
+  if(!student){currentSession=null;navigate("login");return;}
+  var vids=loadVideos();
+  // WV videos stored at order 100+index
+  var wvIdx=WV_DATA.findIndex(function(f){return f.id===wvItem.id;});
+  var vid=vids[100+wvIdx]||{};
+  var src=vid.src||'';
+  var thumb=vid.thumb||wvItem.thumb||'';
+  var title=vid.title||wvItem.title;
+
+  // Build mission list sidebar from all WV items
+  var missionList='';
+  var day5=ALL_LESSONS.find(function(l){return l.order===5;});
+  var wvUnlocked=!!(day5&&isCompleted(day5.id));
+  WV_DATA.forEach(function(f,i){
+    var isActive=(f.id===wvItem.id);
+    var t=vids[100+i]||{};
+    var tThumb=t.thumb||f.thumb||'';
+    missionList+='<div onclick="navigate(\'lesson\',{id:\''+f.id+'\'})" style="cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);padding:10px 14px;background:'+(isActive?'rgba(255,45,120,.07)':'transparent')+';transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,.04)\'" onmouseout="this.style.background=\''+(isActive?'rgba(255,45,120,.07)':'transparent')+'\'">'
+      +'<div style="display:flex;gap:10px;align-items:center">'
+        +(tThumb?'<img src="'+tThumb+'" style="width:56px;height:38px;object-fit:cover;border-radius:6px;flex-shrink:0"/>':'<div style="width:56px;height:38px;background:rgba(255,255,255,.1);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">'+f.icon+'</div>')
+        +'<div><div style="font-size:9px;font-weight:700;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em">'+(f.cat)+'</div>'
+          +'<div style="font-size:12px;font-weight:700;color:#fff;line-height:1.3;margin-top:1px">'+f.title+'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  });
+
+  app.innerHTML=sidebarHtml('wordvault')
+    +'<div id="main-content" style="display:flex;flex-direction:column;height:100vh;overflow:hidden">'
+      +'<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(13,13,28,.9);backdrop-filter:blur(20px);flex-shrink:0">'
+        +'<button onclick="navigate(\'wordvault\')" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:JetBrains Mono,monospace;transition:all .15s" onmouseover="this.style.borderColor=\'rgba(255,45,120,.35)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\'">'
+          +'← Word Vault'
+        +'</button>'
+        +'<div style="flex:1;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+title+'</div>'
+      +'</div>'
+      +'<div style="flex:1;display:flex;overflow:hidden">'
+        // Video + info area
+        +'<div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">'
+          +(src
+            ?'<div id="player-wrapper" style="width:100%;background:#000">'
+              +(src.includes('youtube')||src.includes('youtu.be')
+                ?'<iframe src="'+src+'" style="width:100%;aspect-ratio:16/9;border:none" allowfullscreen></iframe>'
+                :'<video src="'+src+'" controls style="width:100%;aspect-ratio:16/9;background:#000"></video>')
+            +'</div>'
+            :(thumb?'<div style="width:100%;aspect-ratio:16/9;background:#000;position:relative"><img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;opacity:.5"/><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="font-size:60px">'+wvItem.icon+'</span></div></div>':'<div style="width:100%;aspect-ratio:16/9;background:#111;display:flex;align-items:center;justify-content:center;font-size:60px">'+wvItem.icon+'</div>'))
+          +'<div style="padding:20px 24px">'
+            +'<div style="font-size:10px;font-weight:700;font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--g1);margin-bottom:6px">'+wvItem.cat+'</div>'
+            +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:8px">'+title+'</h1>'
+            +'<p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px">'+wvItem.desc+'</p>'
+            +'<div style="display:flex;gap:16px">'
+              +'<span style="font-size:12px;color:var(--muted)">⏱ '+wvItem.dur+'</span>'
+              +'<span style="font-size:12px;color:var(--g1);font-weight:700">+'+wvItem.xp+' XP</span>'
+            +'</div>'
+          +'</div>'
+        +'</div>'
+        // WV sidebar
+        +'<div style="width:280px;flex-shrink:0;border-left:1px solid var(--border);background:rgba(13,13,28,.6);overflow-y:auto;backdrop-filter:blur(20px)">'
+          +'<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:12px 14px 8px;font-family:JetBrains Mono,monospace">Word Vault</div>'
+          +missionList
+        +'</div>'
+      +'</div>'
+    +'</div>';
+}
+
+// ─── WORD VAULT LIST VIEW ────────────────────────────────────────────────────
 function renderWordVault(){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
-  const student=loadStudents()[currentSession.studentId];
+  var student=loadStudents()[currentSession.studentId];
   if(!student){currentSession=null;navigate("login");return;}
 
-  const cats=['All','Media','Hospital','School','Food','Tech','Business','Travel','Names','Legal','Everyday'];
+  var day5=ALL_LESSONS.find(function(l){return l.order===5;});
+  var wvUnlocked=!!(day5&&isCompleted(day5.id));
   var activeFilter='All';
   var searchTerm='';
+  var vids=loadVideos();
 
-  function buildGrid(){
-    const filtered=WV_DATA.filter(f=>{
-      const matchCat=activeFilter==='All'||f.cat===activeFilter;
-      const matchSearch=!searchTerm||f.title.toLowerCase().includes(searchTerm)||f.desc.toLowerCase().includes(searchTerm)||f.cat.toLowerCase().includes(searchTerm);
+  function buildList(){
+    var filtered=WV_DATA.filter(function(f){
+      var matchCat=activeFilter==='All'||f.cat===activeFilter;
+      var matchSearch=!searchTerm||f.title.toLowerCase().includes(searchTerm)||f.desc.toLowerCase().includes(searchTerm)||f.cat.toLowerCase().includes(searchTerm);
       return matchCat&&matchSearch;
     });
-    const cards=filtered.map(f=>{
-      // Word Vault unlocks after Day 5 — all 10 cards unlock together
-      const day5=ALL_LESSONS.find(l=>l.order===5);
-      const locked=!(day5&&isCompleted(day5.id));
-      return '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:22px;cursor:'+(locked?'default':'pointer')
-        +';backdrop-filter:blur(16px);transition:all .2s;position:relative;overflow:hidden'+(locked?';opacity:.55':'')
-        +'" class="wv-card" '+(!locked?'onclick="navigate(\'wordvault\')\'':'')+'>'
-        +'<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent)"></div>'
-        +(locked?'<div style="position:absolute;top:14px;right:14px;font-size:13px;color:var(--muted)">🔒</div>':'')
-        +'<div style="font-size:32px;margin-bottom:12px">'+f.icon+'</div>'
-        +'<div style="font-size:9px;font-family:\'JetBrains Mono\',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;margin-bottom:6px">'+f.cat+'</div>'
-        +'<div style="font-family:\'Montserrat\',sans-serif;font-weight:700;font-size:15px;color:#fff;margin-bottom:6px;line-height:1.3">'+f.title+'</div>'
-        +'<div style="font-size:12px;color:var(--muted);line-height:1.5;margin-bottom:14px">'+f.desc+'</div>'
-        +'<div style="display:flex;align-items:center;justify-content:space-between">'
-        +'<span style="font-size:11px;font-family:\'JetBrains Mono\',monospace;color:var(--muted)">'+f.dur+'</span>'
-        +'<span style="font-size:11px;font-family:\'JetBrains Mono\',monospace;color:var(--g3);font-weight:600">+'+f.xp+' XP</span>'
+    var rows=filtered.map(function(f,i){
+      var idx=WV_DATA.indexOf(f);
+      var v=vids[100+idx]||{};
+      var thumb=v.thumb||f.thumb||'';
+      var locked=!wvUnlocked;
+      var onclick=locked?'':("navigate('lesson',{id:'"+f.id+"'})");
+      return '<div '+(onclick?'onclick="'+onclick+'"':'')+' style="border-radius:14px;overflow:hidden;cursor:'+(locked?'default':'pointer')+';opacity:'+(locked?'.5':'1')+';margin-bottom:12px;position:relative">'
+        +'<div style="position:relative;width:100%;height:110px;background:rgba(255,255,255,.06);overflow:hidden">'
+          +(thumb?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;display:block"/>':'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px">'+f.icon+'</div>')
+          +'<div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(13,13,28,.9) 0%,rgba(13,13,28,.4) 50%,transparent 100%)"></div>'
+          +'<div style="position:absolute;left:16px;top:50%;transform:translateY(-50%)">'
+            +(locked?'<div style="font-size:10px;font-weight:700;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">🔒 Complete Day 5 to unlock</div>':'')
+            +'<div style="font-weight:700;font-size:15px;color:#fff;font-family:Montserrat,sans-serif">'+f.title+'</div>'
+            +'<div style="font-size:11px;color:var(--muted);margin-top:3px">'+f.dur+'  <span style="color:var(--g1);font-weight:700">+'+f.xp+' XP</span></div>'
+          +'</div>'
+          +(locked?'':'<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">'+f.cat+'</div>')
         +'</div>'
-        +(locked?'':'<div style="position:absolute;bottom:0;left:0;right:0;height:2px;background:transparent;transition:background .2s" class="wv-underline"></div>')
-        +'</div>';
+      +'</div>';
     }).join('');
-    var wvGridEl = document.getElementById('wv-grid');
-    wvGridEl.innerHTML = cards || '<div style="color:var(--muted);font-size:14px;padding:32px">No results found.</div>';
-    delete wvGridEl.dataset.dockInit; // re-attach dock magnify listeners to new cards
-
-    // (hover magnification now handled by dock-row magnify engine on #wv-grid)
+    document.getElementById('wv-list').innerHTML=rows||'<div style="color:var(--muted);font-size:14px;padding:32px">No results found.</div>';
   }
 
-  app.innerHTML=sidebarHtml("wordvault")+`
-  <div id="main-content">
-    ${topBarHtml(student)}
-    ${mobileNavHtml("wordvault")}
-    <div style="padding:28px 32px 80px">
-      <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Word Vault</h1>
-      <p style="font-size:14px;color:var(--muted);margin-bottom:24px">Fix the words you've been saying wrong your entire life.</p>
+  app.innerHTML=sidebarHtml("wordvault")
+    +'<div id="main-content">'
+    +topBarHtml(student)
+    +mobileNavHtml("wordvault")
+    +'<div style="padding:28px 32px 80px">'
+    +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Word Vault</h1>'
+    +'<p style="font-size:14px;color:var(--muted);margin-bottom:24px">Fix the words you&#39;ve been saying wrong your entire life.</p>'
 
-      <!-- SEARCH + PRONUNCIATION CHECKER -->
-      <div style="margin-bottom:20px">
-        <div style="position:relative">
-          <div style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none">🔍</div>
-          <input id="wv-search" type="text" placeholder="Search any word... e.g. comfortable, queue, genre"
-            style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:14px 56px 14px 46px;outline:none;backdrop-filter:blur(16px);transition:all .2s;box-sizing:border-box"
-            oninput="searchTerm=this.value.toLowerCase();buildGrid();wvPronounce(this.value.trim())"
-            onfocus="this.style.borderColor='var(--g1)';this.style.boxShadow='0 0 0 3px rgba(255,45,120,.1)'"
-            onblur="this.style.borderColor='rgba(255,255,255,.1)';this.style.boxShadow='none'"/>
-          <button id="wv-speak-btn" onclick="wvSpeakWord()" title="Hear pronunciation"
-            style="visibility:hidden;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--grad);border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:18px;color:#fff;display:inline-flex;align-items:center;justify-content:center;transition:opacity .15s"
-            onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">🔊</button>
-        </div>
-        <!-- PRONUNCIATION INFO -->
-        <div id="wv-proninfo" style="display:none;margin-top:10px;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;backdrop-filter:blur(16px)">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <span id="wv-pron-word" style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px;color:#fff"></span>
-            <span id="wv-pron-ipa" style="font-size:13px;color:var(--g1);font-family:'JetBrains Mono',monospace"></span>
-            <span id="wv-pron-syl" style="font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace"></span>
-          </div>
-          <div id="wv-pron-status" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
-        </div>
-      </div>
+    // ── PRONUNCIATION SEARCH BAR ──
+    +'<div style="margin-bottom:20px">'
+      +'<div style="position:relative">'
+        +'<div style="position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:16px;color:var(--muted);pointer-events:none">🔍</div>'
+        +'<input id="wv-search" type="text" placeholder="Try any English word to hear its pronunciation..."'
+          +' style="width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--text);font-family:Inter,sans-serif;font-size:14px;padding:14px 56px 14px 46px;outline:none;backdrop-filter:blur(16px);transition:all .2s;box-sizing:border-box"'
+          +' oninput="searchTerm=this.value.toLowerCase();buildList();wvPronounce(this.value.trim())"'
+          +' onfocus="this.style.borderColor=&apos;var(--g1)&apos;"'
+          +' onblur="this.style.borderColor=&apos;rgba(255,255,255,.1)&apos;"'+'/>'
+        +'<button id="wv-speak-btn" onclick="wvSpeakWord()" title="Hear pronunciation"'
+          +' style="visibility:hidden;position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--grad);border:none;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:18px;color:#fff;display:inline-flex;align-items:center;justify-content:center;transition:opacity .15s"'
+          +' onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1">🔊</button>'
+      +'</div>'
+      +'<div id="wv-proninfo" style="display:none;margin-top:10px;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;backdrop-filter:blur(16px)">'
+        +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+          +'<span id="wv-pron-word" style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px;color:#fff"></span>'
+          +'<span id="wv-pron-ipa" style="font-size:13px;color:var(--g1);font-family:JetBrains Mono,monospace"></span>'
+        +'</div>'
+        +'<div id="wv-pron-status" style="font-size:11px;color:var(--muted);margin-top:4px"></div>'
+      +'</div>'
+    +'</div>'
 
+    // ── FILTER CHIPS ──
+    +'<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px">'
+    +['All','Media','Hospital','School','Food','Tech','Business','Travel','Names','Legal','Everyday'].map(function(c){
+      return '<button class="wv-chip'+(c==='All'?' active':'')+'" onclick="wvSetFilter(&apos;'+c+'&apos;)" style="padding:7px 14px;border-radius:20px;border:1px solid '+(c==='All'?'rgba(255,45,120,.3)':'var(--border)')+';background:'+(c==='All'?'rgba(255,45,120,.1)':'rgba(255,255,255,.04)')+';color:'+(c==='All'?'var(--text)':'var(--muted)')+';font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;backdrop-filter:blur(10px);flex-shrink:0">'+c+'</button>';
+    }).join('')
+    +'</div>'
 
-      <!-- FILTER CHIPS -->
-      <div id="wv-filters" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px">
-        ${cats.map(c=>'<button class="wv-chip '+(c==='All'?'active':'')+'" onclick="setWvFilter(\''+c+'\')" style="padding:7px 14px;border-radius:20px;border:1px solid '+(c==='All'?'rgba(255,45,120,.3)':'var(--border)')+';background:'+(c==='All'?'rgba(255,45,120,.1)':'rgba(255,255,255,.04)')+';color:'+(c==='All'?'var(--text)':'var(--muted)')+';font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;backdrop-filter:blur(10px);flex-shrink:0">'+c+'</button>').join('')}
-      </div>
+    // ── LIST ──
+    +'<div id="wv-list"></div>'
+    +'</div></div>';
 
-      <!-- GRID -->
-      <div id="wv-grid" class="dock-row" style="display:grid;grid-template-columns:repeat(2,1fr);gap:34px;padding:50px 40px 24px;margin:-30px -36px -10px"></div>
-    </div>
-  </div>`;
-
-  window.setWvFilter=function(cat){
+  window.wvSetFilter=function(cat){
     activeFilter=cat;
     document.querySelectorAll('.wv-chip').forEach(function(btn){
-      var isActive=btn.textContent===cat;
-      btn.style.borderColor=isActive?'rgba(255,45,120,.3)':'var(--border)';
-      btn.style.background=isActive?'rgba(255,45,120,.1)':'rgba(255,255,255,.04)';
-      btn.style.color=isActive?'var(--text)':'var(--muted)';
+      var a=btn.textContent===cat;
+      btn.style.borderColor=a?'rgba(255,45,120,.3)':'var(--border)';
+      btn.style.background=a?'rgba(255,45,120,.1)':'rgba(255,255,255,.04)';
+      btn.style.color=a?'var(--text)':'var(--muted)';
     });
-    buildGrid();
+    buildList();
   };
-  buildGrid();
+  window.buildList=buildList;
+  buildList();
 }
 function renderQuizzes(){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
@@ -3226,6 +3291,21 @@ function renderDashboard(){
 
 function renderLesson(lessonId){
   document.body.style.overflow='hidden'; // freeze page scroll — lesson uses internal scrolling
+  // Check if this is a Word Vault item (f01-f10)
+  var wvItem = (typeof WV_DATA !== 'undefined') ? WV_DATA.find(function(f){return f.id===lessonId;}) : null;
+  if(wvItem){
+    var day5=ALL_LESSONS.find(function(l){return l.order===5;});
+    var wvUnlocked=!!(day5&&isCompleted(day5.id));
+    if(!wvUnlocked){
+      app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:340px;padding:24px"><p style="color:var(--g1);font-size:14px;margin-bottom:16px">Complete Day 5 to unlock Word Vault.</p><button onclick="navigate(\'dashboard\')" class="btn-primary" style="width:auto;padding:10px 24px">Dashboard</button></div></div>';
+      return;
+    }
+    // Build a pseudo-lesson object for the WV player
+    var wvLesson = {id:wvItem.id,title:wvItem.title,description:wvItem.desc,order:0,dayNumber:0};
+    activeLesson = wvLesson;
+    renderWVPlayer(wvItem);
+    return;
+  }
   var lesson=ALL_LESSONS.find(function(l){return l.id===lessonId;});
   if(lesson){
     activeLesson=lesson; // update NOW PLAYING in sidebar
