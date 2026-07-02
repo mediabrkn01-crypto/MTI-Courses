@@ -27,17 +27,11 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px}
 /* BOOT */
-#boot-screen{position:fixed;inset:0;z-index:99999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;transition:opacity .5s}
-#boot-screen.hidden{opacity:0;pointer-events:none}
-.boot-logo{display:flex;align-items:center;justify-content:center;margin-bottom:20px}
 @keyframes bootPulse{0%,100%{box-shadow:0 0 40px rgba(255,45,120,.4),0 0 80px rgba(255,45,120,.15)}50%{box-shadow:0 0 80px rgba(255,45,120,.7),0 0 160px rgba(255,45,120,.3)}}
 .boot-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
 .boot-sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;margin-bottom:48px}
 .boot-bar-wrap{width:260px;margin-bottom:12px}
 .boot-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
-.boot-fill{height:100%;width:0%;background:var(--gradh);border-radius:2px;transition:width .08s linear}
-.boot-status{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-align:center;min-height:16px;margin-bottom:4px}
-.boot-pct{font-size:11px;color:var(--g1);font-family:'JetBrains Mono',monospace;text-align:center}
 /* SCREEN WARN */
 #screen-warn{display:none;position:fixed;inset:0;z-index:9999;background:rgba(6,6,15,.96);backdrop-filter:blur(20px);align-items:center;justify-content:center;flex-direction:column;gap:16px}
 #screen-warn.show{display:flex}
@@ -413,14 +407,6 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 <div id="app-loader"><img class="loader-vid" src="https://github.com/mediabrkn01-crypto/MTI-Courses/raw/refs/heads/main/Comp1_1-ezgif.com-video-to-webp-converter.webp" alt="loading" /></div>
 
 <!-- BOOT SCREEN -->
-<div id="boot-screen">
-  <div class="boot-logo" id="boot-logo-el"><img src="" id="boot-logo-img" style="max-height:80px;max-width:80px;object-fit:contain;display:none;mix-blend-mode:screen"/></div>
-  <div class="boot-bar-wrap">
-    <div class="boot-status" id="boot-status">Loading...</div>
-    <div class="boot-bar"><div class="boot-fill" id="boot-fill"></div></div>
-    <div class="boot-pct" id="boot-pct">0%</div>
-  </div>
-</div>
 
 <!-- SCREEN WARN -->
 <div id="screen-warn">
@@ -800,46 +786,6 @@ function getSymbolSrc(){ return (typeof SITE_IMAGES!=="undefined"&&SITE_IMAGES.s
 })();
 
 // ── BOOT SCREEN ──────────────────────────────────────────────────────────────
-(function runBoot(){
-  // Update logo inside boot screen
-  const bootLogoImg = document.getElementById('boot-logo-img');
-  const logoImg = getLogoSrc();
-  if(logoImg && bootLogoImg){
-    bootLogoImg.src = logoImg;
-    bootLogoImg.style.display = 'inline-block';
-  } else {
-    var bt = document.getElementById('boot-logo-text');
-    if(bt) bt.style.display = 'block';
-  }
-  // boot-site-name element removed
-
-  const steps = [
-    'Initialising Voice OS...',
-    'Loading accent engine...',
-    'Calibrating phoneme matrix...',
-    'Preparing your journey...',
-    'Welcome.'
-  ];
-  const pcts = [0,25,55,80,100];
-  let i = 0;
-
-  function step(){
-    if(i >= steps.length){
-      setTimeout(()=>{
-        const boot = document.getElementById('boot-screen');
-        boot.classList.add('hidden');
-        setTimeout(()=>{ boot.style.display='none'; },500);
-      }, 300);
-      return;
-    }
-    document.getElementById('boot-fill').style.width = pcts[i]+'%';
-    document.getElementById('boot-pct').textContent = pcts[i]+'%';
-    document.getElementById('boot-status').textContent = steps[i];
-    i++;
-    setTimeout(step, 550 + Math.random()*250);
-  }
-  setTimeout(step, 300);
-})();
 
 // Load videos from Supabase on BOOT before anything renders
 if(typeof _sb!=="undefined"){
@@ -1297,16 +1243,15 @@ function hideAppLoader(){
   if(bar){ bar.style.width='100%'; setTimeout(function(){ bar.classList.remove('show'); bar.style.width='0%'; },200); }
   if(ov) ov.classList.remove('show');
 }
+var ASYNC_SCREENS=['dashboard','courses','lesson'];
 function navigate(screen,params){
   document.body.style.overflow=''; // restore scroll when leaving lesson
-  showAppLoader();
+  // Only show loader for screens with real Supabase async load; sync screens are instant
+  if(ASYNC_SCREENS.indexOf(screen)!==-1) showAppLoader();
   render(screen,params||{});
   window.scrollTo(0,0);
-  // Sync render paths: hide right after paint. Async paths (Supabase loads)
-  // call hideAppLoader() themselves once done; this is just a safety fallback
-  // so the loader never gets stuck if something goes wrong.
   clearTimeout(window.__loaderHideT);
-  window.__loaderHideT=setTimeout(hideAppLoader,4000);
+  window.__loaderHideT=setTimeout(hideAppLoader,1500); // shorter safety timeout
 }
 function render(screen,params){
   if(screen==="login")        { renderLogin(); hideAppLoader(); return; }
@@ -1684,13 +1629,46 @@ window.doStudentLogin=async()=>{
     sbLoadVideos().catch(function(){});
   }
   try{
-    navigate("dashboard");
+    showBootSplash(byEmail, function(){ navigate("dashboard"); });
   }catch(e){
     errEl.textContent="Dashboard error: "+e.message;
     errEl.style.display="block";
     console.error(e);
   }
 };
+
+function showBootSplash(student, cb){
+  var initials=(student.name||"?").split(" ").map(function(w){return w[0];}).join("").toUpperCase().slice(0,2);
+  app.innerHTML='<div id="boot-splash" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99998;animation:boot-fade-in .4s ease">'
+    +'<style>'
+    +'@keyframes boot-fade-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}'
+    +'@keyframes boot-fade-out{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.04)}}'
+    +'@keyframes boot-bar{from{width:0%}to{width:100%}}'
+    +'@keyframes boot-ping{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.08);opacity:.85}}'
+    +'</style>'
+    +'<div style="display:flex;flex-direction:column;align-items:center;gap:28px">'
+      +'<div style="position:relative">'
+        +'<div style="width:90px;height:90px;border-radius:24px;background:var(--grad);display:flex;align-items:center;justify-content:center;box-shadow:0 0 60px rgba(255,45,120,.4);animation:boot-ping 1.8s ease-in-out infinite">'
+          +'<span style="font-family:Montserrat,sans-serif;font-weight:900;font-size:32px;color:#fff">BE</span>'
+        +'</div>'
+      +'</div>'
+      +'<div style="text-align:center">'
+        +'<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">Welcome back, '+((student.name||"Student").split(" ")[0])+'</div>'
+        +'<div style="font-size:13px;color:var(--muted)">Loading your journey...</div>'
+      +'</div>'
+      +'<div style="width:200px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden">'
+        +'<div style="height:100%;background:var(--grad);border-radius:2px;animation:boot-bar 1.5s cubic-bezier(.4,0,.2,1) forwards"></div>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
+  setTimeout(function(){
+    var splash=document.getElementById("boot-splash");
+    if(splash){
+      splash.style.animation="boot-fade-out .35s ease forwards";
+      setTimeout(cb, 320);
+    } else { cb(); }
+  }, 1600);
+}
 
 // ─── ADMIN LOGIN ─────────────────────────────────────────────────────────────
 function renderAdminLogin(){
@@ -2996,6 +2974,7 @@ function getLessonTitle(lesson){
 }
 
 function renderDashboard(){
+  document.body.style.overflow=""; // clear any lesson scroll-lock
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
   const student=loadStudents()[currentSession.studentId];
   if(!student){currentSession=null;navigate("login");return;}
