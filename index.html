@@ -1096,8 +1096,7 @@ function buildLessons(sid,sectionLabel,count,start){
   return ls;
 }
 const SECTIONS=[
-  {id:"a",title:"Accent Neutralisation",lessons:buildLessons("a","Accent Neutralisation",20,1)},
-  {id:"b",title:"Pronunciation Fix",lessons:buildLessons("b","Pronunciation Fix",10,21)}
+  {id:"a",title:"Accent Neutralisation",lessons:buildLessons("a","Accent Neutralisation",20,1)}
 ];
 const ALL_LESSONS=SECTIONS.flatMap(s=>s.lessons);
 
@@ -2692,12 +2691,12 @@ function renderWordVault(){
       return matchCat&&matchSearch;
     });
     const cards=filtered.map(f=>{
-      // Map to pronunciation fix lessons (section b)
-      const lesson=SECTIONS[1]?SECTIONS[1].lessons.find(l=>l.title.toLowerCase().includes(f.cat.toLowerCase())):null;
-      const locked=lesson?!isUnlocked(lesson):true;
+      // Word Vault unlocks after Day 5 — all 10 cards unlock together
+      const day5=ALL_LESSONS.find(l=>l.order===5);
+      const locked=!(day5&&isCompleted(day5.id));
       return '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:18px;padding:22px;cursor:'+(locked?'default':'pointer')
         +';backdrop-filter:blur(16px);transition:all .2s;position:relative;overflow:hidden'+(locked?';opacity:.55':'')
-        +'" class="wv-card" '+(lesson&&!locked?'onclick="navigate(\'lesson\',{id:\''+lesson.id+'\'})"':'')+'>'
+        +'" class="wv-card" '+(!locked?'onclick="navigate(\'wordvault\')\'':'')+'>'
         +'<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent)"></div>'
         +(locked?'<div style="position:absolute;top:14px;right:14px;font-size:13px;color:var(--muted)">🔒</div>':'')
         +'<div style="font-size:32px;margin-bottom:12px">'+f.icon+'</div>'
