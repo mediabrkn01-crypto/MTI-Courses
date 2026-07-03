@@ -3462,6 +3462,11 @@ function renderLesson(lessonId){
       +'</div>'
     +'</div>'
     +'</div>';
+  // Force dock magnify on sidebar after DOM is ready
+  requestAnimationFrame(function(){
+    var col=document.querySelector('#mp-right .dock-col');
+    if(col) initDockMagnify(col,'col');
+  });
 
   setupPlayer(lesson,student);
 }
@@ -4262,11 +4267,8 @@ function initDockMagnify(row, mode){
 }
 
 function applyDockMagnifyToAll(){
-  // Always apply to rows; skip col only on lesson player (mp-right present = video playing)
   document.querySelectorAll('.dock-row').forEach(function(el){ initDockMagnify(el, 'row'); });
-  if(!document.getElementById('mp-right')){
-    document.querySelectorAll('.dock-col').forEach(function(el){ initDockMagnify(el, 'col'); });
-  }
+  document.querySelectorAll('.dock-col').forEach(function(el){ initDockMagnify(el, 'col'); });
 }
 
 function initBorderGlow(el){
