@@ -4262,12 +4262,10 @@ function initDockMagnify(row, mode){
 }
 
 function applyDockMagnifyToAll(){
-  // Only run dock magnify on dashboard/course screens — not on lesson (causes video lag)
-  if(!document.querySelector('.be-quiz-wrap') && !document.getElementById('mp-right')){
-    document.querySelectorAll('.dock-row:not([data-dock-init])').forEach(function(el){ initDockMagnify(el, 'row'); });
-    document.querySelectorAll('.dock-col:not([data-dock-init])').forEach(function(el){ initDockMagnify(el, 'col'); });
-  } else {
-    document.querySelectorAll('.dock-row:not([data-dock-init])').forEach(function(el){ initDockMagnify(el, 'row'); });
+  // Always apply to rows; skip col only on lesson player (mp-right present = video playing)
+  document.querySelectorAll('.dock-row').forEach(function(el){ initDockMagnify(el, 'row'); });
+  if(!document.getElementById('mp-right')){
+    document.querySelectorAll('.dock-col').forEach(function(el){ initDockMagnify(el, 'col'); });
   }
 }
 
