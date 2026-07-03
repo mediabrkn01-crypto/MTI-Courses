@@ -2680,10 +2680,10 @@ function renderMyCourses(){
       ${phaseHtml}
     </div>
   </div>`;
-  // Magnification on mission rows
-  document.querySelectorAll('[data-u="1"]').forEach(function(row){
-    row.addEventListener('mouseenter',function(){this.style.transform='scale(1.025) translateX(5px)';this.style.boxShadow='0 4px 20px rgba(0,0,0,.3)';});
-    row.addEventListener('mouseleave',function(){this.style.transform='';this.style.boxShadow='';});
+  // Force dock-col init after DOM is ready
+  requestAnimationFrame(function(){
+    document.querySelectorAll('.dock-col').forEach(function(el){ initDockMagnify(el,'col'); });
+    document.querySelectorAll('.dock-row').forEach(function(el){ initDockMagnify(el,'row'); });
   });
 }
 
