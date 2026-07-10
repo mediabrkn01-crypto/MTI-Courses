@@ -482,6 +482,16 @@ const SUPABASE_URL = 'https://rbhxufnfzsmkzenqavmf.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJiaHh1Zm5menNta3plbnFhdm1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0NjMyOTcsImV4cCI6MjA5ODAzOTI5N30.JTZd6bNmsOrqclSuB44ezsCB542OrqdYxtvXvHzAlF0';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Suppress Supabase realtime DataCloneError (harmless Headers postMessage warning)
+(function(){
+  var _cw = console.warn.bind(console);
+  console.warn = function(){
+    var msg = arguments[0];
+    if(typeof msg === 'string' && (msg.indexOf('DataCloneError') !== -1 || msg.indexOf('postMessage') !== -1)) return;
+    _cw.apply(console, arguments);
+  };
+})();
+
 // ── Supabase helpers ──────────────────────────────────────────────────────────
 // Save student progress to Supabase (non-blocking, fires and forgets)
 async function sbSaveProgress(studentId, lessonId){
@@ -3371,7 +3381,7 @@ function renderLesson(lessonId){
   } else if(bunnyUrl){
     videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen="true"></iframe>';
   } else {
-    videoHtml='<video id="video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline><source id="video-source" src="'+videoSrc+'"/></video>'
+    videoHtml='<video id="video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline><source id="video-source" src="'+videoSrc+'"/></video>'
       +'<div style="position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:center;justify-content:space-between;pointer-events:none">'
       +'<div id="quality-buttons" style="pointer-events:auto;display:flex;gap:4px;border-radius:20px;background:rgba(0,0,0,.5);padding:3px 6px;backdrop-filter:blur(8px)"></div>'
       +'<button id="fullscreen-btn" style="pointer-events:auto;border-radius:20px;background:rgba(0,0,0,.5);padding:3px 10px;font-size:11px;color:rgba(255,255,255,.7);border:none;cursor:pointer">⛶</button>'
@@ -3424,7 +3434,7 @@ function renderLesson(lessonId){
     +'<div style="display:flex;flex:1;min-height:0;overflow:hidden">'
       +'<div style="flex:1;overflow-y:auto;min-width:0;padding-bottom:80px">'
         +'<div style="background:#000;position:relative">'
-          +'<div id="player-wrapper" class="no-select" data-lesson-order="'+lesson.order+'" style="position:relative;width:100%;max-height:60vh;aspect-ratio:16/9;background:#000;overflow:hidden">'
+          +'<div id="player-wrapper" class="no-select" data-lesson-order="'+lesson.order+'" style="position:relative;width:100%;height:62vh;background:#000;overflow:hidden">'
             +videoHtml
             +'<div id="wm-container" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:99">'
               +'<div id="wm-1" style="position:absolute;font-family:monospace;font-size:11px;font-weight:600;color:rgba(255,255,255,.18);white-space:nowrap;user-select:none"></div>'
