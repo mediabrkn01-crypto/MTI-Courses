@@ -2978,26 +2978,30 @@ function renderWordVault(){
       var matchSearch=!searchTerm||f.title.toLowerCase().includes(searchTerm)||f.desc.toLowerCase().includes(searchTerm)||f.cat.toLowerCase().includes(searchTerm);
       return matchCat&&matchSearch;
     });
-    var rows=filtered.map(function(f,i){
+    var cards=filtered.map(function(f){
       var idx=WV_DATA.indexOf(f);
       var v=vids[100+idx+1]||{};
       var thumb=v.thumb||f.thumb||'';
       var locked=!wvUnlocked;
+      var done=isCompleted(f.id);
       var onclick=locked?'':("navigate('lesson',{id:'"+f.id+"'})");
-      return '<div '+(onclick?'onclick="'+onclick+'"':'')+' style="border-radius:14px;overflow:hidden;cursor:'+(locked?'default':'pointer')+';opacity:'+(locked?'.5':'1')+';margin-bottom:12px;position:relative">'
-        +'<div style="position:relative;width:100%;height:110px;background:rgba(255,255,255,.06);overflow:hidden">'
-          +(thumb?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;display:block"/>':'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px">'+f.icon+'</div>')
-          +'<div style="position:absolute;inset:0;background:linear-gradient(to right,rgba(13,13,28,.9) 0%,rgba(13,13,28,.4) 50%,transparent 100%)"></div>'
-          +'<div style="position:absolute;left:16px;top:50%;transform:translateY(-50%)">'
-            +(locked?'<div style="font-size:10px;font-weight:700;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em;margin-bottom:2px">🔒 Complete Day 5 to unlock</div>':'')
-            +'<div style="font-weight:700;font-size:15px;color:#fff;font-family:Montserrat,sans-serif">'+f.title+'</div>'
-            +'<div style="font-size:11px;color:var(--muted);margin-top:3px">'+f.dur+'  <span style="color:var(--g1);font-weight:700">+'+f.xp+' XP</span></div>'
+      return '<div '+(onclick?'onclick="'+onclick+'"':'')+' style="border-radius:16px;overflow:hidden;cursor:'+(locked?'default':'pointer')+';position:relative;background:rgba(255,255,255,.05);border:1px solid '+(done?'rgba(34,197,94,.3)':(locked?'rgba(255,255,255,.06)':'rgba(255,255,255,.09)'))+';transition:transform .15s,border-color .15s" '+(locked?'':' onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'"')+'>'
+        +'<div style="position:relative;width:100%;aspect-ratio:16/9;background:rgba(255,255,255,.06);overflow:hidden">'
+          +(thumb?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;display:block;opacity:'+(locked?.4:1)+'" onerror="this.style.display=\'none\'"/>':'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;background:rgba(255,255,255,.04)">'+f.icon+'</div>')
+          +(done?'<div style="position:absolute;top:8px;right:8px;background:rgba(34,197,94,.9);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff">\u2713</div>':'')
+          +(locked?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:28px">\U0001f512</div>':'')
+        +'</div>'
+        +'<div style="padding:12px 14px">'
+          +'<div style="font-size:9px;font-weight:700;color:'+(done?'#4ade80':'var(--g1)')+';font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">'+f.cat+'</div>'
+          +'<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:'+(done?'rgba(255,255,255,.7)':'#fff')+';line-height:1.3;margin-bottom:6px">'+f.title+'</div>'
+          +'<div style="display:flex;align-items:center;justify-content:space-between">'
+            +'<span style="font-size:11px;color:var(--muted)">'+f.dur+'</span>'
+            +(done?'<span style="font-size:10px;color:#4ade80;font-weight:700">\u2713 Done</span>':'<span style="font-size:10px;color:var(--g1);font-weight:700">+'+f.xp+' XP</span>')
           +'</div>'
-          +(locked?'':'<div style="position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)">'+f.cat+'</div>')
         +'</div>'
       +'</div>';
     }).join('');
-    document.getElementById('wv-list').innerHTML=rows||'<div style="color:var(--muted);font-size:14px;padding:32px">No results found.</div>';
+    document.getElementById('wv-list').innerHTML=cards?('<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px">'+cards+'</div>'):'<div style="color:var(--muted);font-size:14px;padding:32px">No results found.</div>';
   }
 
   app.innerHTML=sidebarHtml("wordvault")
@@ -3035,7 +3039,7 @@ function renderWordVault(){
 
     // ── FILTER CHIPS ──
     +'<div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px">'
-    +['All','Media','Hospital','School','Food','Tech','Business','Travel','Names','Legal','Everyday'].map(function(c){
+    +['All'].concat(WV_DATA.map(function(f){return f.cat;}).filter(function(c,i,a){return a.indexOf(c)===i;})).map(function(c){
       return '<button class="wv-chip'+(c==='All'?' active':'')+'" onclick="wvSetFilter(&apos;'+c+'&apos;)" style="padding:7px 14px;border-radius:20px;border:1px solid '+(c==='All'?'rgba(255,45,120,.3)':'var(--border)')+';background:'+(c==='All'?'rgba(255,45,120,.1)':'rgba(255,255,255,.04)')+';color:'+(c==='All'?'var(--text)':'var(--muted)')+';font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all .15s;backdrop-filter:blur(10px);flex-shrink:0">'+c+'</button>';
     }).join('')
     +'</div>'
