@@ -1335,13 +1335,22 @@ function render(screen,params){
 
 
 function navigateLive(completedCount){
-  if(completedCount<30){
+  var wvCompleted=typeof WV_DATA!=='undefined'?WV_DATA.filter(function(f){return isCompleted(f.id);}).length:0;
+  var totalDone=completedCount+wvCompleted;
+  var coreLeft=Math.max(0,20-completedCount);
+  var wvLeft=Math.max(0,10-wvCompleted);
+  if(totalDone<30){
     var msg=document.createElement('div');
     msg.className='modal-lock';
     msg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:rgba(13,13,28,.97);border:1px solid rgba(255,45,120,.3);border-radius:16px;padding:28px 32px;max-width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)';
-    msg.innerHTML='<div style="font-size:32px;margin-bottom:12px">\U0001f512</div>'
+    var remaining='';
+    if(coreLeft>0) remaining+='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px">\u{1F4DA} '+coreLeft+' core class'+(coreLeft>1?'es':'')+' remaining</div>';
+    if(wvLeft>0) remaining+='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px">\u{1F50A} '+wvLeft+' Pronunciation Workshop video'+(wvLeft>1?'s':'')+' remaining</div>';
+    msg.innerHTML='<div style="font-size:32px;margin-bottom:12px">\u{1F512}</div>'
       +'<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Live With Sreekanth</div>'
-      +'<div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:20px">Complete all 30 classes to unlock live sessions with Sreekanth.</div>'
+      +'<div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:12px">Complete all 30 classes to unlock live sessions.</div>'
+      +remaining
+      +'<div style="font-size:11px;color:var(--g1);font-weight:700;margin:12px 0">'+totalDone+'/30 complete</div>'
       +'<button onclick="document.querySelector(\'.modal-lock\').remove()" class="btn-primary" style="width:auto;padding:10px 24px">Got it</button>';
     document.body.appendChild(msg);
     msg.addEventListener('click',function(e){if(e.target===msg)msg.remove();});
@@ -1463,7 +1472,7 @@ function sidebarHtml(active){
       </div>
       <div class="sb-item ${active==='live'?'active':''}" onclick="closeSidebar();navigateLive(${completedCount})">
         <div class="sb-icon">📡</div><div class="sb-lbl">Live With Sreekanth</div>
-        ${completedCount>=30?'':'<div style=\"font-size:9px;color:var(--muted);margin-left:auto;padding:2px 6px;background:rgba(255,255,255,.06);border-radius:6px;white-space:nowrap\">🔒</div>'}
+        ${(completedCount+(typeof WV_DATA!=='undefined'?WV_DATA.filter(function(f){return isCompleted(f.id);}).length:0))>=30?'':'<div style=\"font-size:9px;color:var(--muted);margin-left:auto;padding:2px 6px;background:rgba(255,255,255,.06);border-radius:6px;white-space:nowrap\">🔒</div>'}
       </div>
       <div class="sb-sec">You</div>
       <div class="sb-item ${active==='achievements'?'active':''}" onclick="closeSidebar();navigate('achievements')">
@@ -2869,7 +2878,7 @@ function renderWVPlayer(wvItem){
 
   // Build mission list sidebar from all WV items
   var missionList='';
-  var day5=ALL_LESSONS.find(function(l){return l.order===5;});
+  var day5=ALL_LESSONS.find(function(l){return l.order===4;});
   var wvUnlocked=!!(day5&&isCompleted(day5.id));
   WV_DATA.forEach(function(f,i){
     var isActive=(f.id===wvItem.id);
@@ -2934,7 +2943,7 @@ function renderWordVault(){
   var student=loadStudents()[currentSession.studentId];
   if(!student){currentSession=null;navigate("login");return;}
 
-  var day5=ALL_LESSONS.find(function(l){return l.order===5;});
+  var day5=ALL_LESSONS.find(function(l){return l.order===4;});
   var wvUnlocked=!!(day5&&isCompleted(day5.id));
   var activeFilter='All';
   var searchTerm='';
@@ -3349,7 +3358,7 @@ function renderDashboard(){
   // Word Vault preview — all 10 WV_DATA cards
   var wvCards='';
   if(typeof WV_DATA!=='undefined'){
-    var _day5=ALL_LESSONS.find(function(l){return l.order===5;});
+    var _day5=ALL_LESSONS.find(function(l){return l.order===4;});
     var _wvUnlocked=!!(_day5&&isCompleted(_day5.id));
     WV_DATA.forEach(function(f){
       var _click=_wvUnlocked?'onclick="navigate(\'lesson\',{id:\''+f.id+'\'})"':'';
@@ -3482,10 +3491,10 @@ function renderLesson(lessonId){
   // Check if this is a Word Vault item (f01-f10)
   var wvItem = (typeof WV_DATA !== 'undefined') ? WV_DATA.find(function(f){return f.id===lessonId;}) : null;
   if(wvItem){
-    var day5=ALL_LESSONS.find(function(l){return l.order===5;});
+    var day5=ALL_LESSONS.find(function(l){return l.order===4;});
     var wvUnlocked=!!(day5&&isCompleted(day5.id));
     if(!wvUnlocked){
-      app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:340px;padding:24px"><p style="color:var(--g1);font-size:14px;margin-bottom:16px">Complete Day 5 to unlock Word Vault.</p><button onclick="navigate(\'dashboard\')" class="btn-primary" style="width:auto;padding:10px 24px">Dashboard</button></div></div>';
+      app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center"><div style="text-align:center;max-width:340px;padding:24px"><p style="color:var(--g1);font-size:14px;margin-bottom:16px">Complete Phase 1 (Day 4) to unlock Pronunciation Workshop.</p><button onclick="navigate(\'dashboard\')" class="btn-primary" style="width:auto;padding:10px 24px">Dashboard</button></div></div>';
       return;
     }
     // Build a pseudo-lesson object for the WV player
