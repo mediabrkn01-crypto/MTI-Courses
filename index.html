@@ -2859,7 +2859,7 @@ function renderWVPlayer(wvItem){
   var vids=loadVideos();
   // WV videos stored at order 100+index
   var wvIdx=WV_DATA.findIndex(function(f){return f.id===wvItem.id;});
-  var vid=vids[100+wvIdx]||{};
+  var vid=vids[100+wvIdx+1]||{};
   var src=vid.src||'';
   var thumb=vid.thumb||wvItem.thumb||'';
   var title=vid.title||wvItem.title;
@@ -2870,7 +2870,7 @@ function renderWVPlayer(wvItem){
   var wvUnlocked=!!(day5&&isCompleted(day5.id));
   WV_DATA.forEach(function(f,i){
     var isActive=(f.id===wvItem.id);
-    var t=vids[100+i]||{};
+    var t=vids[100+i+1]||{};
     var tThumb=t.thumb||f.thumb||'';
     missionList+='<div onclick="navigate(\'lesson\',{id:\''+f.id+'\'})" style="cursor:pointer;border-bottom:1px solid rgba(255,255,255,.06);padding:10px 14px;background:'+(isActive?'rgba(255,45,120,.07)':'transparent')+';transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,.04)\'" onmouseout="this.style.background=\''+(isActive?'rgba(255,45,120,.07)':'transparent')+'\'">'
       +'<div style="display:flex;gap:10px;align-items:center">'
@@ -2939,7 +2939,7 @@ function renderWordVault(){
     });
     var rows=filtered.map(function(f,i){
       var idx=WV_DATA.indexOf(f);
-      var v=vids[100+idx]||{};
+      var v=vids[100+idx+1]||{};
       var thumb=v.thumb||f.thumb||'';
       var locked=!wvUnlocked;
       var onclick=locked?'':("navigate('lesson',{id:'"+f.id+"'})");
