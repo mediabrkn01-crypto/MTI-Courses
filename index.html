@@ -2898,9 +2898,15 @@ function renderWVPlayer(wvItem){
         +'<div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">'
           +(src
             ?'<div id="player-wrapper" style="width:100%;background:#000">'
-              +(src.includes('youtube')||src.includes('youtu.be')
-                ?'<iframe src="'+src+'" style="width:100%;aspect-ratio:16/9;border:none" allowfullscreen></iframe>'
-                :'<video src="'+src+'" controls style="width:100%;aspect-ratio:16/9;background:#000"></video>')
+              +(function(){
+                var ytId=null;
+                var ytM=src.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/))([^&\s?]{11})/);
+                if(ytM) ytId=ytM[1];
+                var bunnyUrl=getBunnyEmbedUrl(src);
+                if(ytId) return '<iframe src="https://www.youtube-nocookie.com/embed/'+ytId+'?rel=0&modestbranding=1&controls=1&playsinline=1&color=white" style="width:100%;aspect-ratio:16/9;border:none" allow="accelerometer;autoplay;encrypted-media;gyroscope;picture-in-picture;fullscreen" allowfullscreen></iframe>';
+                if(bunnyUrl) return '<div style="position:relative;width:100%;aspect-ratio:16/9"><iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen="true"></iframe></div>';
+                return '<video src="'+src+'" controls style="width:100%;aspect-ratio:16/9;background:#000"></video>';
+              })()
             +'</div>'
             :(thumb?'<div style="width:100%;aspect-ratio:16/9;background:#000;position:relative"><img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;opacity:.5"/><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="font-size:60px">'+wvItem.icon+'</span></div></div>':'<div style="width:100%;aspect-ratio:16/9;background:#111;display:flex;align-items:center;justify-content:center;font-size:60px">'+wvItem.icon+'</div>'))
           +'<div style="padding:20px 24px">'
