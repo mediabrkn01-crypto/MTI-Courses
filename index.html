@@ -1330,6 +1330,52 @@ function render(screen,params){
     return;
   }
   if(screen==="quiz")         { renderQuiz(params.lessonId); return; }
+  if(screen==="live")         { renderLive(); return; }
+}
+
+
+function navigateLive(completedCount){
+  if(completedCount<30){
+    var msg=document.createElement('div');
+    msg.className='modal-lock';
+    msg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;background:rgba(13,13,28,.97);border:1px solid rgba(255,45,120,.3);border-radius:16px;padding:28px 32px;max-width:340px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)';
+    msg.innerHTML='<div style="font-size:32px;margin-bottom:12px">\U0001f512</div>'
+      +'<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Live With Sreekanth</div>'
+      +'<div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:20px">Complete all 30 classes to unlock live sessions with Sreekanth.</div>'
+      +'<button onclick="document.querySelector(\'.modal-lock\').remove()" class="btn-primary" style="width:auto;padding:10px 24px">Got it</button>';
+    document.body.appendChild(msg);
+    msg.addEventListener('click',function(e){if(e.target===msg)msg.remove();});
+    return;
+  }
+  navigate('live');
+}
+
+function renderLive(){
+  if(!currentSession||currentSession.role!=='student'){navigate('login');return;}
+  var student=loadStudents()[currentSession.studentId];
+  if(!student){currentSession=null;navigate('login');return;}
+  var sessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
+  var sessionsHtml='';
+  if(sessions.length===0){
+    sessionsHtml='<div style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:24px;text-align:center;color:var(--muted);font-size:13px">No live sessions scheduled yet. Check back soon!</div>';
+  } else {
+    sessionsHtml=sessions.map(function(s){
+      return '<div style="background:rgba(255,45,120,.06);border:1px solid rgba(255,45,120,.15);border-radius:14px;padding:20px;margin-bottom:12px">'
+        +'<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:16px;color:#fff;margin-bottom:4px">'+s.title+'</div>'
+        +'<div style="font-size:13px;color:var(--muted);margin-bottom:12px">'+s.date+'</div>'
+        +(s.link?'<a href="'+s.link+'" target="_blank" style="display:inline-block;background:var(--grad);border-radius:8px;color:#fff;font-size:12px;font-weight:700;padding:8px 18px;text-decoration:none;font-family:Montserrat,sans-serif">Register \u2192</a>':'<span style="font-size:12px;color:var(--muted)">Registration link coming soon</span>')
+        +'</div>';
+    }).join('');
+  }
+  app.innerHTML=sidebarHtml('live')
+    +'<div id="main-content">'
+    +topBarHtml(student)
+    +mobileNavHtml('live')
+    +'<div style="padding:28px 32px 80px">'
+    +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Live With Sreekanth</h1>'
+    +'<p style="font-size:14px;color:var(--muted);margin-bottom:28px">Join exclusive live sessions directly with Sreekanth.</p>'
+    +sessionsHtml
+    +'</div></div>';
 }
 
 // ─── SIDEBAR HTML ────────────────────────────────────────────────────────────
@@ -1410,10 +1456,14 @@ function sidebarHtml(active){
         <div class="sb-icon">⌂</div><div class="sb-lbl">Dashboard</div>
       </div>
       <div class="sb-item ${active==='courses'?'active':''}" onclick="closeSidebar();navigate('courses')">
-        <div class="sb-icon">🎯</div><div class="sb-lbl">Accent Journey</div>
+        <div class="sb-icon">🎯</div><div class="sb-lbl">The Course</div>
       </div>
       <div class="sb-item ${active==='wordvault'?'active':''}" onclick="closeSidebar();navigate('wordvault')">
-        <div class="sb-icon">🔊</div><div class="sb-lbl">Word Vault</div>
+        <div class="sb-icon">🔊</div><div class="sb-lbl">Pronunciation Workshop</div>
+      </div>
+      <div class="sb-item ${active==='live'?'active':''}" onclick="closeSidebar();navigateLive(${completedCount})">
+        <div class="sb-icon">📡</div><div class="sb-lbl">Live With Sreekanth</div>
+        ${completedCount>=30?'':'<div style=\"font-size:9px;color:var(--muted);margin-left:auto;padding:2px 6px;background:rgba(255,255,255,.06);border-radius:6px;white-space:nowrap\">🔒</div>'}
       </div>
       <div class="sb-sec">You</div>
       <div class="sb-item ${active==='achievements'?'active':''}" onclick="closeSidebar();navigate('achievements')">
@@ -2608,6 +2658,19 @@ function renderAdminSettings(){
         </div>
       </div>
 
+    <!-- LIVE SESSIONS SECTION -->
+    <div class="lg" style="padding:20px;margin-bottom:20px;border:1px solid rgba(99,179,237,.25);background:rgba(99,179,237,.05)">
+      <p style="font-weight:700;font-size:15px;color:#63b3ed;margin-bottom:4px">📡 Live With Sreekanth</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Manage live session dates. Students who complete all 30 classes can register.</p>
+      <div id="live-sessions-list" style="margin-bottom:14px"></div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+        <input id="ls-title" type="text" placeholder="Session title (e.g. Live Class — Week 1)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+        <input id="ls-date" type="text" placeholder="Date & time (e.g. Saturday, August 10 — 7:00 PM IST)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+        <input id="ls-link" type="text" placeholder="Registration link (optional)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+      </div>
+      <button onclick="adminAddLiveSession()" class="btn-primary" style="width:auto;padding:9px 20px;font-size:13px">Add Session</button>
+    </div>
+
     ${[
       {
         title:'Daily Drip Limit',
@@ -2658,6 +2721,39 @@ function renderAdminSettings(){
     };
     r.readAsText(file);
   };
+  refreshLiveSessionsList();
+}
+
+function adminAddLiveSession(){
+  var title=document.getElementById('ls-title').value.trim();
+  var date=document.getElementById('ls-date').value.trim();
+  var link=document.getElementById('ls-link').value.trim();
+  if(!title||!date){alert('Title and date required.');return;}
+  var sessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
+  sessions.push({title:title,date:date,link:link});
+  localStorage.setItem('brokeneng_live_sessions',JSON.stringify(sessions));
+  document.getElementById('ls-title').value='';
+  document.getElementById('ls-date').value='';
+  document.getElementById('ls-link').value='';
+  refreshLiveSessionsList();
+}
+function adminRemoveLiveSession(idx){
+  var sessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
+  sessions.splice(idx,1);
+  localStorage.setItem('brokeneng_live_sessions',JSON.stringify(sessions));
+  refreshLiveSessionsList();
+}
+function refreshLiveSessionsList(){
+  var liveSessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
+  var liveSessionsHtml=liveSessions.map(function(s,i){
+    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +'<div style="flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;font-size:12px;color:rgba(255,255,255,.7)">'
+      +'<strong style="color:#fff">'+s.title+'</strong> — '+s.date+(s.link?' — <a href="'+s.link+'" target="_blank" style="color:var(--g1)">'+s.link+'</a>':'')
+      +'</div>'
+      +'<button onclick="adminRemoveLiveSession('+i+')" style="background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.25);border-radius:8px;color:#f87171;font-size:11px;padding:6px 10px;cursor:pointer;white-space:nowrap">Remove</button>'
+      +'</div>';
+  }).join('') || '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">No sessions yet.</div>';
+  document.getElementById('live-sessions-list').innerHTML=liveSessionsHtml;
 }
 
 // ─── MY COURSES ───────────────────────────────────────────────────────────────
@@ -2729,7 +2825,7 @@ function renderMyCourses(){
     ${topBarHtml(student)}
     ${mobileNavHtml("courses")}
     <div style="padding:28px 32px 80px">
-      <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Accent Journey</h1>
+      <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">The Course</h1>
       <p style="font-size:14px;color:var(--muted);margin-bottom:28px">20 missions across 5 phases. One complete voice transformation.</p>
       ${phaseHtml}
     </div>
@@ -2790,7 +2886,7 @@ function renderWVPlayer(wvItem){
     +'<div id="main-content" style="display:flex;flex-direction:column;height:100vh;overflow:hidden">'
       +'<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(13,13,28,.9);backdrop-filter:blur(20px);flex-shrink:0">'
         +'<button onclick="navigate(\'wordvault\')" style="display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:JetBrains Mono,monospace;transition:all .15s" onmouseover="this.style.borderColor=\'rgba(255,45,120,.35)\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\'">'
-          +'← Word Vault'
+          +'← Pronunciation Workshop'
         +'</button>'
         +'<div style="flex:1;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+title+'</div>'
       +'</div>'
@@ -2816,7 +2912,7 @@ function renderWVPlayer(wvItem){
         +'</div>'
         // WV sidebar
         +'<div style="width:280px;flex-shrink:0;border-left:1px solid var(--border);background:rgba(13,13,28,.6);overflow-y:auto;backdrop-filter:blur(20px)">'
-          +'<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:12px 14px 8px;font-family:JetBrains Mono,monospace">Word Vault</div>'
+          +'<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);padding:12px 14px 8px;font-family:JetBrains Mono,monospace">Pronunciation Workshop</div>'
           +missionList
         +'</div>'
       +'</div>'
@@ -2868,7 +2964,7 @@ function renderWordVault(){
     +topBarHtml(student)
     +mobileNavHtml("wordvault")
     +'<div style="padding:28px 32px 80px">'
-    +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Word Vault</h1>'
+    +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Pronunciation Workshop</h1>'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">'
       +'<p style="font-size:14px;color:var(--muted);margin:0">Fix the words you&#39;ve been saying wrong your entire life.</p>'
       +'<button onclick="wvShowKeySettings()" title="ElevenLabs API settings" style="background:rgba(255,45,120,.12);border:1px solid rgba(255,45,120,.25);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--g1);cursor:pointer;font-family:JetBrains Mono,monospace;white-space:nowrap;transition:all .15s" onmouseover="this.style.background=\'rgba(255,45,120,.2)\'" onmouseout="this.style.background=\'rgba(255,45,120,.12)\'">🎙 ElevenLabs</button>'
@@ -3356,7 +3452,7 @@ function renderDashboard(){
 
     // WORD VAULT PREVIEW
     '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
-      '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Word Vault</div>'+
+      '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Pronunciation Workshop</div>'+
       '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'wordvault\')">Browse all →</div>'+
     '</div>'+
     '<div style="display:flex;gap:24px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px -6px" class="dock-row">'+wvCards+'</div>'+
