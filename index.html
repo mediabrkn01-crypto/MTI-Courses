@@ -1064,6 +1064,50 @@ const PLACEHOLDER_QUIZ=[
 ];
 
 // ─── COURSE ───────────────────────────────────────────────────────────────────
+const DAY_DESCRIPTIONS={
+  1:"We start from zero, even with the alphabet. You'll learn which letters Indians commonly mispronounce, the two core features that make English different from Indian languages (non-phonetic + stress-timed), and your first taste of syllables using the clap technique.",
+  2:"Every English word has one syllable that's louder, longer, and higher in pitch. Today you learn to identify that stressed syllable and see why getting it wrong (like \"develop\" as DE-vel-op) instantly signals MTI.",
+  3:"Stress isn't random. It follows suffix rules. Today you learn how words ending in -y, -ic, -tion, and -ive shift their stress predictably, using real MTI examples from Kerala and North India.",
+  4:"Image, village, and garage don't rhyme, because -age has three different pronunciations depending on the word. Today you break down the \"eij,\" \"ij,\" and French \"aazh\" patterns with a full minimal-pairs drill.",
+  5:"Before tackling -ed endings, you learn the foundation: what sound actually is, and the difference between voiced and unvoiced sounds. This sets up the three -ed pronunciation rules (/t/, /d/, /ɪd/) and the 's' suffix rule.",
+  6:"Tradition, competition, condition — Indian speakers often stretch the short /ɪ/ into a long \"ee\" sound. Today you fix that with mouth-position drills, minimal pairs, and penultimate stress practice.",
+  7:"It's the most common vowel sound in English and lives in almost every unstressed syllable. Today you meet the schwa, the relaxed \"uh\" sound, and learn why it's key to sounding natural.",
+  8:"V and W are not the same sound, though most Indian speakers merge them. Today you learn the \"bite your Vs, kiss your Ws\" mouth position rule, plus the tricky /æ/ vs /ɑː/ vowel distinction.",
+  9:"Same word, two meanings, one stress shift. Project, desert, and record change meaning entirely based on which syllable you stress, noun or verb. Today you learn the rule and the exceptions.",
+  10:"The hardest sound in English for non-native speakers worldwide. Today you learn the exact tongue position for both voiced and unvoiced TH, tongue twisters to lock it in, and the two pronunciations of \"the.\"",
+  11:"English is full of letters you're never supposed to say. Today you go through the most common silent letters: W, P, T, B, H, D, N, S, with real words and a sentence drill to apply them naturally.",
+  12:"Hot or hot, coffee or cowfee, on or own — one letter, three completely different sounds. Today you break down short O, long O, and diphthong O with mouth-position drills and tongue twisters.",
+  13:"Same language, different rules. Today you compare British and American pronunciation: the four types of American T, the silent R, and vowel shifts, so you can pick one accent and stay consistent.",
+  14:"The final precision pass on consonants: aspiration on T and P, the floating American R, the buzzing Z and ZH sounds, and the often-dropped Y and H.",
+  15:"A focused walkthrough of four vowel sounds that trip up learners most: /e/ vs /æ/, the central /ɜː/ \"disgust\" sound, and short /ʊ/ vs long /uː/, with minimal pairs and tongue twisters for each.",
+  16:"Some vowel sounds glide from one mouth position to another mid-syllable. Today you learn all 7 English diphthongs, grouped by where the glide ends, with a minimal-pairs challenge to sharpen your ear.",
+  17:"English rhythm depends on shrinking unimportant words. Today you learn 11 function words (to, at, for, of, and, as, than, can, was) that switch between a strong form and a weak form depending on context.",
+  18:"It's not just what you say. It's how your pitch moves. Today you learn falling intonation for statements, rising intonation for yes/no questions, and how shifting stress alone can change a sentence's entire meaning.",
+  19:"Native speakers link, drop, and merge sounds between words instead of saying them one by one. Today you learn linking, elision, assimilation, and coalescence: the mechanics behind natural connected speech.",
+  20:"The final mission. Today you build your own \"language model,\" a native speaker you'll shadow daily, and learn the 4-step shadowing protocol to lock in pronunciation, intonation, and natural rhythm for good.",
+};
+const DAY_BULLETS={
+  1:["Correctly pronounce the letters of the alphabet (A, H, J, K, O, W, Z)","Understand that English is non-phonetic while Indian languages are phonetic","Learn that English is a stress-timed language","Break words into syllables using the clap technique"],
+  2:["Define what a syllable is (one vowel sound per syllable)","Identify the stressed syllable in a word","Practice the Da-Da humming technique for rhythm","Apply correct stress to words like develop, hospital, computer"],
+  3:["Learn the stress rule for words ending in -y (photography, economy)","Learn the stress rule for -ic endings (photographic, democratic)","Learn the stress rule for -tion endings (education, pronunciation)","Learn the stress rule for -ive endings (informative, alternative)"],
+  4:["Identify when -age is pronounced \"eij\" (age, page, stage)","Identify when -age is pronounced \"ij\" (image, village, manage)","Identify when -age is pronounced \"aazh\" (mirage, montage, sabotage)","Practice minimal pairs (age/image, page/village, stage/package)"],
+  5:["Understand voiced vs unvoiced sounds (b/p, d/t, z/s)","Learn when -ed is pronounced /t/ (danced, kissed, washed)","Learn when -ed is pronounced /d/ (learned, loved, lived)","Learn when -ed is pronounced /ɪd/ (wanted, needed, started)"],
+  6:["Learn the correct mouth position for short /ɪ/","Practice minimal pairs (sit/seat, bit/beat, hit/heat)","Identify penultimate syllable stress in -tion words","Apply short /ɪ/ correctly in words like tradition and competition"],
+  7:["Recognize the schwa sound in unstressed syllables","Learn that schwa is never stressed","Practice schwa in words like purchase, about, chocolate","Apply schwa correctly to reduce MTI by identifying it in daily words"],
+  8:["Differentiate V (teeth on lip) from W (kissy lips) mouth positions","Practice minimal pairs (vine/wine, veil/whale, vest/west)","Learn the /æ/ sound in words like cat, hand, man","Learn the /ɑː/ sound in words like car, bar, arm"],
+  9:["Learn that 2-syllable nouns stress the first syllable","Learn that 2-syllable verbs stress the second syllable","Practice noun-verb pairs (PROject/proJECT, REcord/reCORD)","Identify exceptions like comment and regret"],
+  10:["Learn the tongue position for unvoiced TH (think, path, north)","Learn the tongue position for voiced TH (this, that, breathe)","Practice TH tongue twisters for muscle memory","Learn when to say \"thuh\" vs \"thee\" before consonants and vowels"],
+  11:["Identify silent W, P, and T in words like wrong, receipt, fasten","Identify silent B and H in words like climb, honest, ghost","Identify silent D and N in words like badge, autumn, column","Apply silent letters correctly in full sentences"],
+  12:["Identify short O in single-syllable words (hot, not, on)","Identify diphthong O in words (note, boat, go)","Identify long O before R (bore, door, floor)","Practice distinguishing on vs own, not vs note, cot vs coat"],
+  13:["Learn the 4 American T sounds (true, flap, stop, silent)","Understand the R rule difference between British and American English","Learn key vowel shifts (path, hot, internet) between BrE and AmE","Choose one consistent accent style for your own speech"],
+  14:["Learn aspiration for /t/ and /p/ at the start of stressed syllables","Master the curled, floating tongue position for American /r/","Practice the buzzing /z/ and /ʒ/ sounds (measure, decision)","Avoid dropping /j/ and /h/ sounds (tube, happy)"],
+  15:["Distinguish /e/ from /æ/ (bed vs bad, men vs man)","Learn the /ɜː/ sound in bird, girl, nurse","Distinguish short /ʊ/ from long /uː/ (full vs fool, pull vs pool)","Combine all four sounds in full practice sentences"],
+  16:["Learn the \"closing\" diphthongs ending in /ɪ/ (face, price, choice)","Learn the \"closing\" diphthong ending in /ʊ/ (mouth, house)","Learn the \"centering\" diphthongs ending in schwa (near, square, cure)","Practice minimal pairs (wait/white, buy/boy, fear/fair)"],
+  17:["Understand the difference between content words and function words","Learn the weak forms of to, at, for, of, and, as, than, can, was","Identify when to use the strong form for emphasis","Apply weak forms in a full fluency drill sentence"],
+  18:["Apply falling intonation to statements and WH-questions","Apply rising intonation to yes/no questions","Learn the \"list\" intonation pattern for multiple items","Understand contrastive stress and how it shifts meaning"],
+  19:["Practice consonant-to-vowel linking","Learn intrusive sounds /j/, /w/, /r/ between vowels","Understand elision — dropped sounds in clusters (next stop → nex stop)","Practice assimilation and coalescence (want you → wanchu)"],
+  20:["Choose a personal language model using the 4 selection criteria","Learn the 4-step shadowing protocol (prep, pronunciation, intonation, full shadow)","Practice shadowing a 30-second clip using the method","Complete your 20-day pronunciation transformation"],
+};
 // Day titles mapped to class order
 const DAY_TITLES={
   1:"Foundational Phonetics",
@@ -1097,7 +1141,7 @@ function buildLessons(sid,sectionLabel,count,start){
     ls.push({
       id:sid+"-"+i,sectionId:sid,order,
       title,
-      description:"Placeholder description — replace with real class notes.",
+      description:DAY_DESCRIPTIONS[order]||"Placeholder description — replace with real class notes.",
       unlockDate:addDays(courseStart,order-1),dayNumber:order,
       thumbnailUrl: _imgUrl,
       gradientOverride: null
@@ -2625,8 +2669,8 @@ function renderMyCourses(){
   const PHASES=[
     {name:'Foundation',days:'Days 1–4',orders:[1,2,3,4]},
     {name:'Sounds',days:'Days 5–8',orders:[5,6,7,8]},
-    {name:'Stress & Rhythm',days:'Days 9–12',orders:[9,10,11,12]},
-    {name:'Connected Speech',days:'Days 13–16',orders:[13,14,15,16]},
+    {name:'Precision Round',days:'Days 9–12',orders:[9,10,11,12]},
+    {name:'Fine-Tune',days:'Days 13–16',orders:[13,14,15,16]},
     {name:'Accent Mastery',days:'Days 17–20',orders:[17,18,19,20]},
   ];
 
@@ -3163,8 +3207,8 @@ function renderDashboard(){
   var PHASES=[
     {name:'Foundation',days:'Days 1–4',orders:[1,2,3,4]},
     {name:'Sounds',days:'Days 5–8',orders:[5,6,7,8]},
-    {name:'Stress & Rhythm',days:'Days 9–12',orders:[9,10,11,12]},
-    {name:'Connected Speech',days:'Days 13–16',orders:[13,14,15,16]},
+    {name:'Precision Round',days:'Days 9–12',orders:[9,10,11,12]},
+    {name:'Fine-Tune',days:'Days 13–16',orders:[13,14,15,16]},
     {name:'Accent Mastery',days:'Days 17–20',orders:[17,18,19,20]},
   ];
   var phaseCards='';
@@ -3371,7 +3415,7 @@ function renderLesson(lessonId){
   var videoDur=videoMeta.duration||"18 min";
   var videoTitle=videoMeta.panelTitle||videoMeta.title||lesson.title; // use admin-set title
   var videoDesc=videoMeta.desc||lesson.description;
-  var bullets=videoMeta.bullets?videoMeta.bullets.split("\n").filter(function(b){return b.trim();}):["Pronunciation patterns","Stress & intonation","Common mistakes","Real-world examples"];
+  var bullets=videoMeta.bullets?videoMeta.bullets.split("\n").filter(function(b){return b.trim();}):DAY_BULLETS[lesson.order]||["Pronunciation patterns","Stress & intonation","Common mistakes","Real-world examples"];
   var thumbUrl=videoMeta.thumb||lesson.thumbnailUrl||"";
   var ytId=getYouTubeId(videoSrc);
   var bunnyUrl=getBunnyEmbedUrl(videoSrc);
