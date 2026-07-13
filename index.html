@@ -2338,7 +2338,7 @@ function renderAdminClasses(){
   (function(){
     var wvContainer=document.createElement('div');
     wvContainer.style.cssText='margin-bottom:24px';
-    wvContainer.innerHTML='<p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:12px">WORD VAULT</p>'
+    wvContainer.innerHTML='<p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:12px">PRONUNCIATION WORKSHOP</p>'
       +'<div class="lg" style="overflow:hidden"><div style="overflow-x:auto">'
       +'<table class="admin-table" style="min-width:560px">'
       +'<thead><tr><th>#</th><th>Title</th><th class="center">Video</th><th class="right">Action</th></tr></thead>'
@@ -2362,9 +2362,11 @@ function renderAdminClasses(){
   window.openVideoModal=(order)=>{
     const v=loadVideos()[order]||{};
     const lesson=ALL_LESSONS.find(l=>l.order===order);
+    // WV items have order 101-110
+    const wvItem=(order>=101&&order<=110)?WV_DATA[order-101]:null;
     document.getElementById('vm-order').value=order;
-    document.getElementById('vm-class-label').textContent=`Day ${order} — ${lesson?.title||''}`;
-    document.getElementById('vm-panelTitle').value=v.panelTitle||(lesson?lesson.title:'');
+    document.getElementById('vm-class-label').textContent=wvItem?('Pronunciation Workshop — '+wvItem.title):`Day ${order} — ${lesson?.title||''}`;
+    document.getElementById('vm-panelTitle').value=v.panelTitle||(wvItem?wvItem.title:lesson?lesson.title:'');
     document.getElementById('vm-instructor').value=v.instructor||'';
     document.getElementById('vm-src').value=v.src||'';
     document.getElementById('vm-dur').value=v.duration||'';
@@ -2539,7 +2541,7 @@ function renderAdminImages(){
 
     <!-- WORD VAULT -->
     <div style="margin-bottom:28px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-family:JetBrains Mono,monospace">WORD VAULT — 10 Classes</div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-family:JetBrains Mono,monospace">PRONUNCIATION WORKSHOP — 10 Classes</div>
       <div class="lg" style="overflow:hidden;border-radius:16px">${wvRows}</div>
     </div>
   </div>`;
@@ -2860,6 +2862,7 @@ function renderWVPlayer(wvItem){
   // WV videos stored at order 100+index
   var wvIdx=WV_DATA.findIndex(function(f){return f.id===wvItem.id;});
   var vid=vids[100+wvIdx+1]||{};
+  console.log('[WV Player] item='+wvItem.id+' key='+(100+wvIdx+1)+' src='+vid.src+' allKeys='+Object.keys(vids).join(','));
   var src=vid.src||'';
   var thumb=vid.thumb||wvItem.thumb||'';
   var title=vid.title||wvItem.title;
