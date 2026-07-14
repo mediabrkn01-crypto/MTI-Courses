@@ -1346,7 +1346,7 @@ function navigateLive(completedCount){
     var remaining='';
     if(coreLeft>0) remaining+='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px">\u{1F4DA} '+coreLeft+' core class'+(coreLeft>1?'es':'')+' remaining</div>';
     if(wvLeft>0) remaining+='<div style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:4px">\u{1F50A} '+wvLeft+' Pronunciation Workshop video'+(wvLeft>1?'s':'')+' remaining</div>';
-    msg.innerHTML='<div style="font-size:32px;margin-bottom:12px">\u{1F512}</div>'
+    msg.innerHTML='<div style="font-size:32px;margin-bottom:12px">🔒</div>'
       +'<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Live With Sreekanth</div>'
       +'<div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:12px">Complete all 30 classes to unlock live sessions.</div>'
       +remaining
@@ -3014,7 +3014,7 @@ function renderWordVault(){
         +'<div style="position:relative;width:100%;aspect-ratio:16/9;background:rgba(255,255,255,.06);overflow:hidden">'
           +(thumb?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;display:block;opacity:'+(locked?.4:1)+'" onerror="this.style.display=\'none\'"/>':'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;background:rgba(255,255,255,.04)">'+f.icon+'</div>')
           +(done?'<div style="position:absolute;top:8px;right:8px;background:rgba(34,197,94,.9);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff">\u2713</div>':'')
-          +(locked?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:28px">\U0001f512</div>':'')
+          +(locked?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:28px">🔒</div>':'')
         +'</div>'
         +'<div style="padding:12px 14px">'
           +'<div style="font-size:9px;font-weight:700;color:'+(done?'#4ade80':'var(--g1)')+';font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">'+f.cat+'</div>'
@@ -3794,6 +3794,13 @@ function setupPlayer(lesson,student){try{
             doMarkAndQuiz();
           }
         }
+        // Pause/play — pause the fallback timer
+        if(d.event==='onPause'||d.event==='pause'){
+          if(autoTimer){clearTimeout(autoTimer);timerRemaining-=(Date.now()-timerStart);autoTimer=null;}
+        }
+        if(d.event==='onPlay'||d.event==='play'){
+          if(!autoTimer&&timerRemaining>0) startAutoTimer(timerRemaining);
+        }
         // Video ended
         if(d.event==='onVideoEnd'||d.event==='ended'){
           if(!isCompleted(lesson.id)) doMarkAndQuiz();
@@ -3807,10 +3814,17 @@ function setupPlayer(lesson,student){try{
       if(markBtn2&&!isCompleted(lesson.id)) unlockBtn();
     }, Math.round(totalSec*0.80)*1000);
 
-    // Fallback auto-complete after 95% of duration
-    var autoTimer=setTimeout(function(){
-      if(!isCompleted(lesson.id)) doMarkAndQuiz();
-    }, Math.round(totalSec*0.95)*1000);
+    // Fallback auto-complete after 95% of duration — pauses with video
+    var autoTimer=null;
+    var timerStart=null;
+    var timerRemaining=Math.round(totalSec*0.95)*1000;
+    function startAutoTimer(remaining){
+      timerStart=Date.now();
+      autoTimer=setTimeout(function(){
+        if(!isCompleted(lesson.id)) doMarkAndQuiz();
+      }, remaining);
+    }
+    startAutoTimer(timerRemaining);
 
     return;
   }
@@ -3990,6 +4004,12 @@ function setupPlayer(lesson,student){try{
     }
   }
   // Auto-complete at 95% for MP4
+  video.addEventListener("pause",function(){
+    if(autoTimer){clearTimeout(autoTimer);timerRemaining-=(Date.now()-timerStart);autoTimer=null;}
+  });
+  video.addEventListener("play",function(){
+    if(!autoTimer&&timerRemaining>0&&!isCompleted(lesson.id)) startAutoTimer(timerRemaining);
+  });
   video.addEventListener("timeupdate",function(){
     if(!video.duration) return;
     const pct=video.currentTime/video.duration;
