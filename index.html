@@ -1208,14 +1208,34 @@ function getUnlockedSet(student){
   const allUnlocked = new Set(explicit);
   allUnlocked.add(1); // Day 1 always unlocked
 
-  // Unlock next lesson: previous video complete + quiz attempted once (if quiz exists)
+  // Unlock next lesson: previous complete + quiz attempted + daily drip limit
   const attempted = getAttemptedQuizzes(student.id);
-  for(let i=1; i<ALL_LESSONS.length; i++){
-    const lesson = ALL_LESSONS[i];
-    const prev   = ALL_LESSONS[i-1];
+
+  // Carry-over all previously drip-unlocked lessons
+  for(let ki=0;ki<localStorage.length;ki++){
+    const k=localStorage.key(ki);
+    if(k&&k.startsWith('brokeneng_drip_'+student.id+'_')){
+      try{JSON.parse(localStorage.getItem(k)||'[]').forEach(o=>allUnlocked.add(o));}catch(e){}
+    }
+  }
+
+  const todayStr=new Date().toISOString().slice(0,10);
+  const dripKey='brokeneng_drip_'+student.id+'_'+todayStr;
+  let todayNew;
+  try{todayNew=new Set(JSON.parse(localStorage.getItem(dripKey)||'[]'));}
+  catch{todayNew=new Set();}
+
+  for(let i=1;i<ALL_LESSONS.length;i++){
+    const lesson=ALL_LESSONS[i];
+    const prev=ALL_LESSONS[i-1];
     if(!done.has(prev.order)) break;
-    if(hasRealQuiz(prev) && !attempted.has(prev.order)) break;
-    allUnlocked.add(lesson.order);
+    if(hasRealQuiz(prev)&&!attempted.has(prev.order)) break;
+    if(allUnlocked.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
+    if(todayNew.size<DAILY_DRIP){
+      todayNew.add(lesson.order);
+      allUnlocked.add(lesson.order);
+      localStorage.setItem(dripKey,JSON.stringify([...todayNew]));
+    } else { break; }
   }
 
   return allUnlocked;
@@ -3769,6 +3789,18 @@ function setupPlayer(lesson,student){try{
       markBtn2.style.boxShadow='none';
     }
     renderQuizCta(lesson,true);
+    // Real-time quiz button unlock
+    var chBtn=document.getElementById('ch-btn');
+    var chSub=document.getElementById('ch-sub');
+    if(chBtn){
+      chBtn.disabled=false;
+      chBtn.style.background='var(--grad)';
+      chBtn.style.cursor='pointer';
+      chBtn.style.boxShadow='0 2px 14px rgba(255,45,120,.3)';
+      chBtn.style.opacity='1';
+      chBtn.textContent='⚡ Start Challenge';
+    }
+    if(chSub) chSub.textContent='Lesson complete — test what you learned.';
   }
 
   // If YouTube or Bunny.net iframe
@@ -3976,6 +4008,17 @@ function setupPlayer(lesson,student){try{
 
     // Quiz unlocked — student clicks Start Quiz button to open
     renderQuizCta(lesson, true);
+    var chBtn2=document.getElementById('ch-btn');
+    var chSub2=document.getElementById('ch-sub');
+    if(chBtn2){
+      chBtn2.disabled=false;
+      chBtn2.style.background='var(--grad)';
+      chBtn2.style.cursor='pointer';
+      chBtn2.style.boxShadow='0 2px 14px rgba(255,45,120,.3)';
+      chBtn2.style.opacity='1';
+      chBtn2.textContent='⚡ Start Challenge';
+    }
+    if(chSub2) chSub2.textContent='Lesson complete — test what you learned.';
 
     if(currentSession?.role==="student"){
       const students=loadStudents();
