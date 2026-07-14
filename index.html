@@ -1723,6 +1723,8 @@ window.doStudentLogin=async()=>{
 
   errEl.style.display="none";
   currentSession={role:"student",studentId:byEmail.id};
+  // Clear browser's native video resume cache for this origin
+  try{ sessionStorage.clear(); }catch(e){}
   // Sync progress from Supabase in background
   sbLoadProgress(byEmail.id);
   // Load videos first so lesson page has correct src on any device
@@ -3611,7 +3613,7 @@ function renderLesson(lessonId){
     var lThumb=lvm.thumb||'';
     var lOnclick=lUnlocked?"navigate('lesson',{id:'"+l.id+"'})":'';
     var imgBg=lThumb
-      ?'<img src="'+lThumb+'" style="width:100%;height:100%;object-fit:cover"/>'
+      ?'<img src="'+lThumb+'" style="width:100%;height:100%;object-fit:cover;opacity:'+(lUnlocked?'1':'.35')+'"/>'+(lUnlocked?'':'<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;font-size:22px">🔒</div>')
       :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,.15)">'+(lUnlocked?'▶':'🔒')+'</div>';
     var titleColor=isCur?'#fff':lDone?'rgba(255,255,255,.5)':'rgba(255,255,255,.85)';
     missionList+='<div class="mp-item'+(isCur?' mp-active':'')+'" onclick="'+lOnclick+'" style="display:block;cursor:'+(lUnlocked?'pointer':'default')+';opacity:'+(lUnlocked?'1':'.45')+';border-bottom:1px solid rgba(255,255,255,.06);overflow:hidden">'
@@ -3848,6 +3850,8 @@ function setupPlayer(lesson,student){try{
     source.src=realSrc;
     video.load();
   }
+  // Always reset to start — prevents browser resuming previous student's position
+  video.addEventListener('loadedmetadata', function(){ video.currentTime=0; }, {once:true});
 
   wrapper.addEventListener("contextmenu",e=>e.preventDefault());
   video.addEventListener("dragstart",e=>e.preventDefault());
