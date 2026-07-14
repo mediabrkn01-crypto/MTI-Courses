@@ -1812,7 +1812,7 @@ function renderAdminLogin(){
       <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:var(--text);margin-bottom:5px">Admin Panel</h2>
       <p style="font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.5">Sign in to manage students and courses.</p>
       <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Admin Email</label>
-      <input id="adm-email" type="email" placeholder="admin@brokenenglish.com" class="glass-input" style="margin-bottom:14px"/>
+      <input id="adm-email" type="email" placeholder="Email" class="glass-input" style="margin-bottom:14px"/>
       <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Password</label>
       <input id="adm-pass" type="password" placeholder="••••••••" class="glass-input" style="margin-bottom:8px"/>
       <p id="adm-err" style="display:none" style="color:var(--g1);font-size:13px;margin-bottom:8px">Invalid admin credentials.</p>
@@ -1827,7 +1827,7 @@ function renderAdminLogin(){
 window.doAdminLogin=()=>{
   const email=document.getElementById("adm-email").value.trim().toLowerCase();
   const pass=document.getElementById("adm-pass").value;
-  if(email!==ADMIN_CREDENTIALS.email.toLowerCase()||pass!==ADMIN_CREDENTIALS.password){
+  if(email!==getAdminCredentials().email.toLowerCase()||pass!==getAdminCredentials().password){
     document.getElementById("adm-err").classList.remove("hidden");return;
   }
   currentSession={role:"admin"};navigate("admin");
@@ -2634,6 +2634,27 @@ function renderAdminImages(){
   };
 }
 
+
+function getAdminCredentials(){
+  try{
+    var saved=JSON.parse(localStorage.getItem('brokeneng_admin_cred')||'null');
+    if(saved&&saved.email&&saved.password) return saved;
+  }catch(e){}
+  return {email:ADMIN_EMAIL, password:ADMIN_PASSWORD};
+}
+window.saveAdminCredentials=function(){
+  var email=document.getElementById('adm-new-email').value.trim();
+  var pass=document.getElementById('adm-new-pass').value;
+  var pass2=document.getElementById('adm-new-pass2').value;
+  var msg=document.getElementById('adm-cred-msg');
+  if(!email){alert('Email required.');return;}
+  if(pass&&pass!==pass2){alert('Passwords do not match.');return;}
+  var saved=getAdminCredentials();
+  var newCred={email:email, password:pass||saved.password};
+  localStorage.setItem('brokeneng_admin_cred',JSON.stringify(newCred));
+  if(msg){msg.style.display='inline';setTimeout(function(){msg.style.display='none';},2500);}
+};
+
 function renderAdminSettings(){
   // Load current EL settings
   var elKey=localStorage.getItem('brokeneng_el_key')||'';
@@ -2697,8 +2718,25 @@ function renderAdminSettings(){
       },
       {
         title:'Admin Credentials',
-        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:12px">Current admin: <strong style="color:#fff">${ADMIN_CREDENTIALS.email}</strong>. Edit <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;font-size:12px">ADMIN_CREDENTIALS</code> in the source code to change login details.</p>
-        <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;font-family:monospace;font-size:12px;color:rgba(255,255,255,0.7)">email: "${ADMIN_CREDENTIALS.email}"</div>`
+        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px">Change the admin login email and password. Takes effect immediately.</p>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">Email</label>
+            <input id="adm-new-email" type="email" value="${getAdminCredentials().email}" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">New Password</label>
+            <input id="adm-new-pass" type="password" placeholder="Enter new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">Confirm Password</label>
+            <input id="adm-new-pass2" type="password" placeholder="Repeat new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button onclick="saveAdminCredentials()" style="background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px 22px;cursor:pointer;font-family:Montserrat,sans-serif">Save Credentials</button>
+          <span id="adm-cred-msg" style="font-size:12px;color:#4ade80;display:none">✓ Saved!</span>
+        </div>`
       },
       {
         title:'Data Management',
