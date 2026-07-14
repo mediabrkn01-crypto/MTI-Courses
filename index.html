@@ -268,7 +268,8 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
   /* Lesson info padding smaller on mobile */
   #main-content [style*="padding:24px 28px"]{padding:16px 14px!important}
   /* Video max height on mobile */
-  #player-wrapper{max-height:40vh!important}
+  #player-wrapper{height:auto!important;max-height:none!important;aspect-ratio:16/9}
+  #player-wrapper video{object-fit:contain!important}
   .dash-stats-grid{grid-template-columns:repeat(2,1fr)!important}
   /* Module banner text truncation */
   .module-banner-title{font-size:12px!important}
@@ -297,10 +298,10 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
   .admin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 }
 @media(max-width:820px){
-  .wvp-root{height:auto!important;min-height:100vh;overflow:visible!important}
-  .wvp-split{flex-direction:column!important;overflow:visible!important}
-  .wvp-main{overflow:visible!important}
-  .wvp-side{width:100%!important;border-left:none!important;border-top:1px solid rgba(255,255,255,.08)!important;overflow:visible!important}
+  .wvp-root{height:100vh!important;height:100dvh!important;overflow:hidden!important}
+  .wvp-split{flex-direction:column!important;overflow:hidden!important}
+  .wvp-main{flex:none!important;overflow:visible!important}
+  .wvp-side{width:100%!important;flex:1!important;min-height:0;border-left:none!important;border-top:1px solid rgba(255,255,255,.08)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
   /* Lesson page: natural page scroll on mobile */
   .lesson-root{height:auto!important;min-height:100vh;overflow:visible!important}
   .lesson-root>div{overflow:visible!important}
@@ -3174,7 +3175,7 @@ window.showQuizGateMsg=function(label){
 // ─── WORD VAULT PLAYER ───────────────────────────────────────────────────────
 function renderWVPlayer(wvItem){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
-  if(window.innerWidth<=820) document.body.style.overflow=''; // allow page scroll on mobile
+  document.body.style.overflow='hidden'; // player fixed — workshop list scrolls internally
   var student=loadStudents()[currentSession.studentId];
   if(!student){currentSession=null;navigate("login");return;}
   var vids=loadVideos();
