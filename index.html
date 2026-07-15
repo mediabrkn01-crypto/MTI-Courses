@@ -4648,9 +4648,13 @@ async function adminTestEL(){
     var r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+voice,{
       method:'POST',
       headers:{'xi-api-key':key,'Content-Type':'application/json','Accept':'audio/mpeg'},
-      body:JSON.stringify({text:'Hello, welcome to Broken English.',model_id:'eleven_monolingual_v1',voice_settings:{stability:0.5,similarity_boost:0.75}})
+      body:JSON.stringify({text:'Hello, welcome to Broken English.',model_id:'eleven_multilingual_v2',voice_settings:{stability:0.5,similarity_boost:0.75}})
     });
-    if(!r.ok) throw new Error('HTTP '+r.status);
+    if(!r.ok){
+      var msg='HTTP '+r.status;
+      try{var j=await r.json();if(j.detail&&j.detail.message)msg=j.detail.message;else if(j.detail&&typeof j.detail==='string')msg=j.detail;}catch(_){}
+      throw new Error(msg);
+    }
     var buf=await r.arrayBuffer();
     new Audio(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}))).play();
     if(status){status.textContent='✓ Voice working!';status.style.color='#4ade80';}
@@ -4899,7 +4903,7 @@ function wvPlayElevenLabs(word, onSuccess, onFail){
   fetch('https://api.elevenlabs.io/v1/text-to-speech/'+EL_VOICE,{
     method:'POST',
     headers:{'xi-api-key':key,'Content-Type':'application/json','Accept':'audio/mpeg'},
-    body:JSON.stringify({text:word,model_id:'eleven_monolingual_v1',voice_settings:{stability:0.5,similarity_boost:0.75}})
+    body:JSON.stringify({text:word,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.5,similarity_boost:0.75}})
   })
   .then(function(r){
     if(!r.ok) throw new Error('ElevenLabs error '+r.status);
