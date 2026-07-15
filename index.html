@@ -3369,7 +3369,6 @@ function renderWordVault(){
     +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:28px;color:#fff;margin-bottom:4px">Pronunciation Workshop</h1>'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">'
       +'<p style="font-size:14px;color:var(--muted);margin:0">Fix the words you&#39;ve been saying wrong your entire life.</p>'
-      +'<button onclick="wvShowKeySettings()" title="ElevenLabs API settings" style="background:rgba(255,45,120,.12);border:1px solid rgba(255,45,120,.25);border-radius:8px;padding:5px 10px;font-size:11px;color:var(--g1);cursor:pointer;font-family:JetBrains Mono,monospace;white-space:nowrap;transition:all .15s" onmouseover="this.style.background=\'rgba(255,45,120,.2)\'" onmouseout="this.style.background=\'rgba(255,45,120,.12)\'">🎙 ElevenLabs</button>'
     +'</div>'
 
     // ── SYLLABLE & SOUND BREAKDOWN ──
@@ -4608,7 +4607,7 @@ function setupTopBar(student){
     if(students[sess.studentId]){
       currentSession=sess;
       sbLoadProgress(sess.studentId);
-      if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){});
+      if(typeof _sb!=="undefined"){ sbLoadVideos().catch(function(){}); sbLoadELSettings().catch(function(){}); }
       navigate("dashboard");
       return;
     }
@@ -4704,6 +4703,56 @@ function sbdRespell(ipa){
   return out.replace(/[^a-z]/g,'');
 }
 
+
+// Proper IPA syllabifier: one syllable per vowel nucleus, onset-maximised
+function sbdSyllabifyIPA(ipa){
+  ipa=ipa.replace(/[\/\[\]()]/g,'');
+  var DIPH=['eɪ','aɪ','ɔɪ','aʊ','oʊ','əʊ','ɪə','eə','ʊə','ɛə','ɔə'];
+  var VOW='iɪeɛæaɑɒɔoʊuʌəɜɝɚy';
+  // tokenize: stress marks, diphthongs, long vowels, affricates, single chars
+  var toks=[],i=0;
+  while(i<ipa.length){
+    var two=ipa.substr(i,2);
+    if(ipa[i]==='ˈ'||ipa[i]==='ˌ'){toks.push({t:'stress',v:ipa[i]});i++;continue;}
+    if(ipa[i]==='.'){i++;continue;} // ignore dictionary dots — we resyllabify
+    if(DIPH.indexOf(two)!==-1){toks.push({t:'v',v:two+(ipa[i+2]==='ː'?'ː':'')});i+=2+(ipa[i+2]==='ː'?1:0);continue;}
+    if(two==='tʃ'||two==='dʒ'){toks.push({t:'c',v:two});i+=2;continue;}
+    if(VOW.indexOf(ipa[i])!==-1){
+      var v=ipa[i];i++;
+      if(ipa[i]==='ː'){v+='ː';i++;}
+      toks.push({t:'v',v:v});continue;
+    }
+    if(ipa[i]==='ː'){i++;continue;}
+    toks.push({t:'c',v:ipa[i]});i++;
+  }
+  // group into syllables: each vowel = nucleus; consonants before it = onset (max 1 kept with previous coda if cluster>1)
+  var nuclei=toks.filter(function(t){return t.t==='v';}).length;
+  if(nuclei===0)return {syls:[],stress:0};
+  var syls=[],cur=[],stress=0,sylIdx=0,pendingStress=false;
+  var out=[];
+  // walk and split consonant clusters between nuclei: all-but-last consonant → coda of prev, last → onset of next
+  var groups=[];var buf=[];
+  toks.forEach(function(t){
+    if(t.t==='v'){groups.push({ons:buf,nuc:t,stressed:buf._st||false});buf=[];}
+    else if(t.t==='stress'){buf=buf.slice();buf._st=(t.v==='ˈ')||buf._st;}
+    else buf.push(t.v);
+  });
+  var tail=buf; // trailing consonants → coda of last syllable
+  groups.forEach(function(g,gi){
+    var ons=g.ons.filter(function(x){return typeof x==='string';});
+    if(gi>0&&ons.length>1){
+      // move all but last consonant to previous syllable's coda
+      var coda=ons.slice(0,ons.length-1);
+      out[gi-1]+=coda.join('');
+      ons=ons.slice(ons.length-1);
+    }
+    out.push(ons.join('')+g.nuc.v);
+    if(g.stressed)stress=gi;
+  });
+  if(tail.length)out[out.length-1]+=tail.join('');
+  return {syls:out,stress:stress};
+}
+
 function sbdBreak(){
   var w=document.getElementById('sbd-input').value.trim().replace(/[^a-zA-Z'-]/g,'');
   if(!w){sbdClear();return;}
@@ -4726,22 +4775,16 @@ function sbdBreak(){
       ipa=(ipa||'').replace(/^\/|\/$/g,'');
       if(ipa){
         _sbd.verified=true;
-        // split IPA into syllables using . and stress marks as boundaries
-        var parts=ipa.split(/(?=[ˈˌ])|\./).filter(Boolean);
-        var stressIdx=parts.findIndex(function(p){return p.indexOf('ˈ')!==-1;});
-        if(parts.length===_sbd.syls.length){
-          _sbd.ipaSyls=parts.map(function(p){return p.replace(/[ˈˌ]/g,'');});
-          if(stressIdx>=0)_sbd.stress=stressIdx;
-        }else{
-          // counts mismatch: trust the IPA — rebuild spelling split to same count
-          if(parts.length>1){
-            _sbd.ipaSyls=parts.map(function(p){return p.replace(/[ˈˌ]/g,'');});
-            _sbd.syls=sbdRedistribute(w,parts.length);
-            if(stressIdx>=0)_sbd.stress=stressIdx;
-          }else{
-            _sbd.ipaSyls=_sbd.syls.map(function(){return '';});
-            _sbd.ipaSyls[0]=ipa.replace(/[ˈˌ]/g,'');
+        var res=sbdSyllabifyIPA(ipa);
+        if(res.syls.length>0){
+          _sbd.ipaSyls=res.syls;
+          _sbd.stress=res.stress;
+          if(res.syls.length!==_sbd.syls.length){
+            _sbd.syls=sbdRedistribute(w,res.syls.length);
           }
+        }else{
+          _sbd.ipaSyls=_sbd.syls.map(function(){return '';});
+          _sbd.ipaSyls[0]=ipa.replace(/[ˈˌ.]/g,'');
         }
       }
       sbdRender();
@@ -4814,13 +4857,13 @@ function sbdSay(){
   _wvSpeechWord=_sbd.word;
   var key=wvGetKey();
   if(key&&!_wvAudio){
-    if(status)status.textContent='Generating audio...';
+    if(status)status.textContent='Loading voice...';
     wvPlayElevenLabs(_sbd.word,
-      function(){if(status)status.textContent='🔊 ElevenLabs';},
-      function(){wvSpeakWord();if(status)status.textContent='🔊 Browser voice';});
+      function(){if(status)status.textContent='🔊 Playing';},
+      function(){wvSpeakWord();if(status)status.textContent='🔊 Playing';});
   }else{
     wvSpeakWord();
-    if(status)status.textContent=_wvAudio?'🔊 ElevenLabs':'🔊 Browser voice';
+    if(status)status.textContent='🔊 Playing';
   }
 }
 
