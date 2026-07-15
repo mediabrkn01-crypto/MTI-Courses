@@ -782,6 +782,26 @@ function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show
     var existing=document.querySelector("link[rel*='icon']");
     if(existing){existing.href=furl;}
     else{var lnk=document.createElement("link");lnk.rel="icon";lnk.type="image/png";lnk.href=furl;document.head.appendChild(lnk);}
+    // Apple touch icon (iOS home screen)
+    var apple=document.querySelector("link[rel='apple-touch-icon']");
+    if(apple){apple.href=furl;}
+    else{var al=document.createElement("link");al.rel="apple-touch-icon";al.href=furl;document.head.appendChild(al);}
+    // Rebuild PWA manifest so the install-app icon uses the favicon too
+    try{
+      var manifest={
+        name:"Broken English",short_name:"Broken English",
+        description:"Accent training and pronunciation course portal",
+        start_url:"./",display:"standalone",
+        background_color:"#0d0d1c",theme_color:"#0d0d1c",orientation:"portrait",
+        icons:[
+          {src:furl,sizes:"192x192",type:"image/png",purpose:"any maskable"},
+          {src:furl,sizes:"512x512",type:"image/png",purpose:"any maskable"}
+        ]
+      };
+      var mlink=document.querySelector("link[rel='manifest']");
+      if(!mlink){mlink=document.createElement("link");mlink.rel="manifest";document.head.appendChild(mlink);}
+      mlink.href="data:application/manifest+json;charset=utf-8,"+encodeURIComponent(JSON.stringify(manifest));
+    }catch(e){}
   }
 })();
 
