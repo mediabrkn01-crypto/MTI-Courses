@@ -270,6 +270,10 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
   /* Video max height on mobile */
   #player-wrapper{height:auto!important;max-height:none!important;aspect-ratio:16/9}
   #player-wrapper video{object-fit:contain!important}
+  /* Fallback for older iOS/Android that lack aspect-ratio support */
+  @supports not (aspect-ratio:16/9){
+    #player-wrapper{height:0!important;padding-bottom:56.25%!important;position:relative!important}
+  }
   .dash-stats-grid{grid-template-columns:repeat(2,1fr)!important}
   /* Module banner text truncation */
   .module-banner-title{font-size:12px!important}
@@ -406,6 +410,7 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 <meta name="theme-color" content="#0d0d1c">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Broken English">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -760,6 +765,14 @@ function getLogoSrc(){ return (typeof SITE_IMAGES!=="undefined"&&SITE_IMAGES.mai
 function getSymbolSrc(){ return (typeof SITE_IMAGES!=="undefined"&&SITE_IMAGES.symbolLogo)?SITE_IMAGES.symbolLogo:getLogoSrc(); }
 
 
+
+// ── PWA: service worker registration (makes app installable on Android/Chrome/Edge) ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').catch(function(){/* sw.js not uploaded yet — app still works */});
+  });
+}
+
 function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show=i.type==="password";i.type=show?"text":"password";el.innerHTML=show?'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';}
 // Apply brand colors, favicon and title at runtime
 (function applyFavicon(){
@@ -834,7 +847,7 @@ function getStudentStats(studentId){
 function renderAchievements(){
   if(!currentSession||currentSession.role!=='student'){navigate('login');return;}
   const student = loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate('login');return;}
+  if(!student){logout();return;}
   const stats = getStudentStats(student.id);
   const earned = BADGES.filter(b=>b.check(stats));
   // Mark all currently earned badges as seen
@@ -935,6 +948,24 @@ function saveStudents(s){
 }
 function genId(){return"s_"+Math.random().toString(36).slice(2,9);}
 let currentSession=null;
+
+// ── PERSISTENT SESSION (48h) ─────────────────────────────────────────────────
+var SESSION_KEY="brokeneng_session", SESSION_HOURS=48;
+function saveSession(sess){
+  try{localStorage.setItem(SESSION_KEY,JSON.stringify({s:sess,exp:Date.now()+SESSION_HOURS*3600*1000}));}catch(e){}
+}
+function loadSession(){
+  try{
+    var raw=localStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    var d=JSON.parse(raw);
+    if(!d||!d.s||!d.exp||Date.now()>d.exp){localStorage.removeItem(SESSION_KEY);return null;}
+    return d.s;
+  }catch(e){return null;}
+}
+function clearSession(){try{localStorage.removeItem(SESSION_KEY);}catch(e){}}
+function logout(){currentSession=null;clearSession();navigate('login');}
+
 let adminUnlockAll=false;
 
 // ─── QUIZ BANK ────────────────────────────────────────────────────────────────
@@ -1407,7 +1438,7 @@ function navigateLive(completedCount){
 function renderLive(){
   if(!currentSession||currentSession.role!=='student'){navigate('login');return;}
   var student=loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate('login');return;}
+  if(!student){logout();return;}
   var sessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
   var sessionsHtml='';
   if(sessions.length===0){
@@ -1538,7 +1569,7 @@ function sidebarHtml(active){
       <div class="sb-user" onclick="closeSidebar();navigate('profile')">
         <div style="overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0">${stu?avatarSmallHtml(stu):'<div style=\"width:32px;height:32px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0\">?</div>'}</div>
         <div style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:var(--text)">${uName}</div>
-        <div onclick="event.stopPropagation();currentSession=null;navigate('login')" title="Sign out" style="color:var(--muted);cursor:pointer;font-size:16px;flex-shrink:0;padding:4px;transition:color .15s" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'">⇥</div>
+        <div onclick="event.stopPropagation();logout()" title="Sign out" style="color:var(--muted);cursor:pointer;font-size:16px;flex-shrink:0;padding:4px;transition:color .15s" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'">⇥</div>
       </div>
     </div>
   </div>
@@ -1768,6 +1799,7 @@ window.doStudentLogin=async()=>{
 
   errEl.style.display="none";
   currentSession={role:"student",studentId:byEmail.id};
+  saveSession(currentSession);
   // Clear browser's native video resume cache for this origin
   try{ sessionStorage.clear(); }catch(e){}
   // Sync progress from Supabase in background
@@ -1882,7 +1914,7 @@ window.doAdminLogin=()=>{
   if(email!==getAdminCredentials().email.toLowerCase()||pass!==getAdminCredentials().password){
     document.getElementById("adm-err").classList.remove("hidden");return;
   }
-  currentSession={role:"admin"};navigate("admin");
+  currentSession={role:"admin"};saveSession(currentSession);navigate("admin");
 };
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
@@ -1947,7 +1979,7 @@ function adminTopBar(tab){
         class="${tab===t.id?'btn-primary':'btn-ghost'}"
         style="padding:6px 12px;width:auto;font-size:11px;font-family:'Montserrat',sans-serif;white-space:nowrap">${t.label}</button>`).join('')}
     </div>
-    <button onclick="currentSession=null;navigate('login')" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;transition:color .18s;font-family:'JetBrains Mono',monospace" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'">Sign out</button>
+    <button onclick="logout()" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;transition:color .18s;font-family:'JetBrains Mono',monospace" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'">Sign out</button>
   </div>`;
 }
 
@@ -3029,7 +3061,7 @@ function refreshLiveSessionsList(){
 function renderMyCourses(){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
   const student=loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate("login");return;}
+  if(!student){logout();return;}
 
   const PHASES=[
     {name:'Foundation',days:'Days 1–4',orders:[1,2,3,4]},
@@ -3177,7 +3209,7 @@ function renderWVPlayer(wvItem){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
   document.body.style.overflow='hidden'; // player fixed — workshop list scrolls internally
   var student=loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate("login");return;}
+  if(!student){logout();return;}
   var vids=loadVideos();
   // WV videos stored at order 100+index
   var wvIdx=WV_DATA.findIndex(function(f){return f.id===wvItem.id;});
@@ -3264,7 +3296,7 @@ function renderWVPlayer(wvItem){
 function renderWordVault(){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
   var student=loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate("login");return;}
+  if(!student){logout();return;}
 
   var day5=ALL_LESSONS.find(function(l){return l.order===4;});
   var wvUnlocked=!!(day5&&isCompleted(day5.id));
@@ -3364,7 +3396,7 @@ function renderWordVault(){
 function renderQuizzes(){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
   const student=loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate("login");return;}
+  if(!student){logout();return;}
 
   const quizLessons=ALL_LESSONS.filter(l=>hasRealQuiz(l));
   const locked=quizLessons.filter(l=>!isUnlocked(l));
@@ -3435,7 +3467,7 @@ function renderQuizzes(){
 function renderProfile(){
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
   const student=loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate("login");return;}
+  if(!student){logout();return;}
 
   const completedCount=ALL_LESSONS.filter(l=>isCompleted(l.id)).length;
   const quizCount=ALL_LESSONS.filter(l=>hasRealQuiz(l)&&isUnlocked(l)&&isCompleted(l.id)).length;
@@ -3540,7 +3572,7 @@ function renderProfile(){
         <div id="pass-placeholder" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:12px 16px;color:rgba(255,255,255,0.3);font-size:14px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.08)">••••••••••</div>
       </div>
 
-      <button onclick="currentSession=null;navigate('login')" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border:1px solid rgba(237,31,81,.3);border-radius:12px;background:rgba(237,31,81,.08);color:var(--g3);font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;margin-top:8px" onmouseover="this.style.background='rgba(237,31,81,.15)'" onmouseout="this.style.background='rgba(237,31,81,.08)'">
+      <button onclick="logout()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border:1px solid rgba(237,31,81,.3);border-radius:12px;background:rgba(237,31,81,.08);color:var(--g3);font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;margin-top:8px" onmouseover="this.style.background='rgba(237,31,81,.15)'" onmouseout="this.style.background='rgba(237,31,81,.08)'">
         <svg style="width:16px;height:16px;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         Sign Out
       </button>
@@ -3592,7 +3624,7 @@ function renderDashboard(){
   document.body.style.overflow=""; // clear any lesson scroll-lock
   if(!currentSession||currentSession.role!=="student"){navigate("login");return;}
   const student=loadStudents()[currentSession.studentId];
-  if(!student){currentSession=null;navigate("login");return;}
+  if(!student){logout();return;}
 
   const{expired}=getValidity(student);
   if(expired){
@@ -3602,7 +3634,7 @@ function renderDashboard(){
   }
 
   const logoutAt=localStorage.getItem("brokeneng_logout_"+student.id);
-  if(logoutAt&&Date.now()>Number(logoutAt)){localStorage.removeItem("brokeneng_logout_"+student.id);currentSession=null;navigate("login");return;}
+  if(logoutAt&&Date.now()>Number(logoutAt)){localStorage.removeItem("brokeneng_logout_"+student.id);logout();return;}
 
   const completedCount=ALL_LESSONS.filter(l=>isCompleted(l.id)).length;
   const unlockedCount=ALL_LESSONS.filter(isUnlocked).length;
@@ -4538,7 +4570,26 @@ function setupTopBar(student){
   }, {once:true});
 }
 
-navigate("login");
+// Restore saved session (48h validity) — skip login if still valid
+(function(){
+  var sess=loadSession();
+  if(sess&&sess.role==="student"){
+    var students=loadStudents();
+    if(students[sess.studentId]){
+      currentSession=sess;
+      sbLoadProgress(sess.studentId);
+      if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){});
+      navigate("dashboard");
+      return;
+    }
+    clearSession();
+  }else if(sess&&sess.role==="admin"){
+    currentSession=sess;
+    navigate("admin");
+    return;
+  }
+  navigate("login");
+})();
 
 // ── ELEVENLABS ADMIN FUNCTIONS ────────────────────────────────────────────────
 async function adminSaveELSettings(){
