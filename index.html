@@ -4005,13 +4005,20 @@ function renderDashboard(){
   if(typeof WV_DATA!=='undefined'){
     var _day5=ALL_LESSONS.find(function(l){return l.order===4;});
     var _wvUnlocked=!!(_day5&&isCompleted(_day5.id));
-    WV_DATA.forEach(function(f){
+    var _wvVids=loadVideos();
+    WV_DATA.forEach(function(f,idx){
       var _click=_wvUnlocked?'onclick="navigate(\'lesson\',{id:\''+f.id+'\'})"':'';
-      wvCards+='<div style="min-width:150px;max-width:150px;border-radius:12px;padding:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);flex-shrink:0;cursor:'+(_wvUnlocked?'pointer':'default')+';position:relative;opacity:'+(_wvUnlocked?'1':'.5')+'" '+_click+'>'+
-        (!_wvUnlocked?'<div style="position:absolute;top:10px;right:10px;font-size:11px;color:var(--muted)">🔒</div>':'')+
-        '<div style="font-size:26px;margin-bottom:8px">'+f.icon+'</div>'+
+      var _v=_wvVids[100+idx+1]||{};
+      var _thumb=_v.thumb||f.thumb||'';
+      wvCards+='<div style="min-width:150px;max-width:150px;border-radius:12px;overflow:hidden;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);flex-shrink:0;cursor:'+(_wvUnlocked?'pointer':'default')+';position:relative;opacity:'+(_wvUnlocked?'1':'.5')+'" '+_click+'>'+
+        (!_wvUnlocked?'<div style="position:absolute;top:10px;right:10px;font-size:11px;color:var(--muted);z-index:2">🔒</div>':'')+
+        (_thumb
+          ?'<div style="height:84px;background:#000"><img src="'+_thumb+'" style="width:100%;height:100%;object-fit:cover;display:block" onerror="this.parentElement.innerHTML=\'<div style=&quot;font-size:26px;display:flex;align-items:center;justify-content:center;height:100%&quot;>'+f.icon+'</div>\'"/></div>'
+          :'<div style="height:84px;display:flex;align-items:center;justify-content:center;font-size:30px;background:rgba(255,255,255,.03)">'+f.icon+'</div>')+
+        '<div style="padding:10px 12px 12px">'+
         '<div style="font-size:9px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">'+f.cat+'</div>'+
         '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:12px;color:#fff;line-height:1.3">'+f.title+'</div>'+
+        '</div>'+
         '</div>';
     });
   }
