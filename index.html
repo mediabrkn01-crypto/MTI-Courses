@@ -778,7 +778,7 @@ if('serviceWorker' in navigator){
   });
 }
 
-function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show=i.type==="password";i.type=show?"text":"password";el.innerHTML=show?'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';}
+function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show=i.type==="password";i.type=show?"text":"password";el.innerHTML=show?'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';}
 // Apply brand colors, favicon and title at runtime
 (function applyFavicon(){
   // Set favicon dynamically from URL
@@ -1738,7 +1738,7 @@ function renderLogin(){
       <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px">PASSWORD</label>
       <div style="position:relative;margin-bottom:22px"><input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
         style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;padding:14px 44px 14px 16px;outline:none;transition:border .2s;box-sizing:border-box"
-        onfocus="this.style.borderColor='rgba(255,45,120,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/><button type="button" onclick="togglePw('login-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+        onfocus="this.style.borderColor='rgba(255,45,120,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/><button type="button" onclick="togglePw('login-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
 
       <button id="login-btn-main" onclick="doStudentLogin()" class="btn-primary" style="margin-bottom:20px;font-size:15px;font-weight:800;letter-spacing:.02em">Sign In</button>
 
@@ -1901,6 +1901,7 @@ function showBootSplash(student, cb){
 
 // ─── ADMIN LOGIN ─────────────────────────────────────────────────────────────
 function renderAdminLogin(){
+  if(typeof sbLoadAdminCred==='function')sbLoadAdminCred().catch(function(){});
   app.innerHTML=`
   <div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:16px">
     <div class="orb o1"></div><div class="orb o2"></div>
@@ -1923,8 +1924,8 @@ function renderAdminLogin(){
       <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Admin Email</label>
       <input id="adm-email" type="email" placeholder="Email" class="glass-input" style="margin-bottom:14px"/>
       <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Password</label>
-      <div style="position:relative"><input id="adm-pass" type="password" placeholder="••••••••" class="glass-input" style="margin-bottom:8px;padding-right:40px"/><button type="button" onclick="togglePw('adm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
-      <p id="adm-err" style="display:none" style="color:var(--g1);font-size:13px;margin-bottom:8px">Invalid admin credentials.</p>
+      <div style="position:relative"><input id="adm-pass" type="password" placeholder="••••••••" class="glass-input" style="margin-bottom:8px;padding-right:40px"/><button type="button" onclick="togglePw('adm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
+      <p id="adm-err" style="display:none;color:var(--g1);font-size:13px;margin-bottom:8px">Invalid admin credentials.</p>
       <button onclick="doAdminLogin()" class="btn-primary" style="margin-top:8px">Sign In as Admin</button>
       <p style="margin-top:20px;text-align:center">
         <button onclick="navigate('login')" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer" onmouseover="this.style.color='var(--g3)'" onmouseout="this.style.color='var(--muted)'">← Student login</button>
@@ -1936,8 +1937,17 @@ function renderAdminLogin(){
 window.doAdminLogin=()=>{
   const email=document.getElementById("adm-email").value.trim().toLowerCase();
   const pass=document.getElementById("adm-pass").value;
-  if(email!==getAdminCredentials().email.toLowerCase()||pass!==getAdminCredentials().password){
-    document.getElementById("adm-err").classList.remove("hidden");return;
+  var cred=getAdminCredentials();
+  if(email!==cred.email.toLowerCase()||pass!==cred.password){
+    var er=document.getElementById("adm-err");if(er)er.style.display="block";
+    // maybe credentials were changed on another device — pull latest and retry once
+    sbLoadAdminCred().then(function(){
+      var c2=getAdminCredentials();
+      if(email===c2.email.toLowerCase()&&pass===c2.password){
+        currentSession={role:"admin"};saveSession(currentSession);navigate("admin");
+      }
+    }).catch(function(){});
+    return;
   }
   currentSession={role:"admin"};saveSession(currentSession);navigate("admin");
 };
@@ -3121,8 +3131,25 @@ window.saveAdminCredentials=function(){
   var saved=getAdminCredentials();
   var newCred={email:email, password:pass||saved.password};
   localStorage.setItem('brokeneng_admin_cred',JSON.stringify(newCred));
+  sbSaveAdminCred(newCred);
   if(msg){msg.style.display='inline';setTimeout(function(){msg.style.display='none';},2500);}
 };
+
+async function sbSaveAdminCred(cred){
+  try{
+    if(typeof _sb==='undefined')return;
+    await _sb.from('course_config').upsert({id:'admin_cred',data:cred});
+  }catch(e){console.warn('admin cred sync:',e);}
+}
+async function sbLoadAdminCred(){
+  try{
+    if(typeof _sb==='undefined')return;
+    var r=await _sb.from('course_config').select('data').eq('id','admin_cred').single();
+    if(r.error||!r.data||!r.data.data)return;
+    var d=r.data.data;
+    if(d.email&&d.password)localStorage.setItem('brokeneng_admin_cred',JSON.stringify(d));
+  }catch(e){}
+}
 
 function renderAdminSettings(){
   // Load current EL settings
@@ -3195,11 +3222,11 @@ function renderAdminSettings(){
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">New Password</label>
-            <div style="position:relative"><input id="adm-new-pass" type="password" placeholder="Enter new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 40px 10px 14px;outline:none;box-sizing:border-box"/><button type="button" onclick="togglePw('adm-new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <div style="position:relative"><input id="adm-new-pass" type="password" placeholder="Enter new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 40px 10px 14px;outline:none;box-sizing:border-box"/><button type="button" onclick="togglePw('adm-new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">Confirm Password</label>
-            <div style="position:relative"><input id="adm-new-pass2" type="password" placeholder="Repeat new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 40px 10px 14px;outline:none;box-sizing:border-box"/><button type="button" onclick="togglePw('adm-new-pass2',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <div style="position:relative"><input id="adm-new-pass2" type="password" placeholder="Repeat new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 40px 10px 14px;outline:none;box-sizing:border-box"/><button type="button" onclick="togglePw('adm-new-pass2',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:12px">
@@ -3784,11 +3811,11 @@ function renderProfile(){
         <div id="pass-form" style="display:none" style="display:none;flex-direction:column;gap:12px">
           <div>
             <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">New Password</label>
-            <div style="position:relative"><input id="new-pass" type="password" placeholder="Enter new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <div style="position:relative"><input id="new-pass" type="password" placeholder="Enter new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
           </div>
           <div>
             <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">Confirm Password</label>
-            <div style="position:relative"><input id="confirm-pass" type="password" placeholder="Confirm new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('confirm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button></div>
+            <div style="position:relative"><input id="confirm-pass" type="password" placeholder="Confirm new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('confirm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
           </div>
           <p id="pass-err" style="display:none;font-size:12px;color:#fca5a5"></p>
           <p id="pass-ok" style="display:none;font-size:12px;color:#4ade80">Password updated!</p>
