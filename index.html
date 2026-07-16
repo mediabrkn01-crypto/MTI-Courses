@@ -526,6 +526,30 @@ async function sbSaveProgress(studentId, lessonId){
 }
 
 // Save full student record to Supabase
+
+async function sbLoadAllStudents(){
+  try{
+    if(typeof _sb==='undefined')return false;
+    const{data,error}=await _sb.from('students').select('*');
+    if(error||!data)return false;
+    var local=loadStudents();
+    data.forEach(function(d){
+      local[d.id]={
+        id:d.id,
+        name:d.name,
+        email:d.email,
+        password:d.password_hash,
+        validUntil:d.valid_until||null,
+        accessList:d.access_list||[1],
+        createdAt:d.created_at||new Date().toISOString(),
+        completedAt:d.completed_at||null
+      };
+    });
+    localStorage.setItem('brokeneng_students',JSON.stringify(local));
+    return true;
+  }catch(e){console.warn('student list sync:',e);return false;}
+}
+
 async function sbSaveStudent(student){
   try{
     const{error}=await _sb.from('students').upsert({
@@ -2026,6 +2050,15 @@ function glassBtn(label,onclick,variant='ghost'){
 
 // ── STUDENTS TAB ──────────────────────────────────────────────────────────────
 function renderAdmin(tab){
+  if(!window._admStudentsSynced){
+    window._admStudentsSynced=true;
+    sbLoadAllStudents().then(function(ok){
+      if(ok&&currentSession&&currentSession.role==='admin'){
+        var t=(history.state&&history.state.params&&history.state.params.tab)||'students';
+        if(t==='students'||t==='progress')renderAdmin(t);
+      }
+    }).catch(function(){});
+  }
   if(tab==='progress') return renderAdminProgress();
   if(tab==='classes'){
     if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){}).finally(function(){renderAdminClasses();});
@@ -4840,6 +4873,7 @@ function setupTopBar(student){
     clearSession();
   }else if(sess&&sess.role==="admin"){
     currentSession=sess;
+    if(typeof _sb!=="undefined")sbLoadAllStudents().catch(function(){});
     navigate("admin");
     return;
   }
