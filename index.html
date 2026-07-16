@@ -2035,10 +2035,17 @@ function renderAdmin(tab){
         <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;font-family:'Montserrat',sans-serif">Students</h1>
         <p style="font-size:13px;color:var(--muted)">${list.length} enrolled</p>
       </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onclick="document.getElementById('pdf-import-input').click()" style="display:flex;align-items:center;gap:8px;padding:11px 20px;border-radius:12px;background:rgba(255,255,255,.07);color:#fff;font-size:14px;font-weight:700;border:1px solid rgba(255,255,255,.15);cursor:pointer;transition:all .18s;font-family:'Montserrat',sans-serif" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">
+        <svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
+        Import PDF
+      </button>
+      <input id="pdf-import-input" type="file" accept="application/pdf" style="display:none" onchange="handleStudentPDF(event)"/>
       <button onclick="openAddStudent()" style="display:flex;align-items:center;gap:8px;padding:11px 20px;border-radius:12px;background:var(--grad);color:#fff;font-size:14px;font-weight:700;border:1px solid rgba(255,255,255,.2);box-shadow:0 4px 20px rgba(255,45,120,.35),inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer;transition:all .18s;font-family:'Montserrat',sans-serif">
         <svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
         Add Student
       </button>
+      </div>
     </div>
 
     <div id="student-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:16px;overflow-y:auto">
@@ -2183,6 +2190,139 @@ function renderAdmin(tab){
   };
 }
 
+
+
+// ── PDF STUDENT IMPORT ───────────────────────────────────────────────────────
+var _pdfImportRows=[];
+function _loadPdfJs(cb){
+  if(window.pdfjsLib){cb();return;}
+  var sc=document.createElement('script');
+  sc.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+  sc.onload=function(){
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    cb();
+  };
+  sc.onerror=function(){alert('Could not load PDF reader. Check internet connection.');};
+  document.head.appendChild(sc);
+}
+
+window.handleStudentPDF=function(evt){
+  var file=evt.target.files&&evt.target.files[0];
+  evt.target.value='';
+  if(!file)return;
+  _loadPdfJs(function(){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      pdfjsLib.getDocument({data:new Uint8Array(e.target.result)}).promise.then(function(pdf){
+        var pages=[];
+        for(var i=1;i<=pdf.numPages;i++)pages.push(pdf.getPage(i));
+        Promise.all(pages).then(function(pgs){
+          return Promise.all(pgs.map(function(pg){return pg.getTextContent();}));
+        }).then(function(contents){
+          // rebuild lines using Y position
+          var lines=[];
+          contents.forEach(function(tc){
+            var rows={};
+            tc.items.forEach(function(it){
+              if(!it.str.trim())return;
+              var y=Math.round(it.transform[5]);
+              (rows[y]=rows[y]||[]).push({x:it.transform[4],t:it.str});
+            });
+            Object.keys(rows).map(Number).sort(function(a,b){return b-a;}).forEach(function(y){
+              lines.push(rows[y].sort(function(a,b){return a.x-b.x;}).map(function(r){return r.t;}).join(' ').trim());
+            });
+          });
+          _pdfParseStudents(lines);
+        });
+      }).catch(function(err){alert('Could not read PDF: '+err.message);});
+    };
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+function _pdfParseStudents(lines){
+  var emailRe=/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  var existing=Object.values(loadStudents());
+  var rows=[];var seen={};
+  lines.forEach(function(line){
+    var clean=line.replace(/\s+/g,' ').trim();
+    if(!clean||clean.length<3)return;
+    // skip obvious headers
+    if(/^(name|student|email|sl\.?\s*no|s\.?no|#|list|roll|class|batch|date|page)\b/i.test(clean)&&!emailRe.test(clean))return;
+    var email='';var m=clean.match(emailRe);
+    if(m){email=m[0].toLowerCase();}
+    // name: remove email, leading numbering, phone numbers, extra symbols
+    var name=clean.replace(emailRe,'')
+      .replace(/^\s*\d+[\.\)\-:]?\s*/,'')
+      .replace(/\+?\d[\d\s\-]{7,}\d/g,'')
+      .replace(/[|,;:_]+/g,' ')
+      .replace(/\s+/g,' ').trim();
+    // keep only plausible names (letters, spaces, dots)
+    name=name.replace(/[^a-zA-Z\s.'-]/g,'').replace(/\s+/g,' ').trim();
+    if(!name||name.length<2)return;
+    if(name.split(' ').length>6)return; // paragraph junk
+    if(!email){
+      // auto email from name
+      email=name.toLowerCase().replace(/[^a-z]+/g,'.').replace(/^\.|\.$/g,'')+'@student.brokenenglish.in';
+    }
+    var key=email;
+    if(seen[key])return;seen[key]=1;
+    var dup=existing.find(function(s){return s.email&&s.email.toLowerCase()===email;});
+    rows.push({name:name,email:email,dup:!!dup,include:!dup});
+  });
+  if(!rows.length){alert('No student names found in this PDF. Make sure it has selectable text (not a scanned image).');return;}
+  _pdfImportRows=rows;
+  _pdfShowPreview();
+}
+
+function _pdfShowPreview(){
+  var rows=_pdfImportRows;
+  var overlay=document.getElementById('pdf-import-modal');
+  if(overlay)overlay.remove();
+  var div=document.createElement('div');
+  div.id='pdf-import-modal';
+  div.style.cssText='position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);padding:16px';
+  var inner='<div class="lg" style="width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column;padding:26px">'
+    +'<h2 style="font-size:18px;font-weight:800;color:#fff;margin:0 0 4px;font-family:Montserrat,sans-serif">Import Students from PDF</h2>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 16px">'+rows.filter(function(r){return r.include;}).length+' new students found — default password <b style="color:#fff">123</b> (they can change it later). Untick any you don\'t want.</p>'
+    +'<div style="flex:1;overflow-y:auto;border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:16px">'
+    +rows.map(function(r,i){
+      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;'+(r.dup?'opacity:.45':'')+'">'
+        +'<input type="checkbox" '+(r.include?'checked':'')+' '+(r.dup?'disabled':'')+' onchange="_pdfImportRows['+i+'].include=this.checked;_pdfUpdateCount()" style="accent-color:#ff2d78;width:16px;height:16px"/>'
+        +'<span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:600;color:#fff">'+r.name+'</span>'
+        +'<span style="display:block;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis">'+r.email+'</span></span>'
+        +(r.dup?'<span style="font-size:10px;color:#fbbf24;font-family:JetBrains Mono,monospace">EXISTS</span>':'')
+      +'</label>';
+    }).join('')
+    +'</div>'
+    +'<div style="display:flex;gap:10px;justify-content:flex-end">'
+      +'<button onclick="document.getElementById(\'pdf-import-modal\').remove()" style="padding:11px 20px;border-radius:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:13px;font-weight:700;cursor:pointer">Cancel</button>'
+      +'<button id="pdf-import-confirm" onclick="_pdfConfirmImport()" style="padding:11px 22px;border-radius:12px;background:var(--grad);border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:Montserrat,sans-serif;box-shadow:0 4px 20px rgba(255,45,120,.35)">Create '+rows.filter(function(r){return r.include;}).length+' Students</button>'
+    +'</div>'
+  +'</div>';
+  div.innerHTML=inner;
+  document.body.appendChild(div);
+}
+
+window._pdfUpdateCount=function(){
+  var n=_pdfImportRows.filter(function(r){return r.include;}).length;
+  var b=document.getElementById('pdf-import-confirm');
+  if(b)b.textContent='Create '+n+' Students';
+};
+
+window._pdfConfirmImport=function(){
+  var students=loadStudents();
+  var n=0;
+  _pdfImportRows.forEach(function(r){
+    if(!r.include)return;
+    var id=genId();
+    students[id]={id:id,name:r.name,email:r.email,password:'123',accessList:[1],validUntil:null,createdAt:new Date().toISOString()};
+    n++;
+  });
+  saveStudents(students);
+  var m=document.getElementById('pdf-import-modal');if(m)m.remove();
+  navigate('admin',{tab:'students'});
+};
 
 // ── PROGRESS TAB ─────────────────────────────────────────────────────────────
 function renderAdminProgress(){
