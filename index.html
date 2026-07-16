@@ -2098,8 +2098,14 @@ function renderAdmin(tab){
     ${list.length===0
       ?`<div class="lg" style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:15px;font-weight:500">No students yet</p><p style="color:var(--muted);font-size:13px;margin-top:4px;opacity:.6">Add your first student to get started.</p></div>`
       :`<div class="lg" style="overflow:hidden;border-radius:20px">
-          <table class="admin-table" style="min-width:620px">
+          <div id="bulk-bar" style="display:none;align-items:center;gap:14px;padding:12px 18px;background:rgba(255,45,120,.08);border-bottom:1px solid rgba(255,45,120,.2)">
+            <span id="bulk-count" style="font-size:13px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace">0 selected</span>
+            <button onclick="bulkDeleteStudents()" style="padding:8px 18px;border-radius:10px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#f87171;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(248,113,113,.28)'" onmouseout="this.style.background='rgba(248,113,113,.15)'">Delete Selected</button>
+            <button onclick="bulkClearSelection()" style="padding:8px 14px;border-radius:10px;background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">Clear</button>
+          </div>
+          <table class="admin-table" style="min-width:660px">
             <thead><tr>
+              <th style="width:38px"><input type="checkbox" id="bulk-all" onchange="bulkToggleAll(this.checked)" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></th>
               <th>Student</th><th>Validity</th>
               <th class="center">Access</th><th class="center">Status</th>
               <th class="right">Actions</th>
@@ -2109,6 +2115,7 @@ function renderAdmin(tab){
                 const{expired}=getValidity(s);
                 const locked=getLockedVideos(s.id);
                 return`<tr>
+                  <td><input type="checkbox" class="bulk-chk" data-sid="${s.id}" onchange="bulkUpdateBar()" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></td>
                   <td><p style="font-weight:600;color:#fff">${s.name}</p><p style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:1px">${s.email}</p></td>
                   <td>${validityBadge(s)}</td>
                   <td class="center"><span class="pill pill-orange">${(s.accessList||[]).length}/${ALL_LESSONS.length}</span></td>
@@ -2132,6 +2139,7 @@ function renderAdmin(tab){
 
   window.openAddStudent=()=>{
     document.getElementById('modal-title').textContent='Add Student';
+    document.getElementById('s-validity').value='90';
     ['s-id','s-name','s-email','s-pass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     document.getElementById('s-validity').value='';
     document.getElementById('s-custom-date-wrap').style.display='none';
@@ -2173,6 +2181,38 @@ function renderAdmin(tab){
     else{validUntil=null;}
     students[id]={...(students[id]||{}),id,name,email,password:pass,accessList:students[id]?.accessList||[1],validUntil,createdAt:students[id]?.createdAt||new Date().toISOString()};
     saveStudents(students);closeModal();navigate('admin',{tab:'students'});
+  };
+  window.bulkUpdateBar=function(){
+    var chks=[].slice.call(document.querySelectorAll('.bulk-chk:checked'));
+    var bar=document.getElementById('bulk-bar');
+    var cnt=document.getElementById('bulk-count');
+    if(bar)bar.style.display=chks.length?'flex':'none';
+    if(cnt)cnt.textContent=chks.length+' selected';
+    var all=document.getElementById('bulk-all');
+    var total=document.querySelectorAll('.bulk-chk').length;
+    if(all)all.checked=chks.length===total&&total>0;
+  };
+  window.bulkToggleAll=function(on){
+    [].slice.call(document.querySelectorAll('.bulk-chk')).forEach(function(c){c.checked=on;});
+    bulkUpdateBar();
+  };
+  window.bulkClearSelection=function(){bulkToggleAll(false);};
+  window.bulkDeleteStudents=function(){
+    var ids=[].slice.call(document.querySelectorAll('.bulk-chk:checked')).map(function(c){return c.getAttribute('data-sid');});
+    if(!ids.length)return;
+    if(!confirm('Delete '+ids.length+' students permanently? This cannot be undone.'))return;
+    var s=loadStudents();
+    ids.forEach(function(id){
+      delete s[id];
+      localStorage.removeItem('brokeneng_photo_'+id);
+      localStorage.removeItem('brokeneng_locked_'+id);
+      localStorage.removeItem('brokeneng_quizlock_'+id);
+      localStorage.removeItem(getProgressKey(id));
+      localStorage.removeItem('brokeneng_logout_'+id);
+      sbDeleteStudent(id);
+    });
+    saveStudents(s);
+    navigate('admin',{tab:'students'});
   };
   window.confirmDelete=(id)=>{
     const modal=document.getElementById('delete-modal');
@@ -2334,7 +2374,8 @@ window._pdfConfirmImport=function(){
     r.name=(r.name||'').trim();r.email=(r.email||'').trim().toLowerCase();
     if(!r.name||!r.email)return;
     var id=genId();
-    students[id]={id:id,name:r.name,email:r.email,password:'123',accessList:[1],validUntil:null,createdAt:new Date().toISOString()};
+    var _d=new Date();_d.setDate(_d.getDate()+90);
+    students[id]={id:id,name:r.name,email:r.email,password:'123',accessList:[1],validUntil:_d.toISOString().slice(0,10),createdAt:new Date().toISOString()};
     n++;
   });
   saveStudents(students);
