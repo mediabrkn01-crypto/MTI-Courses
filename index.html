@@ -164,9 +164,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .admin-table tbody tr:hover{background:rgba(255,255,255,.04);transform:scale(1.01) translateX(3px)}
 .admin-table td{padding:14px 16px;font-size:14px;color:rgba(255,255,255,.82)}
 .admin-table td.center{text-align:center}.admin-table td.right{text-align:right}
-.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px;align-items:start}
-.settings-grid>.lg{margin-bottom:0!important}
-@media(max-width:760px){.settings-grid{grid-template-columns:1fr}}
+.settings-grid{columns:3 340px;column-gap:20px}
+.settings-grid>.lg{display:inline-block;width:100%;break-inside:avoid;-webkit-column-break-inside:avoid;margin:0 0 20px!important;box-sizing:border-box}
+@media(max-width:760px){.settings-grid{columns:1}}
 /* PILLS */
 .pill{display:inline-flex;align-items:center;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700;backdrop-filter:blur(8px)}
 .pill-white{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.75)}
@@ -447,7 +447,10 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 <script>
 (function(){
   // 1. Block right-click everywhere
-  document.addEventListener('contextmenu',e=>{e.preventDefault();return false;});
+  document.addEventListener('contextmenu',e=>{
+    if(e.target.closest('input,textarea,[contenteditable]'))return; // allow copy/paste in fields
+    e.preventDefault();return false;
+  });
 
   // 2. Block screenshot/recording keyboard shortcuts
   document.addEventListener('keydown',e=>{
@@ -3106,54 +3109,36 @@ function renderAdminImages(){
     }
   };
 
-  // File upload — upload to Imgur anonymously, get URL back
-  window.handleImgUpload=async function(evt,order){
+  // File upload — compress locally and save (no external service)
+  window.handleImgUpload=function(evt,order){
     var file=evt.target.files[0];
     if(!file) return;
     var label=evt.target.closest('label');
+    function resetLabel(){
+      if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,\''+order+'\')"/>';label.style.color='var(--muted)';}
+    }
     if(label){label.textContent='⏳ Uploading…';label.style.color='var(--g3)';}
-
-    try{
-      // Convert to base64 for Imgur API
-      var base64=await new Promise(function(res,rej){
-        var r=new FileReader();
-        r.onload=function(e){res(e.target.result.split(',')[1]);};
-        r.onerror=rej;
-        r.readAsDataURL(file);
-      });
-
-      // Upload to Imgur (anonymous, no login needed)
-      var resp=await fetch('https://api.imgur.com/3/image',{
-        method:'POST',
-        headers:{
-          'Authorization':'Client-ID 546c25a59c58ad7',  // public Imgur client ID
-          'Content-Type':'application/json'
-        },
-        body:JSON.stringify({image:base64,type:'base64'})
-      });
-      var data=await resp.json();
-
-      if(data.success&&data.data&&data.data.link){
-        var url=data.data.link;
+    var r=new FileReader();
+    r.onload=function(e){
+      var img=new Image();
+      img.onload=function(){
+        // resize to max 800px wide, JPEG 0.8 — small enough to store & sync
+        var maxW=800;
+        var w=img.width,h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        var c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        var url=c.toDataURL('image/jpeg',0.8);
         var inp=document.getElementById('img-url-'+order);
         if(inp){inp.value=url;}
         saveImgUrl(order);
-        if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
-      } else {
-        throw new Error(data.data&&data.data.error||'Upload failed');
-      }
-    }catch(e){
-      console.error('Imgur upload error:',e);
-      // Fallback: save as base64 directly
-      var r2=new FileReader();
-      r2.onload=function(ev){
-        var inp=document.getElementById('img-url-'+order);
-        if(inp){inp.value=ev.target.result;saveImgUrl(order);}
-        if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/>';label.style.color='var(--muted)';}
+        resetLabel();
       };
-      r2.readAsDataURL(file);
-      alert('Imgur upload failed - saved as local image. Error: '+e.message);
-    }
+      img.onerror=function(){alert('Could not read that image.');resetLabel();};
+      img.src=e.target.result;
+    };
+    r.onerror=function(){alert('Could not read the file.');resetLabel();};
+    r.readAsDataURL(file);
   };
 }
 
