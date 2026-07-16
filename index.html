@@ -2249,16 +2249,20 @@ function _pdfParseStudents(lines){
     if(!clean||clean.length<3)return;
     // skip obvious headers
     if(/^(name|student|email|sl\.?\s*no|s\.?no|#|list|roll|class|batch|date|page)\b/i.test(clean)&&!emailRe.test(clean))return;
+    if(/^(contact list|student list|contacts|students)$/i.test(clean))return;
     var email='';var m=clean.match(emailRe);
     if(m){email=m[0].toLowerCase();}
     // name: remove email, leading numbering, phone numbers, extra symbols
     var name=clean.replace(emailRe,'')
       .replace(/^\s*\d+[\.\)\-:]?\s*/,'')
-      .replace(/\+?\d[\d\s\-]{7,}\d/g,'')
+      .replace(/\+?\d[\d\s\-()]{7,}\d/g,'')
       .replace(/[|,;:_]+/g,' ')
       .replace(/\s+/g,' ').trim();
-    // keep only plausible names (letters, spaces, dots)
-    name=name.replace(/[^a-zA-Z\s.'-]/g,'').replace(/\s+/g,' ').trim();
+    // strip ALL special characters — keep only letters, spaces and dots inside the name
+    name=name.replace(/[^a-zA-Z\s.]/g,' ')
+      .replace(/\s*\.\s*(?=\s|$)/g,' ')      // lone dots
+      .replace(/\s+/g,' ').trim()
+      .replace(/[\s.]+$/,'').replace(/^[\s.]+/,'');
     if(!name||name.length<2)return;
     if(name.split(' ').length>6)return; // paragraph junk
     if(!email){
@@ -2287,12 +2291,16 @@ function _pdfShowPreview(){
     +'<p style="font-size:12px;color:var(--muted);margin:0 0 16px">'+rows.filter(function(r){return r.include;}).length+' new students found — default password <b style="color:#fff">123</b> (they can change it later). Untick any you don\'t want.</p>'
     +'<div style="flex:1;overflow-y:auto;border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:16px">'
     +rows.map(function(r,i){
-      return '<label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);cursor:pointer;'+(r.dup?'opacity:.45':'')+'">'
-        +'<input type="checkbox" '+(r.include?'checked':'')+' '+(r.dup?'disabled':'')+' onchange="_pdfImportRows['+i+'].include=this.checked;_pdfUpdateCount()" style="accent-color:#ff2d78;width:16px;height:16px"/>'
-        +'<span style="flex:1;min-width:0"><span style="display:block;font-size:13px;font-weight:600;color:#fff">'+r.name+'</span>'
-        +'<span style="display:block;font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis">'+r.email+'</span></span>'
-        +(r.dup?'<span style="font-size:10px;color:#fbbf24;font-family:JetBrains Mono,monospace">EXISTS</span>':'')
-      +'</label>';
+      var num=rows.slice(0,i+1).filter(function(x){return x.include;}).length;
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.05);'+(r.dup?'opacity:.45':'')+'">'
+        +'<span id="pdf-num-'+i+'" style="min-width:26px;text-align:center;font-family:JetBrains Mono,monospace;font-size:12px;font-weight:700;color:'+(r.include?'var(--g1)':'rgba(255,255,255,.2)')+'">'+(r.include?num:'—')+'</span>'
+        +'<input type="checkbox" '+(r.include?'checked':'')+' '+(r.dup?'disabled':'')+' onchange="_pdfImportRows['+i+'].include=this.checked;_pdfUpdateCount()" style="accent-color:#ff2d78;width:16px;height:16px;flex-shrink:0;cursor:pointer"/>'
+        +'<span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">'
+          +'<input type="text" value="'+r.name.replace(/"/g,'&quot;')+'" oninput="_pdfImportRows['+i+'].name=this.value" '+(r.dup?'disabled':'')+' style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px;font-weight:600;padding:6px 10px;outline:none;width:100%;box-sizing:border-box" onfocus="this.style.borderColor=&apos;var(--g1)&apos;" onblur="this.style.borderColor=&apos;rgba(255,255,255,.1)&apos;"/>'
+          +'<input type="text" value="'+r.email.replace(/"/g,'&quot;')+'" oninput="_pdfImportRows['+i+'].email=this.value.trim().toLowerCase()" '+(r.dup?'disabled':'')+' style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--muted);font-size:11px;padding:5px 10px;outline:none;width:100%;box-sizing:border-box;font-family:JetBrains Mono,monospace" onfocus="this.style.borderColor=&apos;var(--g1)&apos;;this.style.color=&apos;#fff&apos;" onblur="this.style.borderColor=&apos;rgba(255,255,255,.08)&apos;;this.style.color=&apos;var(--muted)&apos;"/>'
+        +'</span>'
+        +(r.dup?'<span style="font-size:10px;color:#fbbf24;font-family:JetBrains Mono,monospace;flex-shrink:0">EXISTS</span>':'')
+      +'</div>';
     }).join('')
     +'</div>'
     +'<div style="display:flex;gap:10px;justify-content:flex-end">'
@@ -2308,6 +2316,14 @@ window._pdfUpdateCount=function(){
   var n=_pdfImportRows.filter(function(r){return r.include;}).length;
   var b=document.getElementById('pdf-import-confirm');
   if(b)b.textContent='Create '+n+' Students';
+  // renumber serials
+  var c=0;
+  _pdfImportRows.forEach(function(r,i){
+    var el=document.getElementById('pdf-num-'+i);
+    if(!el)return;
+    if(r.include){c++;el.textContent=c;el.style.color='var(--g1)';}
+    else{el.textContent='—';el.style.color='rgba(255,255,255,.2)';}
+  });
 };
 
 window._pdfConfirmImport=function(){
@@ -2315,6 +2331,8 @@ window._pdfConfirmImport=function(){
   var n=0;
   _pdfImportRows.forEach(function(r){
     if(!r.include)return;
+    r.name=(r.name||'').trim();r.email=(r.email||'').trim().toLowerCase();
+    if(!r.name||!r.email)return;
     var id=genId();
     students[id]={id:id,name:r.name,email:r.email,password:'123',accessList:[1],validUntil:null,createdAt:new Date().toISOString()};
     n++;
