@@ -544,6 +544,20 @@ async function sbSaveProgress(studentId, lessonId){
 
 // Save full student record to Supabase
 
+
+// Wait for the Supabase client to become available (slow networks load the lib late)
+function waitForSb(maxMs){
+  return new Promise(function(res){
+    var waited=0,step=400;
+    (function chk(){
+      if(typeof _sb!=='undefined')return res(true);
+      waited+=step;
+      if(waited>=(maxMs||30000))return res(false);
+      setTimeout(chk,step);
+    })();
+  });
+}
+
 async function sbLoadAllStudents(){
   try{
     if(typeof _sb==='undefined')return false;
@@ -647,8 +661,8 @@ async function sbLoadVideos(){
 
 // Re-sync course data whenever the app comes back to foreground (long-open tabs / installed PWAs)
 document.addEventListener('visibilitychange',function(){
-  if(!document.hidden&&typeof _sb!=='undefined'&&currentSession){
-    sbLoadVideos().catch(function(){});
+  if(!document.hidden&&currentSession){
+    waitForSb(8000).then(function(ok){if(ok)sbLoadVideos().catch(function(){});});
   }
 });
 
@@ -835,7 +849,7 @@ function getSymbolSrc(){ return (typeof SITE_IMAGES!=="undefined"&&SITE_IMAGES.s
 
 
 // ── VERSION SELF-CHECK: if server has a newer build, reload it (fixes browsers stuck on old cache) ──
-var APP_VERSION='2026-07-17-4';
+var APP_VERSION='2026-07-17-5';
 (function(){
   try{
     var u=new URL(location.href);
@@ -1911,13 +1925,13 @@ window.doStudentLogin=async()=>{
   saveSession(currentSession);
   // Clear browser's native video resume cache for this origin
   try{ sessionStorage.clear(); }catch(e){}
-  // Sync progress from Supabase in background
-  sbLoadProgress(byEmail.id);
-  // Load videos first so lesson page has correct src on any device
-  if(typeof _sb!=="undefined"){
+  // Sync progress + videos from Supabase (waits for lib on slow networks)
+  waitForSb().then(function(ok){
+    if(!ok)return;
+    sbLoadProgress(byEmail.id);
     sbLoadVideos().catch(function(){});
     sbLoadELSettings().catch(function(){});
-  }
+  });
   try{
     showBootSplash(byEmail, function(){ navigate("dashboard"); });
   }catch(e){
@@ -4916,15 +4930,19 @@ function setupTopBar(student){
     var students=loadStudents();
     if(students[sess.studentId]){
       currentSession=sess;
-      sbLoadProgress(sess.studentId);
-      if(typeof _sb!=="undefined"){ sbLoadVideos().catch(function(){}); sbLoadELSettings().catch(function(){}); }
+      waitForSb().then(function(ok){
+        if(!ok)return;
+        sbLoadProgress(sess.studentId);
+        sbLoadVideos().catch(function(){});
+        sbLoadELSettings().catch(function(){});
+      });
       navigate("dashboard");
       return;
     }
     clearSession();
   }else if(sess&&sess.role==="admin"){
     currentSession=sess;
-    if(typeof _sb!=="undefined")sbLoadAllStudents().catch(function(){});
+    waitForSb().then(function(ok){if(ok)sbLoadAllStudents().catch(function(){});});
     navigate("admin");
     return;
   }
