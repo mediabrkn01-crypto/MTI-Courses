@@ -433,6 +433,7 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{fil
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Broken English">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 </head>
 <body>
 
@@ -4517,9 +4518,42 @@ function setupPlayer(lesson,student){try{
   const source=document.getElementById("video-source");
   if(!video||!source)return;
 
+  // ── UNIVERSAL VIDEO LOADER (HLS + MP4, all browsers/devices) ──
+  var hlsInstance=null;
+  function isHlsUrl(u){return /\.m3u8($|\?)/i.test(u||'');}
+  function loadVideoSrc(src,resumeTime){
+    if(hlsInstance){try{hlsInstance.destroy();}catch(e){} hlsInstance=null;}
+    if(isHlsUrl(src)){
+      if(video.canPlayType('application/vnd.apple.mpegurl')){
+        // Safari / iOS: native HLS
+        source.src=src; video.src=src; video.load();
+      } else if(window.Hls && Hls.isSupported()){
+        // Chrome / Firefox / Edge / Android: hls.js
+        source.removeAttribute('src'); video.removeAttribute('src');
+        hlsInstance=new Hls({maxBufferLength:30});
+        hlsInstance.loadSource(src);
+        hlsInstance.attachMedia(video);
+        hlsInstance.on(Hls.Events.ERROR,function(ev,data){
+          if(data&&data.fatal){
+            if(data.type===Hls.ErrorTypes.NETWORK_ERROR){hlsInstance.startLoad();}
+            else if(data.type===Hls.ErrorTypes.MEDIA_ERROR){hlsInstance.recoverMediaError();}
+            else{try{hlsInstance.destroy();}catch(e){} source.src=src; video.load();}
+          }
+        });
+      } else {
+        // Very old browsers: last-resort direct assignment
+        source.src=src; video.load();
+      }
+    } else {
+      source.src=src; video.load();
+    }
+    if(resumeTime){
+      video.addEventListener('loadedmetadata',function(){try{video.currentTime=resumeTime;}catch(e){}},{once:true});
+    }
+  }
+
   if(!source.src||source.src===window.location.href){
-    source.src=realSrc;
-    video.load();
+    loadVideoSrc(realSrc);
   }
   // Always reset to start — prevents browser resuming previous student's position
   video.addEventListener('loadedmetadata', function(){ video.currentTime=0; }, {once:true});
@@ -4541,7 +4575,7 @@ function setupPlayer(lesson,student){try{
       btn.addEventListener("click",()=>{
         const i=Number(btn.dataset.i);if(i===qi)return;
         const t=video.currentTime,playing=!video.paused;
-        qi=i;source.src=qualitySrcs[i].src;video.load();video.currentTime=t;
+        qi=i;loadVideoSrc(qualitySrcs[i].src,t);
         if(playing)video.play().catch(()=>{});
         qBtns.querySelectorAll(".qbtn").forEach(b=>{
           b.style.cssText=`border-radius:12px;padding:2px 8px;font-size:10px;border:none;cursor:pointer;font-weight:600;${Number(b.dataset.i)===i?'background:var(--grad);color:#fff':'background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)'}`;
