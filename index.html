@@ -630,8 +630,8 @@ async function sbLoadVideos(){
     var keys=Object.keys(data.data||{});
     console.log('Videos synced from Supabase ✓ —',keys.length,'entries.');
     refreshLessonThumbs();
-    // Data actually changed → re-render current screen so titles/videos update everywhere
-    if(fresh!==stale&&stale){
+    // Data actually changed (including very first sync on a fresh device) → re-render so titles/classes appear
+    if(fresh!==stale){
       try{
         var st=history.state||{};
         var scr=st.screen;
@@ -835,7 +835,7 @@ function getSymbolSrc(){ return (typeof SITE_IMAGES!=="undefined"&&SITE_IMAGES.s
 
 
 // ── VERSION SELF-CHECK: if server has a newer build, reload it (fixes browsers stuck on old cache) ──
-var APP_VERSION='2026-07-17-3';
+var APP_VERSION='2026-07-17-4';
 (function(){
   try{
     var u=new URL(location.href);
