@@ -623,13 +623,34 @@ async function sbLoadVideos(){
   try{
     const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
     if(error||!data||!data.data) return;
+    var fresh=JSON.stringify(data.data);
+    var stale=localStorage.getItem('brokeneng_videos')||'';
     // Supabase ALWAYS wins — overwrite local completely so admin changes propagate
-    localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));
+    localStorage.setItem('brokeneng_videos',fresh);
     var keys=Object.keys(data.data||{});
-    console.log('Videos synced from Supabase ✓ —',keys.length,'entries. Sample key 1:',JSON.stringify(data.data[1]||{}));
+    console.log('Videos synced from Supabase ✓ —',keys.length,'entries.');
     refreshLessonThumbs();
+    // Data actually changed → re-render current screen so titles/videos update everywhere
+    if(fresh!==stale&&stale){
+      try{
+        var st=history.state||{};
+        var scr=st.screen;
+        if(scr&&scr!=='login'&&scr!=='admin-login'){
+          var vid=document.querySelector('#player-wrapper video');
+          var playing=vid&&!vid.paused&&!vid.ended&&vid.currentTime>2;
+          if(!playing){ _fromPop=true; navigate(scr,st.params||{}); _fromPop=false; }
+        }
+      }catch(e){}
+    }
   }catch(e){console.warn('Supabase load videos error:',e);}
 }
+
+// Re-sync course data whenever the app comes back to foreground (long-open tabs / installed PWAs)
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&typeof _sb!=='undefined'&&currentSession){
+    sbLoadVideos().catch(function(){});
+  }
+});
 
 // After videos sync, update any visible thumbs/images without re-rendering
 function refreshLessonThumbs(){
@@ -814,7 +835,7 @@ function getSymbolSrc(){ return (typeof SITE_IMAGES!=="undefined"&&SITE_IMAGES.s
 
 
 // ── VERSION SELF-CHECK: if server has a newer build, reload it (fixes browsers stuck on old cache) ──
-var APP_VERSION='2026-07-17-1';
+var APP_VERSION='2026-07-17-3';
 (function(){
   try{
     var u=new URL(location.href);
@@ -831,18 +852,14 @@ var APP_VERSION='2026-07-17-1';
   }catch(e){}
 })();
 
-// ── PWA: service worker registration + auto-update (fixes stale cached versions) ──
+// ── Single-file mode: no sw.js needed. Clean up any service worker + caches from older builds ──
 if('serviceWorker' in navigator){
-  window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js').then(function(reg){
-      if(reg.update)reg.update(); // force update check every visit
-    }).catch(function(){/* sw.js not uploaded yet — app still works */});
-  });
-  var _swReloaded=false;
-  navigator.serviceWorker.addEventListener('controllerchange',function(){
-    if(_swReloaded)return;_swReloaded=true;
-    location.reload(); // new version activated — load fresh page once
-  });
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){r.unregister();});
+  }).catch(function(){});
+  if(window.caches&&caches.keys){
+    caches.keys().then(function(ks){ks.forEach(function(k){caches.delete(k);});}).catch(function(){});
+  }
 }
 
 function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show=i.type==="password";i.type=show?"text":"password";el.innerHTML=show?'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';}
