@@ -644,6 +644,7 @@ async function sbLoadVideos(){
     refreshLessonThumbs();
   }catch(e){console.warn('Supabase load videos error:',e);}
 }
+
 // Re-sync course data whenever the app comes back to foreground (long-open tabs / installed PWAs)
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden&&currentSession){
@@ -1512,6 +1513,7 @@ function render(screen,params){
   if(screen==="wordvault")    { renderWordVault(); return; }
   if(screen==="profile")      { renderProfile(); return; }
   if(screen==="lesson"){
+    // Ensure videos loaded from Supabase before rendering lesson
     if(typeof _sb!=="undefined"){
       renderLesson(params.id); hideAppLoader(); sbLoadVideos().catch(function(){});
     } else {
@@ -4972,7 +4974,6 @@ function setupTopBar(student){
         sbLoadProgress(sess.studentId);
         sbLoadELSettings().catch(function(){});
       });
-      // On fresh device (no cached videos), fetch from Supabase FIRST then render
       // Always fetch fresh from Supabase first - prevents flash of old/wrong data
       if(typeof _sb!=="undefined"){
         sbLoadVideos().catch(function(){}).finally(function(){ navigate("dashboard"); });
