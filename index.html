@@ -635,18 +635,21 @@ async function sbSaveVideos(videos){
 
 // Load video metadata from Supabase → merge into localStorage → re-render if needed
 var _sbVideosSyncing=false;
+var _videoData={}; // always from Supabase, never stale cache
 async function sbLoadVideos(){
   if(_sbVideosSyncing) return;
   _sbVideosSyncing=true;
   try{
     const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
     if(error||!data||!data.data){ _sbVideosSyncing=false; return; }
-    var fresh=JSON.stringify(data.data);
-    var stale=localStorage.getItem('brokeneng_videos')||'';
-    localStorage.setItem('brokeneng_videos',fresh);
+    var prev=JSON.stringify(_videoData);
+    _videoData=data.data; // always use fresh Supabase data in memory
+    localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));
     refreshLessonThumbs();
     _sbVideosSyncing=false;
-    if(fresh!==stale&&currentSession&&currentSession.role==='student'){
+    // Re-render current student screen so titles/videos update
+    var changed=(prev!==JSON.stringify(_videoData));
+    if(changed&&currentSession&&currentSession.role==='student'){
       var st=history.state||{};
       var scr=st.screen;
       if(scr==='dashboard'||scr==='courses'){
@@ -2059,7 +2062,7 @@ window.doAdminLogin=()=>{
 };
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
-function loadVideos(){try{return JSON.parse(localStorage.getItem("brokeneng_videos")||"{}");}catch{return{};}}
+function loadVideos(){if(Object.keys(_videoData).length>0)return _videoData;try{return JSON.parse(localStorage.getItem("brokeneng_videos")||"{}");}catch{return{};}}
 function saveVideos(v){
   localStorage.setItem("brokeneng_videos",JSON.stringify(v));
   if(typeof _sb!=="undefined") sbSaveVideos(v);
