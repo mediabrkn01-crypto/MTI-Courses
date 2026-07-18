@@ -644,7 +644,7 @@ async function sbLoadVideos(){
     if(error||!data||!data.data){ _sbVideosSyncing=false; return; }
     var prev=JSON.stringify(_videoData);
     _videoData=data.data; // always use fresh Supabase data in memory
-    localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));
+    try{localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));}catch(e){} // best-effort cache only
     refreshLessonThumbs();
     _sbVideosSyncing=false;
     // Re-render current student screen so titles/videos update
@@ -947,6 +947,9 @@ function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show
 })();
 
 // ── BOOT SCREEN ──────────────────────────────────────────────────────────────
+
+// Clear stale video cache on boot so Safari quota doesn't block fresh data
+try{localStorage.removeItem('brokeneng_videos');}catch(e){}
 
 // Load videos from Supabase on BOOT before anything renders
 if(typeof _sb!=="undefined"){
