@@ -634,36 +634,15 @@ async function sbSaveVideos(videos){
 }
 
 // Load video metadata from Supabase → merge into localStorage → re-render if needed
-var _sbVideosSyncing=false;
 var _videoData={}; // always from Supabase, never stale cache
 async function sbLoadVideos(){
-  if(_sbVideosSyncing) return;
-  _sbVideosSyncing=true;
   try{
     const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
-    if(error||!data||!data.data){ _sbVideosSyncing=false; return; }
-    var prev=JSON.stringify(_videoData);
-    _videoData=data.data; // always use fresh Supabase data in memory
-    try{localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));}catch(e){} // best-effort cache only
+    if(error||!data||!data.data) return;
+    _videoData=data.data;
+    try{localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));}catch(e){}
     refreshLessonThumbs();
-    _sbVideosSyncing=false;
-    // Re-render current student screen so titles/videos update
-    if(currentSession&&currentSession.role==='student'){
-      var st=history.state||{};
-      var scr=st.screen||(location.hash||'').replace('#','');
-      if(scr==='dashboard'||scr==='courses'){
-        _fromPop=true; navigate(scr,st.params||{}); _fromPop=false;
-      } else if(scr==='lesson'){
-        var vid=document.querySelector('#player-wrapper video');
-        var playing=vid&&!vid.paused&&!vid.ended&&vid.currentTime>2;
-        var iframe=document.querySelector('#player-wrapper iframe');
-        var realIframe=iframe&&iframe.src&&iframe.src.indexOf('mediadelivery.net')>=0;
-        if(!playing&&!realIframe){
-          _fromPop=true; navigate(scr,st.params||{}); _fromPop=false;
-        }
-      }
-    }
-  }catch(e){_sbVideosSyncing=false;console.warn('Supabase load videos error:',e);}
+  }catch(e){console.warn('Supabase load videos error:',e);}
 }
 // Re-sync course data whenever the app comes back to foreground (long-open tabs / installed PWAs)
 document.addEventListener('visibilitychange',function(){
