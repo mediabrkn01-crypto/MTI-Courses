@@ -4432,6 +4432,17 @@ function setupPlayer(lesson,student){try{
       chBtn.textContent='⚡ Start Challenge';
     }
     if(chSub) chSub.textContent='Lesson complete — test what you learned.';
+    // Update right panel unlock states
+    if(currentSession?.role==="student"){
+      var sts=loadStudents();var ss=sts[currentSession.studentId];
+      if(ss){
+        var unlockedNow=ALL_LESSONS.filter(function(l){return isUnlocked(l);});
+        document.querySelectorAll('[data-lesson-order]').forEach(function(el){
+          var ord=parseInt(el.dataset.lessonOrder);
+          if(unlockedNow.find(function(l){return l.order===ord;})){el.style.opacity='1';el.style.cursor='pointer';}
+        });
+      }
+    }
   }
 
   // Always wire manual mark complete click
@@ -4737,8 +4748,6 @@ function setupPlayer(lesson,student){try{
   video.addEventListener("ended",function(){
     if(!isCompleted(lesson.id)) doMarkAndQuiz();
   });
-  video.addEventListener("ended",markComplete);
-  markBtn.addEventListener("click",markComplete);
 }catch(e){console.warn("setupPlayer error:",e);}}
 
 function renderQuizCta(lesson,completed){try{
