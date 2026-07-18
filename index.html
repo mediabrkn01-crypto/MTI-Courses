@@ -3499,8 +3499,13 @@ window.wvMarkComplete=function(lessonId){
   if(btn){
     btn.outerHTML='<span id="wv-done-badge" style="background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.3);border-radius:8px;font-size:11px;font-weight:700;padding:6px 14px">✓ Completed</span>';
   }
-  // Update sidebar tick marks without re-rendering page
-  document.querySelectorAll('[data-wv-id="'+lessonId+'"]').forEach(function(el){el.style.display='flex';});
+  // Show tick on list card and update border/label without re-rendering
+  var tick=document.querySelector('[data-wv-tick="'+lessonId+'"]');
+  if(tick){tick.style.display='flex';}
+  var card=document.querySelector('[data-wv-card="'+lessonId+'"]');
+  if(card){card.style.borderColor='rgba(34,197,94,.3)';}
+  var xp=document.querySelector('[data-wv-xp="'+lessonId+'"]');
+  if(xp){xp.style.color='#4ade80';xp.textContent='\u2713 Done';}
 };
 
 window.setupWVAutoComplete=function(lessonId){
@@ -3656,10 +3661,10 @@ function renderWordVault(){
       var locked=!wvUnlocked;
       var done=isCompleted(f.id);
       var onclick=locked?'':("navigate('lesson',{id:'"+f.id+"'})");
-      return '<div '+(onclick?'onclick="'+onclick+'"':'')+' style="border-radius:16px;overflow:hidden;cursor:'+(locked?'default':'pointer')+';position:relative;background:rgba(255,255,255,.05);border:1px solid '+(done?'rgba(34,197,94,.3)':(locked?'rgba(255,255,255,.06)':'rgba(255,255,255,.09)'))+';transition:transform .15s,border-color .15s" '+(locked?'':' onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'"')+'>'
+      return '<div data-wv-card="'+f.id+'" '+(onclick?'onclick="'+onclick+'"':'')+' style="border-radius:16px;overflow:hidden;cursor:'+(locked?'default':'pointer')+';position:relative;background:rgba(255,255,255,.05);border:1px solid '+(done?'rgba(34,197,94,.3)':(locked?'rgba(255,255,255,.06)':'rgba(255,255,255,.09)'))+';transition:transform .15s,border-color .15s" '+(locked?'':' onmouseover="this.style.transform=\'scale(1.02)\'" onmouseout="this.style.transform=\'scale(1)\'"')+'>'
         +'<div style="position:relative;width:100%;aspect-ratio:16/9;background:rgba(255,255,255,.06);overflow:hidden">'
           +(thumb?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;display:block;opacity:'+(locked?.4:1)+'" onerror="this.style.display=\'none\'"/>':'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:36px;background:rgba(255,255,255,.04)">'+f.icon+'</div>')
-          +(done?'<div style="position:absolute;top:8px;right:8px;background:rgba(34,197,94,.9);border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff">\u2713</div>':'')
+          +'<div data-wv-tick="'+f.id+'" style="position:absolute;top:8px;right:8px;background:rgba(34,197,94,.9);border-radius:50%;width:28px;height:28px;display:'+(done?'flex':'none')+';align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff">\u2713</div>'
           +(locked?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:28px">🔒</div>':'')
         +'</div>'
         +'<div style="padding:12px 14px">'
@@ -3667,7 +3672,7 @@ function renderWordVault(){
           +'<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:'+(done?'rgba(255,255,255,.7)':'#fff')+';line-height:1.3;margin-bottom:6px">'+f.title+'</div>'
           +'<div style="display:flex;align-items:center;justify-content:space-between">'
             +'<span style="font-size:11px;color:var(--muted)">'+f.dur+'</span>'
-            +(done?'<span style="font-size:10px;color:#4ade80;font-weight:700">\u2713 Done</span>':'<span style="font-size:10px;color:var(--g1);font-weight:700">+'+f.xp+' XP</span>')
+            +'<span data-wv-xp="'+f.id+'" style="font-size:10px;color:'+(done?'#4ade80':'var(--g1)')+';font-weight:700">'+(done?'\u2713 Done':'+'+f.xp+' XP')+'</span>'
           +'</div>'
         +'</div>'
       +'</div>';
