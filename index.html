@@ -1313,9 +1313,10 @@ function getProgressKey(sid){return "brokeneng_progress_"+sid;}
 function loadProgress(sid){
   try{
     var raw=JSON.parse(localStorage.getItem(getProgressKey(sid))||"[]");
-    // Drop stale IDs from old course versions — only count lessons that exist now
-    var valid=new Set(ALL_LESSONS.map(function(l){return l.id;}));
-    return new Set(raw.filter(function(id){return valid.has(id);}));
+    // Keep core lesson IDs + WV lesson IDs (f01-f10) — drop truly stale ones only
+    var validCore=new Set(ALL_LESSONS.map(function(l){return l.id;}));
+    var validWV=typeof WV_DATA!=='undefined'?new Set(WV_DATA.map(function(f){return f.id;})):new Set();
+    return new Set(raw.filter(function(id){return validCore.has(id)||validWV.has(id);}));
   }
   catch{return new Set();}
 }
