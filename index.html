@@ -648,10 +648,9 @@ async function sbLoadVideos(){
     refreshLessonThumbs();
     _sbVideosSyncing=false;
     // Re-render current student screen so titles/videos update
-    var changed=(prev!==JSON.stringify(_videoData));
-    if(changed&&currentSession&&currentSession.role==='student'){
+    if(currentSession&&currentSession.role==='student'){
       var st=history.state||{};
-      var scr=st.screen;
+      var scr=st.screen||(location.hash||'').replace('#','');
       if(scr==='dashboard'||scr==='courses'){
         _fromPop=true; navigate(scr,st.params||{}); _fromPop=false;
       } else if(scr==='lesson'){
