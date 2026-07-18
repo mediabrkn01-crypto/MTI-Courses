@@ -2484,7 +2484,9 @@ window._pdfConfirmImport=function(){
     if(!r.name||!r.email)return;
     var id=genId();
     var _d=new Date();_d.setDate(_d.getDate()+90);
-    students[id]={id:id,name:r.name,email:r.email,password:'123',accessList:[1],validUntil:_d.toISOString().slice(0,10),createdAt:new Date().toISOString()};
+    var st={id:id,name:r.name,email:r.email,password:'123',accessList:[1],validUntil:_d.toISOString().slice(0,10),createdAt:new Date().toISOString()};
+    students[id]=st;
+    if(typeof sbSaveStudent==='function') sbSaveStudent(st);
     n++;
   });
   saveStudents(students);
