@@ -1510,13 +1510,25 @@ function render(screen,params){
   if(screen==="admin-progress-student"){ renderAdminProgressStudent(params.id); return; }
   if(screen==="dashboard"){
     if(typeof _sb!=="undefined"){
-      renderDashboard(); hideAppLoader(); sbLoadVideos().catch(function(){});
+      var _dash_stale=localStorage.getItem('brokeneng_videos');
+      if(!_dash_stale){
+        // Fresh device — load titles from Supabase FIRST, then render
+        sbLoadVideos().catch(function(){}).finally(function(){ renderDashboard(); hideAppLoader(); });
+      } else {
+        renderDashboard(); hideAppLoader(); sbLoadVideos().catch(function(){});
+      }
     } else { renderDashboard(); hideAppLoader(); }
     return;
   }
   if(screen==="courses"){
     if(typeof _sb!=="undefined"){
-      renderMyCourses(); hideAppLoader(); sbLoadVideos().catch(function(){});
+      var _crs_stale=localStorage.getItem('brokeneng_videos');
+      if(!_crs_stale){
+        // Fresh device — load titles from Supabase FIRST, then render
+        sbLoadVideos().catch(function(){}).finally(function(){ renderMyCourses(); hideAppLoader(); });
+      } else {
+        renderMyCourses(); hideAppLoader(); sbLoadVideos().catch(function(){});
+      }
     } else { renderMyCourses(); hideAppLoader(); }
     return;
   }
