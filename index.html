@@ -3494,12 +3494,13 @@ const WV_DATA=[
 window.wvMarkComplete=function(lessonId){
   if(isCompleted(lessonId)) return;
   markLessonComplete(lessonId);
+  // Update button in place — no re-render so video keeps playing
   var btn=document.getElementById('wv-mark-btn');
   if(btn){
     btn.outerHTML='<span id="wv-done-badge" style="background:rgba(34,197,94,.12);color:#4ade80;border:1px solid rgba(34,197,94,.3);border-radius:8px;font-size:11px;font-weight:700;padding:6px 14px">✓ Completed</span>';
   }
-  var wvItem=WV_DATA.find(function(f){return f.id===lessonId;});
-  if(wvItem) renderWVPlayer(wvItem);
+  // Update sidebar tick marks without re-rendering page
+  document.querySelectorAll('[data-wv-id="'+lessonId+'"]').forEach(function(el){el.style.display='flex';});
 };
 
 window.setupWVAutoComplete=function(lessonId){
