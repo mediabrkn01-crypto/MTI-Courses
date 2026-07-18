@@ -639,34 +639,10 @@ async function sbLoadVideos(){
     const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
     if(error||!data||!data.data) return;
     var fresh=JSON.stringify(data.data);
-    var stale=localStorage.getItem('brokeneng_videos')||'';
-    // Supabase ALWAYS wins — overwrite local completely so admin changes propagate
     localStorage.setItem('brokeneng_videos',fresh);
-    var keys=Object.keys(data.data||{});
-    console.log('Videos synced from Supabase ✓ —',keys.length,'entries.');
     refreshLessonThumbs();
-    // Data actually changed (including very first sync on a fresh device) → re-render so titles/videos/thumbs appear
-    if(fresh!==stale){
-      try{
-        var st=history.state||{};
-        var scr=_currentScreen||st.screen;
-        var sparams=_currentParams||st.params||{};
-        if(scr&&scr!=='login'&&scr!=='admin-login'&&scr!=='admin'&&scr!=='admin-student'&&scr!=='admin-progress-student'){
-          var vid=document.querySelector('#player-wrapper video');
-          var playing=vid&&!vid.paused&&!vid.ended&&vid.currentTime>2;
-          var iframeActive=document.querySelector('#player-wrapper iframe');
-          if(!playing&&!iframeActive){ _fromPop=true; navigate(scr,sparams); _fromPop=false; }
-          else if(!playing&&iframeActive){
-            // Re-render only if iframe src doesn't look like a real Bunny URL (still on sample)
-            var iSrc=(iframeActive.src||'');
-            if(!iSrc||iSrc.indexOf('mediadelivery.net')<0){ _fromPop=true; navigate(scr,sparams); _fromPop=false; }
-          }
-        }
-      }catch(e){}
-    }
   }catch(e){console.warn('Supabase load videos error:',e);}
 }
-
 // Re-sync course data whenever the app comes back to foreground (long-open tabs / installed PWAs)
 document.addEventListener('visibilitychange',function(){
   if(!document.hidden&&currentSession){
@@ -1490,11 +1466,8 @@ function hideAppLoader(){
 }
 var ASYNC_SCREENS=['dashboard','courses','lesson'];
 var _fromPop=false;
-var _currentScreen='';
-var _currentParams={};
 function navigate(screen,params){
   document.body.style.overflow=''; // restore scroll when leaving lesson
-  _currentScreen=screen; _currentParams=params||{};
   if(ASYNC_SCREENS.indexOf(screen)!==-1) showAppLoader();
   // Push into browser history so phone back button navigates in-app instead of closing
   if(!_fromPop){
@@ -1520,25 +1493,13 @@ function render(screen,params){
   if(screen==="admin-progress-student"){ renderAdminProgressStudent(params.id); return; }
   if(screen==="dashboard"){
     if(typeof _sb!=="undefined"){
-      var _dash_stale=localStorage.getItem('brokeneng_videos');
-      if(!_dash_stale){
-        // Fresh device — load titles from Supabase FIRST, then render
-        sbLoadVideos().catch(function(){}).finally(function(){ renderDashboard(); hideAppLoader(); });
-      } else {
-        renderDashboard(); hideAppLoader(); sbLoadVideos().catch(function(){});
-      }
+      renderDashboard(); hideAppLoader(); sbLoadVideos().catch(function(){});
     } else { renderDashboard(); hideAppLoader(); }
     return;
   }
   if(screen==="courses"){
     if(typeof _sb!=="undefined"){
-      var _crs_stale=localStorage.getItem('brokeneng_videos');
-      if(!_crs_stale){
-        // Fresh device — load titles from Supabase FIRST, then render
-        sbLoadVideos().catch(function(){}).finally(function(){ renderMyCourses(); hideAppLoader(); });
-      } else {
-        renderMyCourses(); hideAppLoader(); sbLoadVideos().catch(function(){});
-      }
+      renderMyCourses(); hideAppLoader(); sbLoadVideos().catch(function(){});
     } else { renderMyCourses(); hideAppLoader(); }
     return;
   }
@@ -1548,13 +1509,7 @@ function render(screen,params){
   if(screen==="profile")      { renderProfile(); return; }
   if(screen==="lesson"){
     if(typeof _sb!=="undefined"){
-      var _les_stale=localStorage.getItem('brokeneng_videos');
-      if(!_les_stale){
-        // No cached video data — fetch from Supabase FIRST so correct video/title loads
-        sbLoadVideos().catch(function(){}).finally(function(){ renderLesson(params.id); hideAppLoader(); });
-      } else {
-        renderLesson(params.id); hideAppLoader(); sbLoadVideos().catch(function(){});
-      }
+      renderLesson(params.id); hideAppLoader(); sbLoadVideos().catch(function(){});
     } else {
       renderLesson(params.id);
       hideAppLoader();
@@ -4999,10 +4954,16 @@ function setupTopBar(student){
       waitForSb().then(function(ok){
         if(!ok)return;
         sbLoadProgress(sess.studentId);
-        sbLoadVideos().catch(function(){});
         sbLoadELSettings().catch(function(){});
       });
-      navigate("dashboard");
+      // On fresh device (no cached videos), fetch from Supabase FIRST then render
+      var _hasVideos=localStorage.getItem('brokeneng_videos');
+      if(!_hasVideos&&typeof _sb!=="undefined"){
+        sbLoadVideos().catch(function(){}).finally(function(){ navigate("dashboard"); });
+      } else {
+        sbLoadVideos().catch(function(){});
+        navigate("dashboard");
+      }
       return;
     }
     clearSession();
