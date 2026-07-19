@@ -434,6 +434,8 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{tra
 <meta name="apple-mobile-web-app-title" content="Broken English">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init("r2UjQEe1MNj-YflSv");</script>
 </head>
 <body>
 
@@ -3906,13 +3908,13 @@ function renderProfile(){
                 <div><p style="font-size:13px;font-weight:600;color:#4ade80">Course Complete 🎉 — Lifetime Access</p>
                 <p style="font-size:11px;color:rgba(74,222,128,0.7);margin-top:2px">Finished ${new Date(student.completedAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p></div>
               </div>`;
-              if(!validUntil) return`<div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:12px 16px;font-size:14px;color:rgba(255,255,255,0.6)">No expiry — lifetime access</div>`;
+              if(!validUntil) return`<div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:12px 16px;font-size:14px;color:rgba(255,255,255,0.6)">Active access — complete all lessons to unlock everything.</div>`;
               const days=Math.ceil((validUntil-today)/86400000);
               const col=expired?'rgba(239,68,68,0.12)':days<=7?'rgba(239,68,68,0.1)':days<=30?'rgba(234,179,8,0.1)':'rgba(34,197,94,0.1)';
               const bcol=expired?'rgba(239,68,68,0.28)':days<=7?'rgba(239,68,68,0.22)':days<=30?'rgba(234,179,8,0.22)':'rgba(34,197,94,0.22)';
               const tcol=expired?'#fca5a5':days<=7?'#fca5a5':days<=30?'#facc15':'#4ade80';
               const msg=expired?`Access expired on ${validUntil.toLocaleDateString()}`:days<=7?`⚠ Expiring in ${days} days — ${validUntil.toLocaleDateString()}`:days<=30?`⏳ ${days} days remaining — valid until ${validUntil.toLocaleDateString()}`:`✓ Active — valid until ${validUntil.toLocaleDateString()}`;
-              const sub=expired?'Contact your admin to renew.':'Complete all classes to keep access forever!';
+              const sub=expired?'Contact your admin to renew.':'Once you complete the course, all lessons will be unlocked and you can revisit anytime.';
               return`<div style="background:${col};border:1px solid ${bcol};border-radius:12px;padding:12px 16px">
                 <p style="font-size:13px;font-weight:600;color:${tcol}">${msg}</p>
                 <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px">${sub}</p>
@@ -5033,9 +5035,9 @@ window.showStudentForgotPassword=function(){
     '<div style="background:#1a1a2e;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;position:relative">'+
     '<button onclick="document.getElementById(\'fp-overlay\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer">✕</button>'+
     '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:6px">Forgot Password?</h3>'+
-    '<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:18px">Enter your name or email. Your password will be shown if found.</p>'+
-    '<input id="fp-input" placeholder="Your name or email" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:12px"/>'+
-    '<button onclick="doStudentForgotLookup()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Find My Account</button>'+
+    '<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:18px">Enter your registered email address and we\'ll send your password to your inbox.</p>'+
+    '<input id="fp-input" type="email" placeholder="Your email address" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:12px"/>'+
+    '<button id="fp-send-btn" onclick="doStudentForgotLookup()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Send Password to Email</button>'+
     '<div id="fp-result" style="margin-top:14px;font-size:13px;text-align:center"></div>'+
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
@@ -5044,20 +5046,29 @@ window.showStudentForgotPassword=function(){
 window.doStudentForgotLookup=function(){
   var q=(document.getElementById('fp-input')?.value||'').trim().toLowerCase();
   var res=document.getElementById('fp-result');
+  var btn=document.getElementById('fp-send-btn');
   if(!q||!res)return;
   var students=loadStudents();
   var found=Object.values(students).find(function(s){
-    return (s.email||'').toLowerCase()===q||(s.name||'').toLowerCase()===q;
+    return (s.email||'').toLowerCase()===q;
   });
-  if(found){
-    res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px">'+
-      '<div style="color:#4ade80;font-weight:700;margin-bottom:4px">Account found!</div>'+
-      '<div style="color:rgba(255,255,255,.7)">Name: <b style="color:#fff">'+found.name+'</b></div>'+
-      '<div style="color:rgba(255,255,255,.7)">Password: <b style="color:#fff">'+found.password+'</b></div>'+
-      '</div>';
-  } else {
-    res.innerHTML='<div style="color:rgba(255,45,120,.8)">No account found. Contact your admin.</div>';
+  if(!found){
+    res.innerHTML='<div style="color:rgba(255,45,120,.8)">No account found with that email. Contact your admin.</div>';
+    return;
   }
+  if(btn){btn.disabled=true;btn.textContent='Sending...';}
+  emailjs.send('service_n7b31id','template_35h569c',{
+    to_email: found.email,
+    student_name: found.name,
+    password: found.password
+  }).then(function(){
+    res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;color:#4ade80;font-weight:700">✓ Password sent to '+found.email+'</div>';
+    if(btn){btn.disabled=false;btn.textContent='Send Password to Email';}
+  }).catch(function(err){
+    res.innerHTML='<div style="color:rgba(255,45,120,.8)">Failed to send email. Try again or contact admin.</div>';
+    if(btn){btn.disabled=false;btn.textContent='Send Password to Email';}
+    console.warn('EmailJS error:',err);
+  });
 };
 window.showAdminForgotPassword=function(){
   var html='<div id="fp-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'+
