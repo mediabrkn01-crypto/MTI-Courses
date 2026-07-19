@@ -646,8 +646,11 @@ async function sbLoadVideos(){
 }
 
 // Re-sync course data whenever the app comes back to foreground (long-open tabs / installed PWAs)
+var _lastVisible=Date.now();
 document.addEventListener('visibilitychange',function(){
-  if(!document.hidden&&currentSession){
+  if(document.hidden){ _lastVisible=Date.now(); return; }
+  // Only re-sync if tab was actually hidden for >5 seconds (not mobile scroll jank)
+  if(Date.now()-_lastVisible>5000&&currentSession){
     waitForSb(8000).then(function(ok){if(ok)sbLoadVideos().catch(function(){});});
   }
 });
@@ -2028,21 +2031,27 @@ function renderAdminLogin(){
   var ap=document.getElementById("adm-pass");if(ap)ap.addEventListener("keydown",e=>{if(e.key==="Enter")doAdminLogin();});
 }
 window.doAdminLogin=()=>{
-  const email=document.getElementById("adm-email").value.trim().toLowerCase();
-  const pass=document.getElementById("adm-pass").value;
-  var cred=getAdminCredentials();
-  if(email!==cred.email.toLowerCase()||pass!==cred.password){
-    var er=document.getElementById("adm-err");if(er)er.style.display="block";
-    // maybe credentials were changed on another device — pull latest and retry once
-    sbLoadAdminCred().then(function(){
-      var c2=getAdminCredentials();
-      if(email===c2.email.toLowerCase()&&pass===c2.password){
-        currentSession={role:"admin"};saveSession(currentSession);navigate("admin");
-      }
-    }).catch(function(){});
-    return;
-  }
-  currentSession={role:"admin"};saveSession(currentSession);navigate("admin");
+  const email=document.getElementById("adm-email")?.value.trim().toLowerCase()||'';
+  const pass=document.getElementById("adm-pass")?.value||'';
+  if(!email||!pass)return;
+  // Always fetch latest credentials from Supabase first (fixes mobile where local cache may be empty)
+  var btn=document.querySelector('#adm-pass+button,button.btn-primary');
+  sbLoadAdminCred().then(function(){
+    var cred=getAdminCredentials();
+    if(email===cred.email.toLowerCase()&&pass===cred.password){
+      currentSession={role:"admin"};saveSession(currentSession);navigate("admin");
+    } else {
+      var er=document.getElementById("adm-err");if(er)er.style.display="block";
+    }
+  }).catch(function(){
+    // Supabase unavailable — fall back to local
+    var cred=getAdminCredentials();
+    if(email===cred.email.toLowerCase()&&pass===cred.password){
+      currentSession={role:"admin"};saveSession(currentSession);navigate("admin");
+    } else {
+      var er=document.getElementById("adm-err");if(er)er.style.display="block";
+    }
+  });
 };
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
