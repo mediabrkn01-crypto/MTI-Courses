@@ -1840,6 +1840,7 @@ function renderLogin(){
 
       <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:10px">Accounts are created by the course admin.</p>
       <p style="text-align:center"><span style="font-size:12px;color:var(--muted2);cursor:pointer" onclick="navigate('admin-login')">Admin portal</span></p>
+      <p style="text-align:center;margin-top:10px"><span style="font-size:12px;color:rgba(255,45,120,.8);cursor:pointer;text-decoration:underline" onclick="showStudentForgotPassword()">Forgot Password?</span></p>
       <p style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.35)">Having trouble? Contact <a href="mailto:mediabrkn01@gmail.com" style="color:rgba(255,45,120,.7);text-decoration:none">mediabrkn01@gmail.com</a></p>
     </div>
   </div>`;
@@ -2023,7 +2024,8 @@ function renderAdminLogin(){
       <div style="position:relative"><input id="adm-pass" type="password" placeholder="••••••••" class="glass-input" style="margin-bottom:8px;padding-right:40px"/><button type="button" onclick="togglePw('adm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
       <p id="adm-err" style="display:none;color:var(--g1);font-size:13px;margin-bottom:8px">Invalid admin credentials.</p>
       <button onclick="doAdminLogin()" class="btn-primary" style="margin-top:8px">Sign In as Admin</button>
-      <p style="margin-top:20px;text-align:center">
+      <p style="margin-top:12px;text-align:center"><span style="font-size:12px;color:rgba(255,45,120,.8);cursor:pointer;text-decoration:underline" onclick="showAdminForgotPassword()">Forgot Password?</span></p>
+      <p style="margin-top:10px;text-align:center">
         <button onclick="navigate('login')" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer" onmouseover="this.style.color='var(--g3)'" onmouseout="this.style.color='var(--muted)'">← Student login</button>
       </p>
     </div>
@@ -5024,6 +5026,50 @@ function setupTopBar(student){
   }
   navigate("login");
 })();
+
+// ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+window.showStudentForgotPassword=function(){
+  var html='<div id="fp-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'+
+    '<div style="background:#1a1a2e;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;position:relative">'+
+    '<button onclick="document.getElementById(\'fp-overlay\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer">✕</button>'+
+    '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:6px">Forgot Password?</h3>'+
+    '<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:18px">Enter your name or email. Your password will be shown if found.</p>'+
+    '<input id="fp-input" placeholder="Your name or email" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:12px"/>'+
+    '<button onclick="doStudentForgotLookup()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Find My Account</button>'+
+    '<div id="fp-result" style="margin-top:14px;font-size:13px;text-align:center"></div>'+
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+  setTimeout(function(){var el=document.getElementById('fp-input');if(el)el.focus();},100);
+};
+window.doStudentForgotLookup=function(){
+  var q=(document.getElementById('fp-input')?.value||'').trim().toLowerCase();
+  var res=document.getElementById('fp-result');
+  if(!q||!res)return;
+  var students=loadStudents();
+  var found=Object.values(students).find(function(s){
+    return (s.email||'').toLowerCase()===q||(s.name||'').toLowerCase()===q;
+  });
+  if(found){
+    res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px">'+
+      '<div style="color:#4ade80;font-weight:700;margin-bottom:4px">Account found!</div>'+
+      '<div style="color:rgba(255,255,255,.7)">Name: <b style="color:#fff">'+found.name+'</b></div>'+
+      '<div style="color:rgba(255,255,255,.7)">Password: <b style="color:#fff">'+found.password+'</b></div>'+
+      '</div>';
+  } else {
+    res.innerHTML='<div style="color:rgba(255,45,120,.8)">No account found. Contact your admin.</div>';
+  }
+};
+window.showAdminForgotPassword=function(){
+  var html='<div id="fp-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'+
+    '<div style="background:#1a1a2e;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;position:relative">'+
+    '<button onclick="document.getElementById(\'fp-overlay\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer">✕</button>'+
+    '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:6px">Admin Forgot Password</h3>'+
+    '<p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:18px">Admin passwords are stored securely in Supabase.<br/>To reset your password, go to your <b style="color:#fff">Supabase dashboard → course_config table → admin_cred row</b> and update the password field directly.</p>'+
+    '<a href="https://supabase.com" target="_blank" style="display:block;width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif;text-align:center;text-decoration:none;box-sizing:border-box">Open Supabase</a>'+
+    '<p style="margin-top:14px;text-align:center;font-size:12px;color:rgba(255,255,255,.35)">Or contact <a href="mailto:mediabrkn01@gmail.com" style="color:rgba(255,45,120,.7)">mediabrkn01@gmail.com</a></p>'+
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+};
 
 // ── ELEVENLABS ADMIN FUNCTIONS ────────────────────────────────────────────────
 async function adminSaveELSettings(){
