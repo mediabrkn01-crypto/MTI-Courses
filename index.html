@@ -1872,15 +1872,15 @@ window.doStudentLogin=async()=>{
   var byEmail=null;
   if(typeof _sb!=="undefined"){
     try{
-      // Try email match first, then name match
-      var sbRes=await _sb.from("students").select("*").eq("email",email).single();
-      if(sbRes.error||!sbRes.data){
+      // Try email match first, then name match — use limit(1) to handle duplicate rows
+      var sbRes=await _sb.from("students").select("*").eq("email",email).limit(1);
+      if(sbRes.error||!sbRes.data||!sbRes.data.length){
         // Try by name (case-insensitive via ilike)
-        var sbRes2=await _sb.from("students").select("*").ilike("name",email).single();
-        if(!sbRes2.error&&sbRes2.data) sbRes=sbRes2;
+        var sbRes2=await _sb.from("students").select("*").ilike("name",email).limit(1);
+        if(!sbRes2.error&&sbRes2.data&&sbRes2.data.length) sbRes=sbRes2;
       }
-      if(!sbRes.error&&sbRes.data){
-        var d=sbRes.data;
+      if(!sbRes.error&&sbRes.data&&sbRes.data.length){
+        var d=sbRes.data[0];
         byEmail={
           id:d.id,name:d.name,email:d.email,
           password:d.password_hash,
