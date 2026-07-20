@@ -1868,42 +1868,47 @@ window.doStudentLogin=async()=>{
   const loginBtn=document.getElementById("login-btn-main");
   if(loginBtn){loginBtn.textContent="Signing in...";loginBtn.disabled=true;}
 
-  // 1. Try Supabase first (works across devices)
-  var sbStudent=null;
+  // 1. Try Supabase first (works across all devices, no localStorage dependency)
+  var byEmail=null;
   if(typeof _sb!=="undefined"){
     try{
-      const{data,error}=await _sb.from("students")
-        .select("*")
-        .eq("email",email)
-        .single();
-      if(!error&&data){
-        sbStudent=data;
-        // Sync to localStorage for offline use
-        const localStudents=loadStudents();
-        localStudents[data.id]={
-          id:data.id,
-          name:data.name,
-          email:data.email,
-          password:data.password_hash,
-          validUntil:data.valid_until||null,
-          accessList:data.access_list||[1],
-          createdAt:data.created_at||new Date().toISOString(),
-          completedAt:data.completed_at||null
+      // Try email match first, then name match
+      var sbRes=await _sb.from("students").select("*").eq("email",email).single();
+      if(sbRes.error||!sbRes.data){
+        // Try by name (case-insensitive via ilike)
+        var sbRes2=await _sb.from("students").select("*").ilike("name",email).single();
+        if(!sbRes2.error&&sbRes2.data) sbRes=sbRes2;
+      }
+      if(!sbRes.error&&sbRes.data){
+        var d=sbRes.data;
+        byEmail={
+          id:d.id,name:d.name,email:d.email,
+          password:d.password_hash,
+          validUntil:d.valid_until||null,
+          accessList:d.access_list||[1],
+          createdAt:d.created_at||new Date().toISOString(),
+          completedAt:d.completed_at||null
         };
-        localStorage.setItem("brokeneng_students",JSON.stringify(localStudents));
+        // Sync to localStorage best-effort
+        try{
+          var ls=loadStudents();
+          ls[byEmail.id]=byEmail;
+          localStorage.setItem("brokeneng_students",JSON.stringify(ls));
+        }catch(e){}
       }
     }catch(e){console.warn("Supabase login lookup failed:",e);}
   }
 
-  // 2. Fall back to localStorage
-  const students=loadStudents();
-  const allStudents=Object.values(students);
-  const byEmail=allStudents.find(s=>(s.email&&s.email.toLowerCase()===email)||(s.name&&s.name.trim().toLowerCase()===email));
+  // 2. Fall back to localStorage if Supabase unavailable
+  if(!byEmail){
+    const students=loadStudents();
+    byEmail=Object.values(students).find(s=>(s.email&&s.email.toLowerCase()===email)||(s.name&&s.name.trim().toLowerCase()===email))||null;
+  }
 
   if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
 
   if(!byEmail){
-    errEl.textContent="No account found with that email address.";
+    errEl.textContent="No account found. Check your email/username or contact admin.";
     errEl.style.display="block";
     return;
   }
