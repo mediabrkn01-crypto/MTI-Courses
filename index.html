@@ -2530,8 +2530,40 @@ function renderAdminProgress(){
   const students = loadStudents();
   const list = Object.values(students);
 
+  // Show loading state while fetching from Supabase
+  app.innerHTML = adminTopBar('progress') + '<div style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:14px">Loading progress from server...</p></div>';
+
+  // Fetch ALL student progress from Supabase, then render
+  (async function(){
+    var sbProgress = {}; // {studentId: Set of lessonIds}
+    try{
+      if(typeof _sb !== 'undefined'){
+        const {data, error} = await _sb.from('student_progress').select('student_id,lesson_id');
+        if(!error && data){
+          data.forEach(function(r){
+            if(!sbProgress[r.student_id]) sbProgress[r.student_id] = new Set();
+            sbProgress[r.student_id].add(r.lesson_id);
+          });
+        }
+      }
+    }catch(e){console.warn('Supabase progress fetch error:',e);}
+
+    // Merge Supabase progress into localStorage for each student
+    list.forEach(function(st){
+      if(sbProgress[st.id]){
+        var existing = loadProgress(st.id);
+        sbProgress[st.id].forEach(function(id){ existing.add(id); });
+        try{ localStorage.setItem('brokeneng_progress_'+st.id, JSON.stringify([...existing])); }catch(e){}
+        sbProgress[st.id] = existing;
+      }
+    });
+
+    function getStudentProgress(sid){
+      return sbProgress[sid] || loadProgress(sid);
+    }
+
   function progressRow(st){
-    const progress = loadProgress(st.id);
+    const progress = getStudentProgress(st.id);
     const completed = progress.size;
     const total = ALL_LESSONS.length;
     const pct = total ? Math.round(completed/total*100) : 0;
@@ -2579,6 +2611,7 @@ function renderAdminProgress(){
           </table>
         </div>`}
   </div>`;
+  })();
 }
 
 // ── PER-STUDENT PROGRESS DETAIL ──────────────────────────────────────────────
