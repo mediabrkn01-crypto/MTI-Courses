@@ -2529,88 +2529,133 @@ window._pdfConfirmImport=function(){
 function renderAdminProgress(){
   const students = loadStudents();
   const list = Object.values(students);
+  const TOTAL_LESSONS = ALL_LESSONS.length + (typeof WV_DATA!=='undefined'?WV_DATA.length:0); // 20 core + 10 WV = 30
 
-  // Show loading state while fetching from Supabase
   app.innerHTML = adminTopBar('progress') + '<div style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:14px">Loading progress from server...</p></div>';
 
-  // Fetch ALL student progress from Supabase, then render
   (async function(){
-    var sbProgress = {}; // {studentId: Set of lessonIds}
+    // Fetch progress from Supabase
+    var sbProgress = {};
+    var sbQuizPassed = {};
+    var sbLastLesson = {};
     try{
       if(typeof _sb !== 'undefined'){
-        const {data, error} = await _sb.from('student_progress').select('student_id,lesson_id');
-        if(!error && data){
-          data.forEach(function(r){
+        const [progRes, quizRes] = await Promise.all([
+          _sb.from('student_progress').select('student_id,lesson_id'),
+          _sb.from('quiz_scores').select('student_id,lesson_id,pct')
+        ]);
+        if(!progRes.error && progRes.data){
+          progRes.data.forEach(function(r){
             if(!sbProgress[r.student_id]) sbProgress[r.student_id] = new Set();
             sbProgress[r.student_id].add(r.lesson_id);
+          });
+        }
+        if(!quizRes.error && quizRes.data){
+          quizRes.data.forEach(function(r){
+            if(!sbQuizPassed[r.student_id]) sbQuizPassed[r.student_id] = new Set();
+            if(r.pct>=70) sbQuizPassed[r.student_id].add(r.lesson_id);
           });
         }
       }
     }catch(e){console.warn('Supabase progress fetch error:',e);}
 
-    // Merge Supabase progress into localStorage for each student
-    list.forEach(function(st){
-      if(sbProgress[st.id]){
-        var existing = loadProgress(st.id);
-        sbProgress[st.id].forEach(function(id){ existing.add(id); });
-        try{ localStorage.setItem('brokeneng_progress_'+st.id, JSON.stringify([...existing])); }catch(e){}
-        sbProgress[st.id] = existing;
-      }
-    });
-
     function getStudentProgress(sid){
-      return sbProgress[sid] || loadProgress(sid);
+      var sb = sbProgress[sid] || new Set();
+      var local = loadProgress(sid);
+      local.forEach(function(id){sb.add(id);});
+      return sb;
+    }
+    function getStudentQuizPassed(sid){
+      var sb = sbQuizPassed[sid] || new Set();
+      var local = getPassedQuizzes(sid);
+      local.forEach(function(id){sb.add(id);});
+      return sb;
+    }
+    function getLastLesson(sid, progress){
+      // Find highest completed lesson order
+      var maxOrder = 0; var lastL = null;
+      ALL_LESSONS.forEach(function(l){
+        if(progress.has(l.id) && l.order > maxOrder){ maxOrder=l.order; lastL=l; }
+      });
+      return lastL;
     }
 
-  function progressRow(st){
-    const progress = getStudentProgress(st.id);
-    const completed = progress.size;
-    const total = ALL_LESSONS.length;
-    const pct = total ? Math.round(completed/total*100) : 0;
-    const passed = getPassedQuizzes(st.id);
-    const quizTotal = ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
-    const lastId = localStorage.getItem('brokeneng_lastlesson_'+st.id);
-    const lastLesson = lastId ? ALL_LESSONS.find(l=>l.id===lastId) : null;
-    const barColor = pct===100?'#4ade80':pct>50?'#a78bfa':'var(--g3)';
-    return `<tr onclick="navigate('admin-progress-student',{id:'${st.id}'})" style="cursor:pointer">
-      <td>
-        <p style="font-weight:600;color:#fff;margin:0">${st.name}</p>
-        <p style="font-size:11px;color:rgba(255,255,255,.4);margin:2px 0 0">${st.email}</p>
-      </td>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;min-width:80px">
-            <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div>
+    function progressRow(st){
+      const progress = getStudentProgress(st.id);
+      const completed = progress.size;
+      const pct = TOTAL_LESSONS ? Math.min(100,Math.round(completed/TOTAL_LESSONS*100)) : 0;
+      const passed = getStudentQuizPassed(st.id);
+      const quizTotal = ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
+      const lastLesson = getLastLesson(st.id, progress);
+      const barColor = pct===100?'#4ade80':pct>50?'#a78bfa':'var(--g3)';
+      return `<tr onclick="navigate('admin-progress-student',{id:'${st.id}'})" style="cursor:pointer">
+        <td>
+          <p style="font-weight:600;color:#fff;margin:0">${st.name}</p>
+          <p style="font-size:11px;color:rgba(255,255,255,.4);margin:2px 0 0">${st.email}</p>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;min-width:80px">
+              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div>
+            </div>
+            <span style="font-size:12px;font-weight:700;color:${barColor};min-width:34px;text-align:right">${pct}%</span>
           </div>
-          <span style="font-size:12px;font-weight:700;color:${barColor};min-width:34px;text-align:right">${pct}%</span>
-        </div>
-        <p style="font-size:11px;color:rgba(255,255,255,.35);margin:3px 0 0">${completed}/${total} lessons</p>
-      </td>
-      <td class="center"><span class="pill pill-orange">${passed.size}/${quizTotal}</span></td>
-      <td style="font-size:12px;color:rgba(255,255,255,.5)">${lastLesson ? `<span style="color:#fff;font-weight:600">Day ${lastLesson.order}</span><br><span style="font-size:11px">${getLessonTitle(lastLesson)||''}</span>` : '<span style="color:rgba(255,255,255,.25)">—</span>'}</td>
-    </tr>`;
-  }
+          <p style="font-size:11px;color:rgba(255,255,255,.35);margin:3px 0 0">${completed}/${TOTAL_LESSONS} lessons</p>
+        </td>
+        <td class="center"><span class="pill pill-orange">${passed.size}/${quizTotal}</span></td>
+        <td style="font-size:12px;color:rgba(255,255,255,.5)">${lastLesson ? `<span style="color:#fff;font-weight:600">Day ${lastLesson.order}</span><br><span style="font-size:11px">${getLessonTitle(lastLesson)||''}</span>` : '<span style="color:rgba(255,255,255,.25)">—</span>'}</td>
+      </tr>`;
+    }
 
-  app.innerHTML = adminTopBar('progress') + `
-  <div style="padding:24px;position:relative;z-index:1">
-    <div style="margin-bottom:20px">
-      <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;font-family:'Montserrat',sans-serif">Student Progress</h1>
-      <p style="font-size:13px;color:var(--muted)">${list.length} students — click any row for full detail</p>
-    </div>
-    ${list.length===0
-      ? `<div class="lg" style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:15px">No students yet</p></div>`
-      : `<div class="lg admin-table-wrap" style="overflow:hidden;border-radius:20px">
-          <table class="admin-table" style="min-width:620px">
-            <thead><tr>
-              <th>Student</th>
-              <th>Overall Progress</th>
-              <th class="center">Quizzes Passed</th>
-              <th>Currently On</th>
-            </tr></thead>
-            <tbody>${list.map(progressRow).join('')}</tbody>
-          </table>
-        </div>`}
-  </div>`;
+    var sortedList = list.slice();
+
+    function applyFilters(){
+      var q = (document.getElementById('prog-search')||{}).value||'';
+      var sort = (document.getElementById('prog-sort')||{}).value||'newest';
+      q = q.trim().toLowerCase();
+      var filtered = q ? sortedList.filter(function(st){
+        return (st.name||'').toLowerCase().includes(q)||(st.email||'').toLowerCase().includes(q);
+      }) : sortedList.slice();
+      if(sort==='az') filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+      else if(sort==='za') filtered.sort(function(a,b){return (b.name||'').localeCompare(a.name||'');});
+      else if(sort==='oldest') filtered.sort(function(a,b){return (a.createdAt||'').localeCompare(b.createdAt||'');});
+      else filtered.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+      var tbody = document.getElementById('prog-tbody');
+      if(tbody) tbody.innerHTML = filtered.map(progressRow).join('');
+    }
+
+    app.innerHTML = adminTopBar('progress') + `
+    <div style="padding:24px;position:relative;z-index:1">
+      <div style="margin-bottom:16px">
+        <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;font-family:'Montserrat',sans-serif">Student Progress</h1>
+        <p style="font-size:13px;color:var(--muted)">${list.length} students · ${TOTAL_LESSONS} total lessons</p>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <input id="prog-search" placeholder="Search by name or email..." oninput="applyFilters()" style="flex:1;min-width:200px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none"/>
+        <select id="prog-sort" onchange="applyFilters()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none;cursor:pointer">
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="az">A → Z</option>
+          <option value="za">Z → A</option>
+        </select>
+      </div>
+      ${list.length===0
+        ? `<div class="lg" style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:15px">No students yet</p></div>`
+        : `<div class="lg admin-table-wrap" style="overflow:hidden;border-radius:20px">
+            <table class="admin-table" style="min-width:620px">
+              <thead><tr>
+                <th>Student</th>
+                <th>Overall Progress</th>
+                <th class="center">Quizzes Passed</th>
+                <th>Currently On</th>
+              </tr></thead>
+              <tbody id="prog-tbody">${sortedList.map(progressRow).join('')}</tbody>
+            </table>
+          </div>`}
+    </div>`;
+
+    window.applyFilters = applyFilters;
+    applyFilters();
   })();
 }
 
