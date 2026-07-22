@@ -2166,11 +2166,17 @@ function renderAdmin(tab){
   if(tab==='images')   return renderAdminImages();
 
   const students=loadStudents();
-  const list=Object.values(students);
+  // Deduplicate by email — keep latest entry per email
+  var _seen={};
+  const list=Object.values(students).filter(function(s){
+    var key=(s.email||s.name||s.id).toLowerCase();
+    if(_seen[key]) return false;
+    _seen[key]=true; return true;
+  });
 
   app.innerHTML=adminTopBar('students')+`
   <div style="padding:24px;position:relative;z-index:1">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap">
       <div>
         <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;font-family:'Montserrat',sans-serif">Students</h1>
         <p style="font-size:13px;color:var(--muted)">${list.length} enrolled</p>
@@ -2186,6 +2192,16 @@ function renderAdmin(tab){
         Add Student
       </button>
       </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <input id="stu-search" placeholder="Search by name or email..." oninput="applyStuFilters()" style="flex:1;min-width:200px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none"/>
+      <select id="stu-sort" onchange="applyStuFilters()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none;cursor:pointer">
+        <option value="newest">Newest First</option>
+        <option value="oldest">Oldest First</option>
+        <option value="az">A → Z</option>
+        <option value="za">Z → A</option>
+      </select>
     </div>
 
     <div id="student-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:16px;overflow-y:auto">
@@ -2250,7 +2266,7 @@ function renderAdmin(tab){
               <th class="center">Access</th><th class="center">Status</th>
               <th class="right">Actions</th>
             </tr></thead>
-            <tbody>
+            <tbody id="stu-tbody">
               ${list.map((s,i)=>{
                 const{expired}=getValidity(s);
                 const locked=getLockedVideos(s.id);
@@ -2276,6 +2292,40 @@ function renderAdmin(tab){
           </table>
         </div>`}
   </div>`;
+
+  // Search + sort for students tab
+  window._stuList = list;
+  window.applyStuFilters = function(){
+    var q=(document.getElementById('stu-search')||{}).value||'';
+    var sort=(document.getElementById('stu-sort')||{}).value||'newest';
+    q=q.trim().toLowerCase();
+    var filtered=window._stuList.filter(function(s){
+      return !q||(s.name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
+    });
+    if(sort==='az') filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+    else if(sort==='za') filtered.sort(function(a,b){return (b.name||'').localeCompare(a.name||'');});
+    else if(sort==='oldest') filtered.sort(function(a,b){return (a.createdAt||'').localeCompare(b.createdAt||'');});
+    else filtered.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
+    var tbody=document.getElementById('stu-tbody');
+    if(!tbody)return;
+    tbody.innerHTML=filtered.map(function(s){
+      var v=getValidity(s); var expired=v.expired;
+      var locked=getLockedVideos(s.id);
+      return '<tr>'+
+        '<td><input type="checkbox" class="bulk-chk" data-sid="'+s.id+'" onchange="bulkUpdateBar()" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></td>'+
+        '<td><p style="font-weight:600;color:#fff">'+s.name+'</p><p style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:1px">'+s.email+'</p></td>'+
+        '<td>'+validityBadge(s)+'</td>'+
+        '<td class="center"><span class="pill pill-orange">'+(s.accessList||[]).length+'/'+ALL_LESSONS.length+'</span></td>'+
+        '<td class="center">'+(expired?'<span class="pill pill-red">Expired</span>':'<span class="pill pill-green">Active</span>')+(locked.length>0?'<span class="pill pill-yellow" style="margin-left:4px">'+locked.length+' locked</span>':'')+'</td>'+
+        '<td class="right" style="white-space:nowrap"><div style="display:inline-flex;gap:6px">'+
+          glassBtn('Manage',"navigate('admin-student',{id:'"+s.id+"'})",'ghost')+
+          glassBtn('Edit',"openEditStudent('"+s.id+"')",'ghost')+
+          glassBtn('Delete',"confirmDelete('"+s.id+"')",'danger')+
+        '</div></td>'+
+      '</tr>';
+    }).join('');
+  };
+  applyStuFilters();
 
   window.openAddStudent=()=>{
     document.getElementById('modal-title').textContent='Add Student';
