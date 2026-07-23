@@ -478,7 +478,8 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{tra
 
   // 3. Block text selection on video areas
   document.addEventListener('selectstart',e=>{
-    if((e.target.closest?e.target.closest('#player-wrapper'):e.target.id==='player-wrapper'||e.target.closest&&e.target.closest('#player-wrapper'))||e.target.closest('#yt-player')){
+    var _t=e.target; if(!_t||!_t.closest)return;
+    if(_t.closest('#player-wrapper')||_t.closest('#yt-player')){
       e.preventDefault();
     }
   });
