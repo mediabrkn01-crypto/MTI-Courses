@@ -612,33 +612,41 @@ async function sbDeleteStudent(studentId){
 // Load all progress for a student from Supabase (sync to localStorage)
 async function sbLoadProgress(studentId){
   try{
-    // Load lesson progress AND quiz scores in parallel
     const[progRes,quizRes]=await Promise.all([
       _sb.from('student_progress').select('lesson_id').eq('student_id',studentId),
       _sb.from('quiz_scores').select('lesson_id,pct').eq('student_id',studentId)
     ]);
-    // Merge lesson progress into localStorage
+    var changed=false;
     if(!progRes.error&&progRes.data){
       const ids=progRes.data.map(r=>r.lesson_id);
       const key='brokeneng_progress_'+studentId;
       const existing=new Set(JSON.parse(localStorage.getItem(key)||'[]'));
+      var before=existing.size;
       ids.forEach(id=>existing.add(id));
+      if(existing.size!==before) changed=true;
       try{localStorage.setItem(key,JSON.stringify([...existing]));}catch(e){}
     }
-    // Merge passed quizzes into localStorage
     if(!quizRes.error&&quizRes.data){
       var passedKey='brokeneng_passed_quizzes_'+studentId;
       var attempted='brokeneng_attempted_quizzes_'+studentId;
       var existingPassed=new Set(JSON.parse(localStorage.getItem(passedKey)||'[]'));
       var existingAttempted=new Set(JSON.parse(localStorage.getItem(attempted)||'[]'));
+      var bP=existingPassed.size, bA=existingAttempted.size;
       quizRes.data.forEach(function(r){
         existingAttempted.add(r.lesson_id);
         if(r.pct>=70) existingPassed.add(r.lesson_id);
       });
+      if(existingPassed.size!==bP||existingAttempted.size!==bA) changed=true;
       try{
         localStorage.setItem(passedKey,JSON.stringify([...existingPassed]));
         localStorage.setItem(attempted,JSON.stringify([...existingAttempted]));
       }catch(e){}
+    }
+    // If new progress data arrived and student is on dashboard/courses, re-render so unlocks update
+    if(changed&&currentSession&&currentSession.role==='student'){
+      var scr=(history.state||{}).screen||(location.hash||'').replace('#','');
+      if(scr==='dashboard'){try{renderDashboard();}catch(e){}}
+      else if(scr==='courses'){try{renderMyCourses();}catch(e){}}
     }
   }catch(e){console.warn('Supabase load error:',e);}
 }
@@ -1512,11 +1520,22 @@ function navigate(screen,params){
   requestAnimationFrame(function(){ requestAnimationFrame(hideAppLoader); });
 }
 window.addEventListener('popstate',function(e){
+  _fromPop=true;
   if(e.state&&e.state.screen){
-    _fromPop=true;
     navigate(e.state.screen,e.state.params||{});
-    _fromPop=false;
+  } else {
+    // Safari sometimes loses state — fall back to hash or dashboard
+    var hash=(location.hash||'').replace('#','');
+    var validScreens=['dashboard','courses','lesson','wordvault','achievements','login'];
+    if(hash&&validScreens.indexOf(hash)>=0){
+      navigate(hash,{});
+    } else if(currentSession){
+      navigate('dashboard',{});
+    } else {
+      navigate('login',{});
+    }
   }
+  _fromPop=false;
 });
 function render(screen,params){
   if(screen==="login")        { renderLogin(); return; }
