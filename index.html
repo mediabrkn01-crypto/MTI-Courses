@@ -616,14 +616,12 @@ async function sbLoadProgress(studentId){
       _sb.from('student_progress').select('lesson_id').eq('student_id',studentId),
       _sb.from('quiz_scores').select('lesson_id,pct').eq('student_id',studentId)
     ]);
-    var changed=false;
     if(!progRes.error&&progRes.data){
       const ids=progRes.data.map(r=>r.lesson_id);
       const key='brokeneng_progress_'+studentId;
       const existing=new Set(JSON.parse(localStorage.getItem(key)||'[]'));
-      var before=existing.size;
       ids.forEach(id=>existing.add(id));
-      if(existing.size!==before) changed=true;
+      _progressCache[studentId]=existing; // store in memory for Safari
       try{localStorage.setItem(key,JSON.stringify([...existing]));}catch(e){}
     }
     if(!quizRes.error&&quizRes.data){
@@ -631,22 +629,16 @@ async function sbLoadProgress(studentId){
       var attempted='brokeneng_attempted_quizzes_'+studentId;
       var existingPassed=new Set(JSON.parse(localStorage.getItem(passedKey)||'[]'));
       var existingAttempted=new Set(JSON.parse(localStorage.getItem(attempted)||'[]'));
-      var bP=existingPassed.size, bA=existingAttempted.size;
       quizRes.data.forEach(function(r){
         existingAttempted.add(r.lesson_id);
         if(r.pct>=70) existingPassed.add(r.lesson_id);
       });
-      if(existingPassed.size!==bP||existingAttempted.size!==bA) changed=true;
+      _quizPassedCache[studentId]=existingPassed;
+      _quizAttemptedCache[studentId]=existingAttempted;
       try{
         localStorage.setItem(passedKey,JSON.stringify([...existingPassed]));
         localStorage.setItem(attempted,JSON.stringify([...existingAttempted]));
       }catch(e){}
-    }
-    // If new progress data arrived and student is on dashboard/courses, re-render so unlocks update
-    if(changed&&currentSession&&currentSession.role==='student'){
-      var scr=(history.state||{}).screen||(location.hash||'').replace('#','');
-      if(scr==='dashboard'){try{renderDashboard();}catch(e){}}
-      else if(scr==='courses'){try{renderMyCourses();}catch(e){}}
     }
   }catch(e){console.warn('Supabase load error:',e);}
 }
@@ -666,6 +658,9 @@ async function sbSaveVideos(videos){
 
 // Load video metadata from Supabase → merge into localStorage → re-render if needed
 var _videoData={}; // always from Supabase, never stale cache
+var _progressCache={}; // in-memory progress {studentId: Set} — survives Safari localStorage quota failures
+var _quizPassedCache={}; // in-memory quiz passed {studentId: Set}
+var _quizAttemptedCache={}; // in-memory quiz attempted {studentId: Set}
 var _videosBootLoaded=false; // prevents double-load on first navigate
 async function sbLoadVideos(){
   try{
@@ -1346,9 +1341,10 @@ const ALL_LESSONS=SECTIONS.flatMap(s=>s.lessons);
 // ─── PROGRESS STORE (persisted per student in localStorage) ──────────────────
 function getProgressKey(sid){return "brokeneng_progress_"+sid;}
 function loadProgress(sid){
+  // Use in-memory Supabase cache if available (works even when Safari localStorage is full)
+  if(_progressCache[sid]) return _progressCache[sid];
   try{
     var raw=JSON.parse(localStorage.getItem(getProgressKey(sid))||"[]");
-    // Keep core lesson IDs + WV lesson IDs (f01-f10) — drop truly stale ones only
     var validCore=new Set(ALL_LESSONS.map(function(l){return l.id;}));
     var validWV=typeof WV_DATA!=='undefined'?new Set(WV_DATA.map(function(f){return f.id;})):new Set();
     return new Set(raw.filter(function(id){return validCore.has(id)||validWV.has(id);}));
@@ -1356,7 +1352,8 @@ function loadProgress(sid){
   catch{return new Set();}
 }
 function saveProgress(sid,setObj){
-  localStorage.setItem(getProgressKey(sid),JSON.stringify([...setObj]));
+  _progressCache[sid]=setObj; // keep memory in sync
+  try{localStorage.setItem(getProgressKey(sid),JSON.stringify([...setObj]));}catch(e){}
 }
 // Returns true if lesson is completed by current student
 function isCompleted(lessonId){
@@ -2124,14 +2121,14 @@ function saveVideos(v){
 function getLockedVideos(sid){try{return JSON.parse(localStorage.getItem("brokeneng_locked_"+sid)||"[]");}catch{return[];}}
 function saveLockedVideos(sid,arr){localStorage.setItem("brokeneng_locked_"+sid,JSON.stringify(arr));}
 function getLockedQuizzes(sid){try{return JSON.parse(localStorage.getItem("brokeneng_quizlock_"+sid)||"[]");}catch{return[];}}
-function getPassedQuizzes(sid){try{return new Set(JSON.parse(localStorage.getItem("brokeneng_quizpassed_"+sid)||"[]"));}catch{return new Set();}}
-function savePassedQuiz(sid,order){var p=getPassedQuizzes(sid);p.add(order);localStorage.setItem("brokeneng_quizpassed_"+sid,JSON.stringify([...p]));}
+function getPassedQuizzes(sid){if(_quizPassedCache[sid])return _quizPassedCache[sid];try{return new Set(JSON.parse(localStorage.getItem("brokeneng_quizpassed_"+sid)||"[]"));}catch{return new Set();}}
+function savePassedQuiz(sid,order){var p=getPassedQuizzes(sid);p.add(order);_quizPassedCache[sid]=p;try{localStorage.setItem("brokeneng_quizpassed_"+sid,JSON.stringify([...p]));}catch(e){}}
 function hasPassedQuiz(lessonOrder){
   if(!currentSession?.studentId) return false;
   return getPassedQuizzes(currentSession.studentId).has(lessonOrder);
 }
-function getAttemptedQuizzes(sid){try{return new Set(JSON.parse(localStorage.getItem("brokeneng_quizattempt_"+sid)||"[]"));}catch{return new Set();}}
-function saveAttemptedQuiz(sid,order){var a=getAttemptedQuizzes(sid);a.add(order);localStorage.setItem("brokeneng_quizattempt_"+sid,JSON.stringify([...a]));}
+function getAttemptedQuizzes(sid){if(_quizAttemptedCache[sid])return _quizAttemptedCache[sid];try{return new Set(JSON.parse(localStorage.getItem("brokeneng_quizattempt_"+sid)||"[]"));}catch{return new Set();}}
+function saveAttemptedQuiz(sid,order){var a=getAttemptedQuizzes(sid);a.add(order);_quizAttemptedCache[sid]=a;try{localStorage.setItem("brokeneng_quizattempt_"+sid,JSON.stringify([...a]));}catch(e){}}
 function hasAttemptedQuiz(lessonOrder){
   if(!currentSession?.studentId) return false;
   return getAttemptedQuizzes(currentSession.studentId).has(lessonOrder);
