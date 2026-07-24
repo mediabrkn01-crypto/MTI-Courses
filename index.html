@@ -5214,12 +5214,15 @@ function renderQuiz(lessonId){
       +'<div id="next-wrap" style="display:none"><button class="be-next-btn" onclick="nextQuestion()">'+(idx<total-1?"Next Question →":"See Results")+'</button></div>';
     updateProgress();
 
+    // Normalise answer: dynamic quizzes use text string, hardcoded use numeric index
+    var correctIdx=typeof q.answer==='number'?q.answer:q.options.indexOf(q.answer);
+
     window.pickAnswer=(oi)=>{
       if(answered)return;answered=true;
-      const isCorrect=oi===q.answer;if(isCorrect)correct++;
+      const isCorrect=oi===correctIdx;if(isCorrect)correct++;
       q.options.forEach((_,i)=>{
         const btn=document.getElementById("opt-"+i);btn.disabled=true;
-        if(i===q.answer) btn.classList.add("correct");
+        if(i===correctIdx) btn.classList.add("correct");
         else if(i===oi) btn.classList.add("wrong");
         else btn.classList.add("dim");
       });
@@ -5229,7 +5232,7 @@ function renderQuiz(lessonId){
         :"display:flex;align-items:flex-start;gap:10px;border-radius:12px;padding:14px 18px;margin-top:18px;font-size:13px;font-weight:600;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171";
       fb.innerHTML=isCorrect
         ?'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Correct! Well done.</span>'
-        :'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><div><div>Incorrect</div><div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8">Answer: '+String.fromCharCode(65+q.answer)+') '+q.options[q.answer]+'</div></div>';
+        :'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><div><div>Incorrect</div><div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8">Answer: '+String.fromCharCode(65+correctIdx)+') '+q.options[correctIdx]+'</div></div>';
       document.getElementById("next-wrap").style.display="block";
     };
   }
