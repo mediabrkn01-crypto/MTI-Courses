@@ -4448,6 +4448,15 @@ function renderDashboard(){
 
 function renderLesson(lessonId){
   document.body.style.overflow=window.innerWidth<=820?'':'hidden'; // internal scroll on desktop, natural scroll on mobile
+  // Remove stale player from DOM immediately when switching lessons
+  var existingPlayer=document.getElementById('player-wrapper');
+  if(existingPlayer){
+    var existingIframe=existingPlayer.querySelector('iframe');
+    var existingVideo=existingPlayer.querySelector('video');
+    if(existingIframe) existingIframe.src='about:blank';
+    if(existingVideo){ existingVideo.pause(); existingVideo.src=''; }
+    existingPlayer.innerHTML='<div style="width:100%;height:100%;background:#000;display:flex;align-items:center;justify-content:center"><div style="width:32px;height:32px;border:3px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);border-radius:50%;animation:spin .7s linear infinite"></div></div>';
+  }
   // Check if this is a Word Vault item (f01-f10)
   var wvItem = (typeof WV_DATA !== 'undefined') ? WV_DATA.find(function(f){return f.id===lessonId;}) : null;
   if(wvItem){
@@ -4556,7 +4565,7 @@ function renderLesson(lessonId){
     +'<div class="lesson-body-split" style="display:flex;flex:1;min-height:0;overflow:hidden">'
       +'<div class="lesson-left-col" style="flex:1;overflow-y:auto;min-width:0;padding-bottom:80px">'
         +'<div style="background:#000;position:relative">'
-          +'<div id="player-wrapper" class="no-select" data-lesson-order="'+lesson.order+'" style="position:relative;width:100%;height:62vh;background:#000;overflow:hidden">'
+          +'<div id="player-wrapper" class="no-select" data-lesson-order="'+lesson.order+'" style="position:relative;width:100%;aspect-ratio:16/9;background:#000;overflow:hidden">'
             +videoHtml
             +'<div id="wm-container" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:99">'
               +'<div id="wm-1" style="position:absolute;font-family:monospace;font-size:11px;font-weight:600;color:rgba(255,255,255,.18);white-space:nowrap;user-select:none"></div>'
