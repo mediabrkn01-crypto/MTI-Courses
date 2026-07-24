@@ -5177,14 +5177,18 @@ function setupTopBar(student){
     var students=loadStudents();
     if(students[sess.studentId]){
       currentSession=sess;
-      waitForSb().then(function(ok){
-        if(!ok)return;
-        sbLoadProgress(sess.studentId);
-        sbLoadELSettings().catch(function(){});
-      });
-      // Always fetch fresh from Supabase first - prevents flash of old/wrong data
+      // Show loader immediately (no black screen on refresh)
+      showAppLoader();
       if(typeof _sb!=="undefined"){
-        sbLoadVideos().catch(function(){}).finally(function(){ _videosBootLoaded=true; navigate("dashboard"); });
+        // Await BOTH progress and videos so unlocks show correctly after refresh on Safari
+        Promise.all([
+          sbLoadProgress(sess.studentId).catch(function(){}),
+          sbLoadVideos().catch(function(){}),
+          sbLoadELSettings().catch(function(){})
+        ]).finally(function(){
+          _videosBootLoaded=true;
+          navigate("dashboard");
+        });
       } else {
         navigate("dashboard");
       }
