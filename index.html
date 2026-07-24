@@ -646,6 +646,37 @@ async function sbLoadProgress(studentId){
 }
 
 // Save all video metadata to Supabase (admin action)
+// ── DYNAMIC QUIZ FUNCTIONS ───────────────────────────────────────────────────
+var _dynamicQuizCache={}; // {lessonOrder: [{id,prompt,options,answer}]}
+
+async function sbSaveQuiz(lessonOrder, questions){
+  try{
+    var key='quiz_'+lessonOrder;
+    const{error}=await _sb.from('course_config').upsert({id:key,data:questions},{onConflict:'id'});
+    if(error) console.warn('Quiz save error:',error.message);
+    else{ _dynamicQuizCache[lessonOrder]=questions; console.log('Quiz saved for Day',lessonOrder); }
+  }catch(e){console.warn('Quiz save error:',e);}
+}
+
+async function sbLoadAllDynamicQuizzes(){
+  try{
+    const{data,error}=await _sb.from('course_config').select('id,data').like('id','quiz_%');
+    if(error||!data) return;
+    data.forEach(function(r){
+      var order=parseInt((r.id||'').replace('quiz_',''));
+      if(!isNaN(order)&&r.data) _dynamicQuizCache[order]=r.data;
+    });
+    console.log('Dynamic quizzes loaded:',Object.keys(_dynamicQuizCache).length);
+  }catch(e){console.warn('Dynamic quiz load error:',e);}
+}
+
+async function sbDeleteQuiz(lessonOrder){
+  try{
+    await _sb.from('course_config').delete().eq('id','quiz_'+lessonOrder);
+    delete _dynamicQuizCache[lessonOrder];
+  }catch(e){}
+}
+
 async function sbSaveVideos(videos){
   try{
     const{error}=await _sb.from('course_config').upsert({
@@ -963,9 +994,10 @@ function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show
 // Clear stale video cache on boot so Safari quota doesn't block fresh data
 try{localStorage.removeItem('brokeneng_videos');}catch(e){}
 
-// Load videos from Supabase on BOOT before anything renders
+// Load videos + dynamic quizzes from Supabase on BOOT
 if(typeof _sb!=="undefined"){
   sbLoadVideos().catch(function(e){ console.warn('Boot video load failed:',e); });
+  sbLoadAllDynamicQuizzes().catch(function(){});
 }
 
 // ── ACHIEVEMENTS ──────────────────────────────────────────────────────────────
@@ -1484,8 +1516,8 @@ function isVideoAccessible(lesson){
 }
 
 function formatDate(d){return d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"});}
-function getQuiz(l){return QUIZ_BANK[l.dayNumber]||PLACEHOLDER_QUIZ;}
-function hasRealQuiz(l){return!!QUIZ_BANK[l.dayNumber];}
+function getQuiz(l){return _dynamicQuizCache[l.dayNumber]||QUIZ_BANK[l.dayNumber]||PLACEHOLDER_QUIZ;}
+function hasRealQuiz(l){return!!(_dynamicQuizCache[l.dayNumber]||QUIZ_BANK[l.dayNumber]);}
 
 // ─── ROUTER ───────────────────────────────────────────────────────────────────
 const app=document.getElementById("app");
@@ -3097,6 +3129,22 @@ function renderAdminClasses(){
                 <textarea id="vm-desc" rows="2" placeholder="Short description shown on the lesson page..." class="glass-input" style="resize:none"></textarea>
               </div>
             </div>
+
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px">
+              <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin-bottom:10px">⚡ Quiz Upload</p>
+              <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Upload a PDF, DOCX, or TXT file. Claude AI will extract the questions automatically.</p>
+              <div id="vm-quiz-status" style="display:none;font-size:12px;margin-bottom:10px;padding:8px 10px;border-radius:8px"></div>
+              <div id="vm-quiz-current" style="margin-bottom:10px"></div>
+              <label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.2);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.6);transition:border-color .2s" onmouseover="this.style.borderColor='rgba(255,45,120,.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)'">
+                <span style="font-size:18px">📄</span>
+                <span id="vm-quiz-filename">Choose PDF, DOCX, or TXT file...</span>
+                <input id="vm-quiz-file" type="file" accept=".pdf,.docx,.txt" style="display:none" onchange="vmQuizFileSelected(this)"/>
+              </label>
+              <div style="display:flex;gap:8px;margin-top:10px">
+                <button id="vm-quiz-upload-btn" onclick="vmUploadQuiz()" style="display:none;flex:1;background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;font-family:Montserrat,sans-serif">⚡ Process & Save Quiz</button>
+                <button id="vm-quiz-delete-btn" onclick="vmDeleteQuiz()" style="display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer">🗑 Remove Quiz</button>
+              </div>
+            </div>
           </div>
 
           <!-- RIGHT: live preview -->
@@ -3206,6 +3254,30 @@ function renderAdminClasses(){
     document.getElementById('vm-desc').value=v.desc||'';
     document.getElementById('video-modal').style.display='flex';
     updateVmPreview();
+    // Populate quiz status
+    var qStatus=document.getElementById('vm-quiz-status');
+    var qCurrent=document.getElementById('vm-quiz-current');
+    var qDelBtn=document.getElementById('vm-quiz-delete-btn');
+    var qFileBtn=document.getElementById('vm-quiz-upload-btn');
+    var qFilename=document.getElementById('vm-quiz-filename');
+    if(qStatus){qStatus.style.display='none';}
+    if(qFileBtn){qFileBtn.style.display='none';}
+    if(qFilename){qFilename.textContent='Choose PDF, DOCX, or TXT file...';}
+    if(document.getElementById('vm-quiz-file')) document.getElementById('vm-quiz-file').value='';
+    if(qCurrent){
+      var hasDynamic=!!_dynamicQuizCache[order];
+      var hasHardcoded=!!QUIZ_BANK[order];
+      if(hasDynamic){
+        qCurrent.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.6);padding:6px 0">Current: <b style="color:#4ade80">'+_dynamicQuizCache[order].length+' questions (dynamic ✓)</b></div>';
+        if(qDelBtn) qDelBtn.style.display='block';
+      } else if(hasHardcoded){
+        qCurrent.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);padding:6px 0">Current: <span style="color:rgba(255,200,80,.7)">hardcoded quiz ('+QUIZ_BANK[order].length+' questions)</span> — upload to override</div>';
+        if(qDelBtn) qDelBtn.style.display='none';
+      } else {
+        qCurrent.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);padding:6px 0">No quiz yet — upload a file to add one</div>';
+        if(qDelBtn) qDelBtn.style.display='none';
+      }
+    }
   };
   window.updateVmPreview=()=>{
     const title=document.getElementById('vm-panelTitle').value||'Panel Title';
@@ -5318,6 +5390,107 @@ window.showAdminForgotPassword=function(){
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
 };
+
+// ── ADMIN QUIZ UPLOAD FUNCTIONS ───────────────────────────────────────────────
+window.vmQuizFileSelected=function(input){
+  var file=input.files[0];
+  if(!file) return;
+  document.getElementById('vm-quiz-filename').textContent=file.name;
+  document.getElementById('vm-quiz-upload-btn').style.display='flex';
+};
+
+window.vmUploadQuiz=async function(){
+  var order=Number(document.getElementById('vm-order').value);
+  if(!order) return;
+  var file=document.getElementById('vm-quiz-file').files[0];
+  if(!file){alert('Please choose a file first.');return;}
+  var status=document.getElementById('vm-quiz-status');
+  var btn=document.getElementById('vm-quiz-upload-btn');
+
+  status.style.display='block';
+  status.style.background='rgba(255,255,255,.07)';
+  status.style.color='rgba(255,255,255,.7)';
+  status.textContent='Reading file...';
+  btn.disabled=true; btn.textContent='Processing...';
+
+  try{
+    // Read file as text
+    var text=await new Promise(function(resolve,reject){
+      var r=new FileReader();
+      r.onload=function(e){ resolve(e.target.result); };
+      r.onerror=reject;
+      if(file.name.endsWith('.pdf')){
+        // PDF: read as base64 and send to Claude
+        var r2=new FileReader();
+        r2.onload=function(e){ resolve('__PDF__:'+e.target.result.split(',')[1]); };
+        r2.onerror=reject;
+        r2.readAsDataURL(file);
+      } else {
+        r.readAsText(file);
+      }
+    });
+
+    status.textContent='Sending to Claude AI to extract questions...';
+
+    // Build messages for Claude
+    var messages;
+    if(text.startsWith('__PDF__:')){
+      messages=[{role:'user',content:[
+        {type:'document',source:{type:'base64',media_type:'application/pdf',data:text.replace('__PDF__:','')}},
+        {type:'text',text:'Extract ALL quiz questions from this document. Return ONLY a JSON array, no markdown, no explanation. Each item must have: id (string like "q1"), prompt (the question text), options (array of 4 strings), answer (exact string matching one option). Example: [{"id":"q1","prompt":"What is...?","options":["A","B","C","D"],"answer":"B"}]'}
+      ]}];
+    } else {
+      messages=[{role:'user',content:'Extract ALL quiz questions from this text. Return ONLY a JSON array, no markdown, no explanation. Each item must have: id (string like "q1"), prompt (the question text), options (array of 4 strings), answer (exact string matching one option). Example: [{"id":"q1","prompt":"What is...?","options":["A","B","C","D"],"answer":"B"}]\n\nText:\n'+text.substring(0,12000)}];
+    }
+
+    var res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:messages})
+    });
+    var data=await res.json();
+    var raw=(data.content||[]).map(function(b){return b.text||'';}).join('');
+    // Strip markdown fences
+    raw=raw.replace(/```json|```/g,'').trim();
+    var questions=JSON.parse(raw);
+
+    if(!Array.isArray(questions)||questions.length===0) throw new Error('No questions found in file');
+
+    // Save to Supabase
+    status.textContent='Saving '+questions.length+' questions to Supabase...';
+    await sbSaveQuiz(order, questions);
+
+    status.style.background='rgba(34,197,94,.1)';
+    status.style.color='#4ade80';
+    status.textContent='✓ '+questions.length+' questions saved for Day '+order;
+    btn.disabled=false; btn.textContent='⚡ Process & Save Quiz';
+    document.getElementById('vm-quiz-filename').textContent='Choose PDF, DOCX, or TXT file...';
+    document.getElementById('vm-quiz-file').value='';
+    btn.style.display='none';
+    document.getElementById('vm-quiz-delete-btn').style.display='block';
+    document.getElementById('vm-quiz-current').innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.5);padding:6px 0">Current: <b style="color:#4ade80">'+questions.length+' questions (dynamic)</b></div>';
+
+  }catch(e){
+    status.style.background='rgba(239,68,68,.1)';
+    status.style.color='#f87171';
+    status.textContent='Error: '+e.message+'. Check file format and try again.';
+    btn.disabled=false; btn.textContent='⚡ Process & Save Quiz';
+  }
+};
+
+window.vmDeleteQuiz=async function(){
+  var order=Number(document.getElementById('vm-order').value);
+  if(!order||!confirm('Remove dynamic quiz for Day '+order+'? The hardcoded quiz will be used instead.')) return;
+  await sbDeleteQuiz(order);
+  var status=document.getElementById('vm-quiz-status');
+  status.style.display='block';
+  status.style.background='rgba(255,255,255,.07)';
+  status.style.color='rgba(255,255,255,.6)';
+  status.textContent='Dynamic quiz removed. Using hardcoded quiz.';
+  document.getElementById('vm-quiz-delete-btn').style.display='none';
+  document.getElementById('vm-quiz-current').innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);padding:6px 0">Current: <span style="color:rgba(255,255,255,.4)">using hardcoded quiz</span></div>';
+};
+
 
 // ── ELEVENLABS ADMIN FUNCTIONS ────────────────────────────────────────────────
 async function adminSaveELSettings(){
