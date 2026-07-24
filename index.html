@@ -434,7 +434,7 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{tra
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Broken English">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>emailjs.init("r2UjQEe1MNj-YflSv");</script>
 </head>
@@ -912,7 +912,7 @@ function togglePw(id,el){var i=document.getElementById(id);if(!i)return;var show
       var manifest={
         name:"Broken English",short_name:"Broken English",
         description:"Accent training and pronunciation course portal",
-        start_url:"./",display:"standalone",
+        start_url:"https://academy.brokenenglish.in/",display:"standalone",
         background_color:"#0d0d1c",theme_color:"#0d0d1c",orientation:"portrait",
         icons:[
           {src:furl,sizes:"192x192",type:"image/png",purpose:"any maskable"},
