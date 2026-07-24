@@ -5609,66 +5609,60 @@ window.adminQuizPreview=function(order){
 };
 
 // ── LOCAL QUIZ TEXT PARSER ────────────────────────────────────────────────────
+// Format: numbered questions, A) B) C) D) options, ANSWER KEY section at end
+// e.g. "1. B 2. B 3. C ..." all on one line or separate lines
 function parseQuizFromText(text){
-  var questions=[];
-  // Split by question numbers: "1." "2." etc
-  var lines=text.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
-  var current=null;
-  var optLetters=['A','B','C','D','A)','B)','C)','D)'];
-  var answerKey={};
+  // Strip markdown bold markers from mammoth output
+  text=text.replace(/\*\*/g,'').replace(/\*/g,'');
 
-  // Find answer key section first
-  var answerIdx=lines.findIndex(function(l){return /answer key/i.test(l)||/answers?:/i.test(l);});
-  if(answerIdx>=0){
-    // Parse "1. B 2. C ..." or "1. B\n2. C\n..."
-    var ansText=lines.slice(answerIdx+1).join(' ');
-    var ansMatches=ansText.match(/(\d+)\.?\s*([A-D])/g)||[];
+  var lines=text.split('\n').map(function(l){return l.trim();}).filter(Boolean);
+
+  // ── Step 1: extract answer key ──
+  var answerKey={};
+  var ansKeyLineIdx=-1;
+  for(var i=0;i<lines.length;i++){
+    if(/ANSWER KEY/i.test(lines[i])){ ansKeyLineIdx=i; break; }
+  }
+  if(ansKeyLineIdx>=0){
+    // Everything after ANSWER KEY line — may be one line "1. B 2. B 3. C 4. C 5. B 6. A 7. B"
+    var ansBlock=lines.slice(ansKeyLineIdx+1).join(' ');
+    var ansMatches=ansBlock.match(/(\d+)\.\s*([A-D])/g)||[];
     ansMatches.forEach(function(m){
-      var p=m.match(/(\d+)\.?\s*([A-D])/);
+      var p=m.match(/(\d+)\.\s*([A-D])/);
       if(p) answerKey[parseInt(p[1])]=p[2];
     });
-    lines=lines.slice(0,answerIdx); // remove answer key from parsing
+    lines=lines.slice(0,ansKeyLineIdx); // remove answer key section
   }
 
-  var qNum=0;
-  lines.forEach(function(line){
-    // Detect question line: starts with number+dot or number+)
-    var qMatch=line.match(/^(\d+)[.)\s]\s*(.+)/);
-    if(qMatch&&!line.match(/^\d+[.)\s]*[A-Da-d][).]/)){
-      // Could be question or could be an option number — check if it has sub-options
-      // If previous current has <4 options, this might still be question
-      if(current&&current.options.length<4&&!current.prompt){
-        current.prompt=line;
-      } else {
-        if(current&&current.prompt&&current.options.length>=2) questions.push(current);
-        qNum=parseInt(qMatch[1]);
-        current={id:'q'+qNum,prompt:qMatch[2],options:[],answer:''};
-      }
-      return;
-    }
-    // Detect option: A) B) C) D) or A. B. C. D.
-    var optMatch=line.match(/^([A-Da-d])[.)\s]\s*(.+)/);
-    if(optMatch&&current){
-      current.options.push(optMatch[2]);
-      return;
-    }
-    // If current question exists and we have a line that doesn't match, append to prompt
-    if(current&&current.options.length===0&&!optMatch){
-      current.prompt+=' '+line;
-    }
-  });
-  if(current&&current.prompt&&current.options.length>=2) questions.push(current);
+  // ── Step 2: parse questions and options ──
+  var questions=[];
+  var current=null;
 
-  // Apply answer key
+  lines.forEach(function(line){
+    // Question: starts with digit + dot, not followed by A-D) pattern
+    var qMatch=line.match(/^(\d+)\.\s+(.+)/);
+    if(qMatch&&!/^\d+\.\s*[A-D][).]/.test(line)){
+      if(current) questions.push(current);
+      current={id:'',prompt:qMatch[2].trim(),options:[],answer:''};
+      return;
+    }
+    // Option: A) text  or  A. text
+    var optMatch=line.match(/^([A-D])[).\s]\s*(.+)/);
+    if(optMatch&&current){
+      current.options.push(optMatch[2].trim());
+      return;
+    }
+    // Skip non-matching lines (title, subtitle etc)
+  });
+  if(current&&current.options.length>=2) questions.push(current);
+
+  // ── Step 3: apply answer key to set correct answer string ──
   questions.forEach(function(q,i){
     var num=i+1;
-    if(answerKey[num]){
-      var letter=answerKey[num];
-      var idx={'A':0,'B':1,'C':2,'D':3}[letter];
-      if(idx!==undefined&&q.options[idx]) q.answer=q.options[idx];
-    }
-    if(!q.answer&&q.options.length>0) q.answer=q.options[0]; // fallback
     q.id='q'+num;
+    var letter=answerKey[num];
+    var idx=letter?{A:0,B:1,C:2,D:3}[letter]:-1;
+    q.answer=(idx>=0&&q.options[idx])?q.options[idx]:(q.options[0]||'');
   });
 
   return questions;
