@@ -435,6 +435,7 @@ body.tab-hidden #player-wrapper video,body.tab-hidden #player-wrapper iframe{tra
 <meta name="apple-mobile-web-app-title" content="Broken English">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>emailjs.init("r2UjQEe1MNj-YflSv");</script>
 </head>
@@ -5417,43 +5418,28 @@ window.vmUploadQuiz=async function(){
   try{
     // Read file as text
     var text=await new Promise(function(resolve,reject){
-      var r=new FileReader();
-      r.onload=function(e){ resolve(e.target.result); };
-      r.onerror=reject;
-      if(file.name.endsWith('.pdf')){
-        // PDF: read as base64 and send to Claude
-        var r2=new FileReader();
-        r2.onload=function(e){ resolve('__PDF__:'+e.target.result.split(',')[1]); };
-        r2.onerror=reject;
-        r2.readAsDataURL(file);
+      if(file.name.endsWith('.docx')){
+        // Use mammoth to extract text from DOCX
+        var r=new FileReader();
+        r.onload=function(e){
+          if(typeof mammoth!=='undefined'){
+            mammoth.extractRawText({arrayBuffer:e.target.result}).then(function(res){resolve(res.value);}).catch(reject);
+          } else { reject(new Error('mammoth.js not loaded')); }
+        };
+        r.onerror=reject; r.readAsArrayBuffer(file);
+      } else if(file.name.endsWith('.pdf')){
+        reject(new Error('PDF upload not supported in browser. Please use TXT or DOCX format.'));
       } else {
-        r.readAsText(file);
+        var r=new FileReader(); r.onload=function(e){resolve(e.target.result);}; r.onerror=reject; r.readAsText(file);
       }
     });
 
     status.textContent='Sending to Claude AI to extract questions...';
 
     // Build messages for Claude
-    var messages;
-    if(text.startsWith('__PDF__:')){
-      messages=[{role:'user',content:[
-        {type:'document',source:{type:'base64',media_type:'application/pdf',data:text.replace('__PDF__:','')}},
-        {type:'text',text:'Extract ALL quiz questions from this document. Return ONLY a JSON array, no markdown, no explanation. Each item must have: id (string like "q1"), prompt (the question text), options (array of 4 strings), answer (exact string matching one option). Example: [{"id":"q1","prompt":"What is...?","options":["A","B","C","D"],"answer":"B"}]'}
-      ]}];
-    } else {
-      messages=[{role:'user',content:'Extract ALL quiz questions from this text. Return ONLY a JSON array, no markdown, no explanation. Each item must have: id (string like "q1"), prompt (the question text), options (array of 4 strings), answer (exact string matching one option). Example: [{"id":"q1","prompt":"What is...?","options":["A","B","C","D"],"answer":"B"}]\n\nText:\n'+text.substring(0,12000)}];
-    }
-
-    var res=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:messages})
-    });
-    var data=await res.json();
-    var raw=(data.content||[]).map(function(b){return b.text||'';}).join('');
-    // Strip markdown fences
-    raw=raw.replace(/```json|```/g,'').trim();
-    var questions=JSON.parse(raw);
+    // Parse questions locally from text (no external API needed)
+    var plainText=text.startsWith('__PDF__:')?'[PDF - cannot parse in browser]':text;
+    var questions=parseQuizFromText(plainText);
 
     if(!Array.isArray(questions)||questions.length===0) throw new Error('No questions found in file');
 
@@ -5565,20 +5551,9 @@ window.adminQuizUploadDirect=async function(input,order){
         r.onerror=reject; r.readAsText(file);
       }
     });
-    if(statusEl) statusEl.textContent='Sending to Claude AI...';
-    var messages;
-    if(text.startsWith('__PDF__:')){
-      messages=[{role:'user',content:[
-        {type:'document',source:{type:'base64',media_type:'application/pdf',data:text.replace('__PDF__:','')}},
-        {type:'text',text:'Extract ALL quiz questions. Return ONLY a JSON array, no markdown. Each item: {id:"q1",prompt:"...",options:["A","B","C","D"],answer:"B"}'}
-      ]}];
-    } else {
-      messages=[{role:'user',content:'Extract ALL quiz questions. Return ONLY a JSON array, no markdown. Each item: {id:"q1",prompt:"...",options:["A","B","C","D"],answer:"B"}\n\n'+text.substring(0,12000)}];
-    }
-    var res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:messages})});
-    var data=await res.json();
-    var raw=(data.content||[]).map(function(b){return b.text||'';}).join('').replace(/```json|```/g,'').trim();
-    var questions=JSON.parse(raw);
+    if(statusEl) statusEl.textContent='Parsing questions from file...';
+    var plainText=text.startsWith('__PDF__:')?'[PDF - cannot parse in browser]':text;
+    var questions=parseQuizFromText(plainText);
     if(!Array.isArray(questions)||!questions.length) throw new Error('No questions found');
     if(statusEl) statusEl.textContent='Saving '+questions.length+' questions...';
     await sbSaveQuiz(order,questions);
@@ -5632,6 +5607,72 @@ window.adminQuizPreview=function(order){
   window._closeQuizPreview=function(){try{overlay.remove();}catch(e){};};
   document.body.appendChild(overlay);
 };
+
+// ── LOCAL QUIZ TEXT PARSER ────────────────────────────────────────────────────
+function parseQuizFromText(text){
+  var questions=[];
+  // Split by question numbers: "1." "2." etc
+  var lines=text.split('\n').map(function(l){return l.trim();}).filter(function(l){return l.length>0;});
+  var current=null;
+  var optLetters=['A','B','C','D','A)','B)','C)','D)'];
+  var answerKey={};
+
+  // Find answer key section first
+  var answerIdx=lines.findIndex(function(l){return /answer key/i.test(l)||/answers?:/i.test(l);});
+  if(answerIdx>=0){
+    // Parse "1. B 2. C ..." or "1. B\n2. C\n..."
+    var ansText=lines.slice(answerIdx+1).join(' ');
+    var ansMatches=ansText.match(/(\d+)\.?\s*([A-D])/g)||[];
+    ansMatches.forEach(function(m){
+      var p=m.match(/(\d+)\.?\s*([A-D])/);
+      if(p) answerKey[parseInt(p[1])]=p[2];
+    });
+    lines=lines.slice(0,answerIdx); // remove answer key from parsing
+  }
+
+  var qNum=0;
+  lines.forEach(function(line){
+    // Detect question line: starts with number+dot or number+)
+    var qMatch=line.match(/^(\d+)[.)\s]\s*(.+)/);
+    if(qMatch&&!line.match(/^\d+[.)\s]*[A-Da-d][).]/)){
+      // Could be question or could be an option number — check if it has sub-options
+      // If previous current has <4 options, this might still be question
+      if(current&&current.options.length<4&&!current.prompt){
+        current.prompt=line;
+      } else {
+        if(current&&current.prompt&&current.options.length>=2) questions.push(current);
+        qNum=parseInt(qMatch[1]);
+        current={id:'q'+qNum,prompt:qMatch[2],options:[],answer:''};
+      }
+      return;
+    }
+    // Detect option: A) B) C) D) or A. B. C. D.
+    var optMatch=line.match(/^([A-Da-d])[.)\s]\s*(.+)/);
+    if(optMatch&&current){
+      current.options.push(optMatch[2]);
+      return;
+    }
+    // If current question exists and we have a line that doesn't match, append to prompt
+    if(current&&current.options.length===0&&!optMatch){
+      current.prompt+=' '+line;
+    }
+  });
+  if(current&&current.prompt&&current.options.length>=2) questions.push(current);
+
+  // Apply answer key
+  questions.forEach(function(q,i){
+    var num=i+1;
+    if(answerKey[num]){
+      var letter=answerKey[num];
+      var idx={'A':0,'B':1,'C':2,'D':3}[letter];
+      if(idx!==undefined&&q.options[idx]) q.answer=q.options[idx];
+    }
+    if(!q.answer&&q.options.length>0) q.answer=q.options[0]; // fallback
+    q.id='q'+num;
+  });
+
+  return questions;
+}
 
 // ── ELEVENLABS ADMIN FUNCTIONS ────────────────────────────────────────────────
 async function adminSaveELSettings(){
