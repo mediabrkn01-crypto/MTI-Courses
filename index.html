@@ -1559,12 +1559,19 @@ function render(screen,params){
   if(screen==="wordvault")    { renderWordVault(); return; }
   if(screen==="profile")      { renderProfile(); return; }
   if(screen==="lesson"){
-    // Ensure videos loaded from Supabase before rendering lesson
     if(typeof _sb!=="undefined"){
-      renderLesson(params.id); hideAppLoader(); if(!_videosBootLoaded){sbLoadVideos().catch(function(){});}else{_videosBootLoaded=false;}
+      // If video data already in memory — render immediately, no flash
+      if(Object.keys(_videoData).length>0){
+        renderLesson(params.id); hideAppLoader();
+      } else {
+        // No video data yet — show skeleton in player area while fetching, then render once
+        showAppLoader();
+        sbLoadVideos().catch(function(){}).finally(function(){
+          renderLesson(params.id); hideAppLoader();
+        });
+      }
     } else {
-      renderLesson(params.id);
-      hideAppLoader();
+      renderLesson(params.id); hideAppLoader();
     }
     return;
   }
