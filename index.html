@@ -2616,7 +2616,13 @@ window._pdfConfirmImport=function(){
 // ── PROGRESS TAB ─────────────────────────────────────────────────────────────
 function renderAdminProgress(){
   const students = loadStudents();
-  const list = Object.values(students);
+  // Deduplicate by email — keep the record with the most progress (highest ID = most recent import)
+  var _seenEmail={};
+  const list = Object.values(students).filter(function(s){
+    var key=(s.email||s.id).toLowerCase().trim();
+    if(_seenEmail[key]) return false;
+    _seenEmail[key]=true; return true;
+  });
   const TOTAL_LESSONS = ALL_LESSONS.length + (typeof WV_DATA!=='undefined'?WV_DATA.length:0); // 20 core + 10 WV = 30
 
   app.innerHTML = adminTopBar('progress') + '<div style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:14px">Loading progress from server...</p></div>';
@@ -2647,17 +2653,42 @@ function renderAdminProgress(){
       }
     }catch(e){console.warn('Supabase progress fetch error:',e);}
 
+    // Build email→[ids] map to merge progress across duplicate Supabase records
+    var _emailToIds={};
+    list.forEach(function(st){
+      var email=(st.email||'').toLowerCase().trim();
+      if(!_emailToIds[email]) _emailToIds[email]=[];
+      _emailToIds[email].push(st.id);
+    });
+    // Also include all Supabase student_ids that map to the same email
+    Object.values(students).forEach(function(st){
+      var email=(st.email||'').toLowerCase().trim();
+      if(!_emailToIds[email]) _emailToIds[email]=[];
+      if(_emailToIds[email].indexOf(st.id)<0) _emailToIds[email].push(st.id);
+    });
+
+    function getMergedIds(sid){
+      var st=students[sid]; if(!st) return [sid];
+      var email=(st.email||'').toLowerCase().trim();
+      return _emailToIds[email]||[sid];
+    }
     function getStudentProgress(sid){
-      var sb = sbProgress[sid] || new Set();
-      var local = loadProgress(sid);
-      local.forEach(function(id){sb.add(id);});
-      return sb;
+      var merged=new Set();
+      getMergedIds(sid).forEach(function(id){
+        var sb=sbProgress[id]||new Set();
+        sb.forEach(function(x){merged.add(x);});
+        loadProgress(id).forEach(function(x){merged.add(x);});
+      });
+      return merged;
     }
     function getStudentQuizPassed(sid){
-      var sb = sbQuizPassed[sid] || new Set();
-      var local = getPassedQuizzes(sid);
-      local.forEach(function(id){sb.add(id);});
-      return sb;
+      var merged=new Set();
+      getMergedIds(sid).forEach(function(id){
+        var sb=sbQuizPassed[id]||new Set();
+        sb.forEach(function(x){merged.add(x);});
+        getPassedQuizzes(id).forEach(function(x){merged.add(x);});
+      });
+      return merged;
     }
     function getLastLesson(sid, progress){
       // Find highest completed lesson order
