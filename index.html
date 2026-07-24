@@ -4191,13 +4191,19 @@ function renderDashboard(){
   const xpTotal=completedCount>0?completedCount*100+quizScores*75:0;
   const vsArc=163.4*(1-pct/100);
 
-  // Prefer the last lesson the student actually opened (if still unlocked)
-  var lastLessonId=student?localStorage.getItem('brokeneng_lastlesson_'+student.id):null;
-  var lastLesson=lastLessonId?ALL_LESSONS.find(l=>l.id===lastLessonId):null;
-  if(lastLesson&&isUnlocked(lastLesson)&&!isCompleted(lastLesson.id)){
-    activeLesson=lastLesson;
-  } else {
-    activeLesson=ALL_LESSONS.find(l=>isUnlocked(l)&&!isCompleted(l.id))||ALL_LESSONS.find(l=>isUnlocked(l))||ALL_LESSONS[0];
+  // Pick the next actual lesson to work on:
+  // 1. First unlocked lesson that is NOT completed (this is what student should do next)
+  // 2. If all unlocked are completed, use the last-opened one from localStorage
+  // 3. Otherwise fallback to first lesson
+  activeLesson=ALL_LESSONS.find(l=>isUnlocked(l)&&!isCompleted(l.id));
+  if(!activeLesson){
+    var lastLessonId=student?localStorage.getItem('brokeneng_lastlesson_'+student.id):null;
+    var lastLesson=lastLessonId?ALL_LESSONS.find(l=>l.id===lastLessonId):null;
+    if(lastLesson&&isUnlocked(lastLesson)){
+      activeLesson=lastLesson;
+    } else {
+      activeLesson=ALL_LESSONS.find(l=>isUnlocked(l))||ALL_LESSONS[0];
+    }
   }
   const nextLesson=activeLesson;
 
