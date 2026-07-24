@@ -5674,12 +5674,28 @@ function parseQuizFromJSON(text){
     var arr=Array.isArray(data)?data:(data.questions||data.quiz||[]);
     if(!arr.length) throw new Error('No questions found in JSON');
     return arr.map(function(q,i){
-      return {
-        id: q.id||('q'+(i+1)),
-        prompt: q.prompt||q.question||q.text||'',
-        options: q.options||q.choices||q.answers||[],
-        answer: q.answer||q.correct||q.correctAnswer||''
-      };
+      var prompt=(q.prompt||q.question||q.text||'').replace(/^\d+\.\s*/,'').trim();
+      // options can be array OR object {"A":"...","B":"..."}
+      var optionsRaw=q.options||q.choices||q.answers||[];
+      var optionsArr;
+      var letterMap={};
+      if(Array.isArray(optionsRaw)){
+        optionsArr=optionsRaw;
+      } else {
+        // object format: {A:"...", B:"...", C:"...", D:"..."}
+        optionsArr=['A','B','C','D'].filter(function(k){return optionsRaw[k]!=null;}).map(function(k){
+          letterMap[k]=optionsRaw[k]; return optionsRaw[k];
+        });
+      }
+      // answer can be letter "B" or full text
+      var rawAnswer=q.answer||q.correct||q.correctAnswer||q.correct_answer||'';
+      var answer=rawAnswer;
+      if(rawAnswer.length===1&&letterMap[rawAnswer]){
+        answer=letterMap[rawAnswer]; // map "B" → full option text
+      } else if(rawAnswer.length===1&&optionsArr[{A:0,B:1,C:2,D:3}[rawAnswer]]!=null){
+        answer=optionsArr[{A:0,B:1,C:2,D:3}[rawAnswer]];
+      }
+      return {id:q.id||('q'+(i+1)),prompt:prompt,options:optionsArr,answer:answer};
     }).filter(function(q){return q.prompt&&q.options.length>=2;});
   }catch(e){ throw new Error('Invalid JSON: '+e.message); }
 }
