@@ -3140,7 +3140,7 @@ function renderAdminClasses(){
               <label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.2);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.6);transition:border-color .2s" onmouseover="this.style.borderColor='rgba(255,45,120,.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)'">
                 <span style="font-size:18px">📄</span>
                 <span id="vm-quiz-filename">Choose PDF, DOCX, or TXT file...</span>
-                <input id="vm-quiz-file" type="file" accept=".pdf,.docx,.txt" style="display:none" onchange="vmQuizFileSelected(this)"/>
+                <input id="vm-quiz-file" type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="vmQuizFileSelected(this)"/>
               </label>
               <div style="display:flex;gap:8px;margin-top:10px">
                 <button id="vm-quiz-upload-btn" onclick="vmUploadQuiz()" style="display:none;flex:1;background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;font-family:Montserrat,sans-serif">⚡ Process & Save Quiz</button>
@@ -5439,7 +5439,7 @@ window.vmUploadQuiz=async function(){
     // Build messages for Claude
     // Parse questions locally from text (no external API needed)
     var plainText=text.startsWith('__PDF__:')?'[PDF - cannot parse in browser]':text;
-    var questions=parseQuizFromText(plainText);
+    var questions=file.name.endsWith('.json')?parseQuizFromJSON(plainText):parseQuizFromText(plainText);
 
     if(!Array.isArray(questions)||questions.length===0) throw new Error('No questions found in file');
 
@@ -5498,8 +5498,8 @@ function renderAdminQuiz(){
       var actions=hasDynamic
         ?'<button onclick="adminQuizPreview('+lesson.order+')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">Preview</button>'
          +'<button onclick="adminQuizDelete('+lesson.order+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#f87171;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">Delete</button>'
-         +'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">Replace<input type="file" accept=".pdf,.docx,.txt" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>'
-        :'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">⚡ Upload Quiz<input type="file" accept=".pdf,.docx,.txt" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>';
+         +'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">Replace<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>'
+        :'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">⚡ Upload Quiz<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>';
       return '<tr id="quiz-row-'+lesson.order+'">'
         +'<td style="font-weight:600;color:#fff">Day '+lesson.order+'</td>'
         +'<td style="font-size:13px;color:rgba(255,255,255,.7)">'+title+'</td>'
@@ -5553,7 +5553,7 @@ window.adminQuizUploadDirect=async function(input,order){
     });
     if(statusEl) statusEl.textContent='Parsing questions from file...';
     var plainText=text.startsWith('__PDF__:')?'[PDF - cannot parse in browser]':text;
-    var questions=parseQuizFromText(plainText);
+    var questions=file.name.endsWith('.json')?parseQuizFromJSON(plainText):parseQuizFromText(plainText);
     if(!Array.isArray(questions)||!questions.length) throw new Error('No questions found');
     if(statusEl) statusEl.textContent='Saving '+questions.length+' questions...';
     await sbSaveQuiz(order,questions);
@@ -5666,6 +5666,22 @@ function parseQuizFromText(text){
   });
 
   return questions;
+}
+
+function parseQuizFromJSON(text){
+  try{
+    var data=JSON.parse(text);
+    var arr=Array.isArray(data)?data:(data.questions||data.quiz||[]);
+    if(!arr.length) throw new Error('No questions found in JSON');
+    return arr.map(function(q,i){
+      return {
+        id: q.id||('q'+(i+1)),
+        prompt: q.prompt||q.question||q.text||'',
+        options: q.options||q.choices||q.answers||[],
+        answer: q.answer||q.correct||q.correctAnswer||''
+      };
+    }).filter(function(q){return q.prompt&&q.options.length>=2;});
+  }catch(e){ throw new Error('Invalid JSON: '+e.message); }
 }
 
 // ── ELEVENLABS ADMIN FUNCTIONS ────────────────────────────────────────────────
