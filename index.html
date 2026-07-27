@@ -1506,10 +1506,13 @@ function getUnlockedSet(student){
     if(!done.has(prev.order)) break;
     if(hasRealQuiz(prev)&&!attempted.has(prev.order)) break;
     if(allUnlocked.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
+    // If lesson is already COMPLETED on any device, restore unlock (cross-device sync)
+    if(done.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
+    // Otherwise apply drip limit for new unlocks
     if(todayNew.size<DAILY_DRIP){
       todayNew.add(lesson.order);
       allUnlocked.add(lesson.order);
-      localStorage.setItem(dripKey,JSON.stringify([...todayNew]));
+      try{localStorage.setItem(dripKey,JSON.stringify([...todayNew]));}catch(e){}
     } else { break; }
   }
 
@@ -3943,7 +3946,7 @@ function renderWVPlayer(wvItem){
                 if(ytM) ytId=ytM[1];
                 var bunnyUrl=getBunnyEmbedUrl(src);
                 if(ytId) return '<iframe src="https://www.youtube-nocookie.com/embed/'+ytId+'?rel=0&modestbranding=1&controls=1&playsinline=1&color=white" style="width:100%;aspect-ratio:16/9;border:none" allow="accelerometer;autoplay;encrypted-media;gyroscope;picture-in-picture;fullscreen" allowfullscreen></iframe>';
-                if(bunnyUrl) return '<div style="position:relative;width:100%;aspect-ratio:16/9"><iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen="true"></iframe></div>';
+                if(bunnyUrl) return '<div style="position:relative;width:100%;aspect-ratio:16/9"><iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe></div>';
                 return '<video src="'+src+'" controls style="width:100%;aspect-ratio:16/9;background:#000"></video>';
               })()
             +'</div>'
@@ -4608,7 +4611,7 @@ function renderLesson(lessonId){
   if(ytId){
     videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="https://www.youtube-nocookie.com/embed/'+ytId+'?rel=0&modestbranding=1&controls=1&playsinline=1&color=white" allow="accelerometer;autoplay;encrypted-media;gyroscope;picture-in-picture;fullscreen" allowfullscreen referrerpolicy="strict-origin"></iframe>';
   } else if(bunnyUrl){
-    videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture;fullscreen" allowfullscreen="true"></iframe>';
+    videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
   } else {
     videoHtml='<video id="video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline><source id="video-source" src="'+videoSrc+'"/></video>'
       +'<div style="position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:center;justify-content:space-between;pointer-events:none">'
