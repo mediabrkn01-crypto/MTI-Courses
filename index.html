@@ -1534,9 +1534,9 @@ function getUnlockedSet(student){
     try{todayNew=new Set(JSON.parse(localStorage.getItem(dripKey)||'[]'));}
     catch{todayNew=new Set();}
   }
-  // Day 1 is auto-unlocked and counts toward the phase limit of 4
-  // so only DAILY_DRIP-1 additional lessons can drip-unlock on day 1
-  const effectiveDrip = allUnlocked.has(1) && todayNew.size===0 ? DAILY_DRIP-1 : DAILY_DRIP;
+  // Day 1 is always auto-unlocked and counts as slot 1 of DAILY_DRIP
+  // so drip can only ever unlock DAILY_DRIP-1 additional lessons
+  const effectiveDrip = DAILY_DRIP - 1;
 
   for(let i=1;i<ALL_LESSONS.length;i++){
     const lesson=ALL_LESSONS[i];
