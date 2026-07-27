@@ -1507,10 +1507,14 @@ function isUnlocked(lesson){
   if(adminUnlockAll)return true;
   if(currentSession?.role==="student"){
     const s=loadStudents()[currentSession.studentId];
-    if(!s)return false;
-    const{expired}=getValidity(s);
-    if(expired)return false;
-    return getUnlockedSet(s).has(lesson.order);
+    // If student not in localStorage (new device / Safari cleared storage),
+    // build a minimal student object from session to allow access
+    var student=s||{id:currentSession.studentId,accessList:[1],validUntil:null,completedAt:null};
+    if(s){
+      const{expired}=getValidity(s);
+      if(expired)return false;
+    }
+    return getUnlockedSet(student).has(lesson.order);
   }
   return false;
 }
