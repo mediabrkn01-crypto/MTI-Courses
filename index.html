@@ -646,8 +646,16 @@ async function sbLoadProgress(studentId){
       var existingPassed=new Set(JSON.parse(localStorage.getItem(passedKey)||'[]'));
       var existingAttempted=new Set(JSON.parse(localStorage.getItem(attempted)||'[]'));
       quizRes.data.forEach(function(r){
+        // Add both the lesson_id string AND the order number so getUnlockedSet works
         existingAttempted.add(r.lesson_id);
-        if(r.pct>=70) existingPassed.add(r.lesson_id);
+        var lesson=ALL_LESSONS.find(function(l){return l.id===r.lesson_id;});
+        if(lesson){
+          existingAttempted.add(lesson.order); // order number used by getUnlockedSet
+          if(r.pct>=70){
+            existingPassed.add(r.lesson_id);
+            existingPassed.add(lesson.order);
+          }
+        }
       });
       _quizPassedCache[studentId]=existingPassed;
       _quizAttemptedCache[studentId]=existingAttempted;
