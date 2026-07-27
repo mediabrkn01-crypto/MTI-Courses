@@ -5319,26 +5319,36 @@ function setupTopBar(student){
 (function(){
   var sess=loadSession();
   if(sess&&sess.role==="student"){
-    var students=loadStudents();
-    if(students[sess.studentId]){
-      currentSession=sess;
-      // Show loader immediately (no black screen on refresh)
-      showAppLoader();
-      if(typeof _sb!=="undefined"){
-        // Await BOTH progress and videos so unlocks show correctly after refresh on Safari
-        Promise.all([
-          sbLoadProgress(sess.studentId).catch(function(){}),
-          sbLoadVideos().catch(function(){}),
-          sbLoadELSettings().catch(function(){})
-        ]).finally(function(){
-          _videosBootLoaded=true;
+    currentSession=sess;
+    showAppLoader();
+    // Boot: load all data from Supabase regardless of localStorage state
+    // (fixes new device / Safari cleared storage)
+    if(typeof _sb!=="undefined"){
+      Promise.all([
+        sbLoadProgress(sess.studentId).catch(function(){}),
+        sbLoadVideos().catch(function(){}),
+        sbLoadELSettings().catch(function(){})
+      ]).finally(function(){
+        _videosBootLoaded=true;
+        // Verify session is still valid (student exists in Supabase or localStorage)
+        var students=loadStudents();
+        if(students[sess.studentId]||_progressCache[sess.studentId]){
           navigate("dashboard");
-        });
-      } else {
-        navigate("dashboard");
-      }
-      return;
+        } else {
+          // Try Supabase lookup as last resort
+          _sb.from('students').select('id').eq('id',sess.studentId).limit(1)
+            .then(function(r){
+              if(!r.error&&r.data&&r.data.length>0){ navigate("dashboard"); }
+              else { clearSession(); navigate("login"); }
+            }).catch(function(){ navigate("dashboard"); }); // network error → trust session
+        }
+      });
+    } else {
+      var students=loadStudents();
+      if(students[sess.studentId]){ navigate("dashboard"); }
+      else { clearSession(); navigate("login"); }
     }
+    return;
     clearSession();
   }else if(sess&&sess.role==="admin"){
     currentSession=sess;
