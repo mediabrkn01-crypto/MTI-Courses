@@ -645,9 +645,9 @@ async function sbLoadProgress(studentId){
     }
     // Restore last watched lesson from Supabase
     try{
-      var lastRes=await _sb.from('course_config').select('data').eq('id','lastlesson_'+studentId).single();
-      if(!lastRes.error&&lastRes.data&&lastRes.data.data&&lastRes.data.data.lessonId){
-        try{localStorage.setItem('brokeneng_lastlesson_'+studentId, lastRes.data.data.lessonId);}catch(e){}
+      var lastRes=await _sb.from('course_config').select('data').eq('id','lastlesson_'+studentId).limit(1);
+      if(!lastRes.error&&lastRes.data&&lastRes.data.length>0&&lastRes.data[0].data&&lastRes.data[0].data.lessonId){
+        try{localStorage.setItem('brokeneng_lastlesson_'+studentId, lastRes.data[0].data.lessonId);}catch(e){}
       }
     }catch(e){}
   }catch(e){console.warn('Supabase load error:',e);}
@@ -4564,7 +4564,7 @@ function renderLesson(lessonId){
       try{localStorage.setItem('brokeneng_lastlesson_'+currentSession.studentId, lesson.id);}catch(e){}
       // Also save to Supabase course_config for cross-device sync
       if(typeof _sb!=='undefined'){
-        _sb.from('course_config').upsert({id:'lastlesson_'+currentSession.studentId,data:{lessonId:lesson.id}},{onConflict:'id'}).catch(function(){});
+        (async function(){ try{ await _sb.from('course_config').upsert({id:'lastlesson_'+currentSession.studentId,data:{lessonId:lesson.id}},{onConflict:'id'}); }catch(e){} })();
       }
     }
   }
