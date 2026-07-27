@@ -1507,6 +1507,9 @@ function getUnlockedSet(student){
   let todayNew;
   try{todayNew=new Set(JSON.parse(localStorage.getItem(dripKey)||'[]'));}
   catch{todayNew=new Set();}
+  // Day 1 is auto-unlocked and counts toward the phase limit of 4
+  // so only DAILY_DRIP-1 additional lessons can drip-unlock on day 1
+  const effectiveDrip = allUnlocked.has(1) && todayNew.size===0 ? DAILY_DRIP-1 : DAILY_DRIP;
 
   for(let i=1;i<ALL_LESSONS.length;i++){
     const lesson=ALL_LESSONS[i];
@@ -1517,7 +1520,7 @@ function getUnlockedSet(student){
     // If lesson is already COMPLETED on any device, restore unlock (cross-device sync)
     if(done.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
     // Otherwise apply drip limit for new unlocks
-    if(todayNew.size<DAILY_DRIP){
+    if(todayNew.size<effectiveDrip){
       todayNew.add(lesson.order);
       allUnlocked.add(lesson.order);
       try{localStorage.setItem(dripKey,JSON.stringify([...todayNew]));}catch(e){}
