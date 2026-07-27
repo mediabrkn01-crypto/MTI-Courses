@@ -671,6 +671,20 @@ async function sbLoadProgress(studentId){
         try{localStorage.setItem('brokeneng_lastlesson_'+studentId, lastRes.data[0].data.lessonId);}catch(e){}
       }
     }catch(e){}
+    // Load drip unlock state from Supabase into memory
+    try{
+      var todayStr=new Date().toISOString().slice(0,10);
+      var dripRes=await _sb.from('course_config').select('id,data').like('id','drip_'+studentId+'_%');
+      if(!dripRes.error&&dripRes.data){
+        if(!_dripCache[studentId]) _dripCache[studentId]={};
+        dripRes.data.forEach(function(r){
+          var date=r.id.replace('drip_'+studentId+'_','');
+          _dripCache[studentId][date]=new Set(r.data||[]);
+          // Also restore into localStorage for cross-day carry-over
+          try{localStorage.setItem('brokeneng_drip_'+studentId+'_'+date,JSON.stringify(r.data||[]));}catch(e){}
+        });
+      }
+    }catch(e){}
   }catch(e){console.warn('Supabase load error:',e);}
 }
 
@@ -720,6 +734,7 @@ async function sbSaveVideos(videos){
 
 // Load video metadata from Supabase → merge into localStorage → re-render if needed
 var _videoData={}; // always from Supabase, never stale cache
+var _dripCache={}; // {studentId: {dateStr: Set<order>}} — loaded from Supabase
 var _progressCache={}; // in-memory progress {studentId: Set} — survives Safari localStorage quota failures
 var _quizPassedCache={}; // in-memory quiz passed {studentId: Set}
 var _quizAttemptedCache={}; // in-memory quiz attempted {studentId: Set}
@@ -779,6 +794,13 @@ function refreshLessonThumbs(){
     else console.log('Supabase connected OK');
   }catch(e){console.warn('Supabase init error:',e);}
 })();
+
+async function sbSaveDripUnlock(studentId, dateStr, orders){
+  try{
+    var key='drip_'+studentId+'_'+dateStr;
+    await _sb.from('course_config').upsert({id:key,data:[...orders]},{onConflict:'id'});
+  }catch(e){console.warn('Drip save error:',e);}
+}
 
 async function sbSaveQuizScore(studentId, lessonId, score, total){
   try{
@@ -1505,8 +1527,13 @@ function getUnlockedSet(student){
   const todayStr=new Date().toISOString().slice(0,10);
   const dripKey='brokeneng_drip_'+student.id+'_'+todayStr;
   let todayNew;
-  try{todayNew=new Set(JSON.parse(localStorage.getItem(dripKey)||'[]'));}
-  catch{todayNew=new Set();}
+  // Read from Supabase-loaded memory cache first (cross-device), fall back to localStorage
+  if(_dripCache[student.id]&&_dripCache[student.id][todayStr]){
+    todayNew=new Set(_dripCache[student.id][todayStr]);
+  } else {
+    try{todayNew=new Set(JSON.parse(localStorage.getItem(dripKey)||'[]'));}
+    catch{todayNew=new Set();}
+  }
   // Day 1 is auto-unlocked and counts toward the phase limit of 4
   // so only DAILY_DRIP-1 additional lessons can drip-unlock on day 1
   const effectiveDrip = allUnlocked.has(1) && todayNew.size===0 ? DAILY_DRIP-1 : DAILY_DRIP;
@@ -1524,6 +1551,13 @@ function getUnlockedSet(student){
       todayNew.add(lesson.order);
       allUnlocked.add(lesson.order);
       try{localStorage.setItem(dripKey,JSON.stringify([...todayNew]));}catch(e){}
+      // Update memory cache
+      if(!_dripCache[student.id]) _dripCache[student.id]={};
+      _dripCache[student.id][todayStr]=todayNew;
+      // Save to Supabase (async, best-effort)
+      if(typeof sbSaveDripUnlock==='function'){
+        sbSaveDripUnlock(student.id,todayStr,todayNew).catch(function(){});
+      }
     } else { break; }
   }
 
