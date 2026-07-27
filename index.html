@@ -615,9 +615,22 @@ async function sbDeleteStudent(studentId){
 // Load all progress for a student from Supabase (sync to localStorage)
 async function sbLoadProgress(studentId){
   try{
+    // Find all student IDs sharing the same email (handles duplicate imports)
+    var allIds=[studentId];
+    try{
+      var myEmail='';
+      var stu=loadStudents()[studentId];
+      if(stu&&stu.email) myEmail=stu.email.toLowerCase().trim();
+      if(myEmail){
+        var dupRes=await _sb.from('students').select('id').ilike('email',myEmail);
+        if(!dupRes.error&&dupRes.data) dupRes.data.forEach(function(r){if(r.id&&allIds.indexOf(r.id)<0) allIds.push(r.id);});
+      }
+    }catch(e){}
+
+    // Fetch progress for ALL matching student IDs and merge
     const[progRes,quizRes]=await Promise.all([
-      _sb.from('student_progress').select('lesson_id').eq('student_id',studentId),
-      _sb.from('quiz_scores').select('lesson_id,pct').eq('student_id',studentId)
+      _sb.from('student_progress').select('lesson_id').in('student_id',allIds),
+      _sb.from('quiz_scores').select('lesson_id,pct,student_id').in('student_id',allIds)
     ]);
     if(!progRes.error&&progRes.data){
       const ids=progRes.data.map(r=>r.lesson_id);
