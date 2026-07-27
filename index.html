@@ -643,6 +643,13 @@ async function sbLoadProgress(studentId){
         localStorage.setItem(attempted,JSON.stringify([...existingAttempted]));
       }catch(e){}
     }
+    // Restore last watched lesson from Supabase
+    try{
+      var lastRes=await _sb.from('course_config').select('data').eq('id','lastlesson_'+studentId).single();
+      if(!lastRes.error&&lastRes.data&&lastRes.data.data&&lastRes.data.data.lessonId){
+        try{localStorage.setItem('brokeneng_lastlesson_'+studentId, lastRes.data.data.lessonId);}catch(e){}
+      }
+    }catch(e){}
   }catch(e){console.warn('Supabase load error:',e);}
 }
 
@@ -4550,7 +4557,11 @@ function renderLesson(lessonId){
   if(lesson){
     activeLesson=lesson; // update NOW PLAYING in sidebar
     if(currentSession&&currentSession.studentId){
-      localStorage.setItem('brokeneng_lastlesson_'+currentSession.studentId, lesson.id);
+      try{localStorage.setItem('brokeneng_lastlesson_'+currentSession.studentId, lesson.id);}catch(e){}
+      // Also save to Supabase course_config for cross-device sync
+      if(typeof _sb!=='undefined'){
+        _sb.from('course_config').upsert({id:'lastlesson_'+currentSession.studentId,data:{lessonId:lesson.id}},{onConflict:'id'}).catch(function(){});
+      }
     }
   }
   if(!lesson||!isUnlocked(lesson)){
@@ -5250,6 +5261,10 @@ function renderQuiz(lessonId){
       if(_lesson){
         saveAttemptedQuiz(currentSession.studentId, _lesson.order);
         if(passed) savePassedQuiz(currentSession.studentId, _lesson.order);
+        // Save to Supabase so quiz scores sync across all devices
+        if(typeof sbSaveQuizScore==='function'){
+          sbSaveQuizScore(currentSession.studentId, _lesson.id, correct, total).catch(function(){});
+        }
       }
     }
     document.getElementById("progress-fill").style.width="100%";
