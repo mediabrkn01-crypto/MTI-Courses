@@ -1534,9 +1534,11 @@ function getUnlockedSet(student){
     try{todayNew=new Set(JSON.parse(localStorage.getItem(dripKey)||'[]'));}
     catch{todayNew=new Set();}
   }
-  // Day 1 is always auto-unlocked and counts as slot 1 of DAILY_DRIP
-  // so drip can only ever unlock DAILY_DRIP-1 additional lessons
-  const effectiveDrip = DAILY_DRIP - 1;
+  // Day 1 only: Lesson 1 is auto-unlocked and counts as slot 1
+  // Check if student has any drip history (i.e. has been on the platform before today)
+  var hasPriorDrip=Object.keys((_dripCache[student.id]||{})).some(function(d){return d<todayStr;});
+  // On first-ever day (no prior drip history and today's drip is empty), subtract 1 for auto-unlock
+  const effectiveDrip = (!hasPriorDrip && todayNew.size===0) ? DAILY_DRIP-1 : DAILY_DRIP;
 
   for(let i=1;i<ALL_LESSONS.length;i++){
     const lesson=ALL_LESSONS[i];
