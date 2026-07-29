@@ -1516,7 +1516,11 @@ function getUnlockedSet(student){
   // Unlock next lesson: previous complete + quiz attempted + daily drip limit
   const attempted = getAttemptedQuizzes(student.id);
 
-  // Carry-over all previously drip-unlocked lessons
+  // Carry-over all previously drip-unlocked lessons — read from Supabase cache first
+  if(_dripCache[student.id]){
+    Object.values(_dripCache[student.id]).forEach(function(s){s.forEach(function(o){allUnlocked.add(o);});});
+  }
+  // Also check localStorage (same device, same day)
   for(let ki=0;ki<localStorage.length;ki++){
     const k=localStorage.key(ki);
     if(k&&k.startsWith('brokeneng_drip_'+student.id+'_')){
