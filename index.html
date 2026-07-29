@@ -620,7 +620,15 @@ async function sbLoadProgress(studentId){
     try{
       var myEmail='';
       var stu=loadStudents()[studentId];
-      if(stu&&stu.email) myEmail=stu.email.toLowerCase().trim();
+      if(stu&&stu.email){
+        myEmail=stu.email.toLowerCase().trim();
+      } else {
+        // Student not in localStorage (new device) — fetch from Supabase by ID
+        var stuRes=await _sb.from('students').select('email').eq('id',studentId).limit(1);
+        if(!stuRes.error&&stuRes.data&&stuRes.data.length>0&&stuRes.data[0].email){
+          myEmail=stuRes.data[0].email.toLowerCase().trim();
+        }
+      }
       if(myEmail){
         var dupRes=await _sb.from('students').select('id').ilike('email',myEmail);
         if(!dupRes.error&&dupRes.data) dupRes.data.forEach(function(r){if(r.id&&allIds.indexOf(r.id)<0) allIds.push(r.id);});
@@ -674,16 +682,24 @@ async function sbLoadProgress(studentId){
     // Load drip unlock state from Supabase into memory
     try{
       var todayStr=new Date().toISOString().slice(0,10);
-      var dripRes=await _sb.from('course_config').select('id,data').like('id','drip_'+studentId+'_%');
-      if(!dripRes.error&&dripRes.data){
-        if(!_dripCache[studentId]) _dripCache[studentId]={};
-        dripRes.data.forEach(function(r){
-          var date=r.id.replace('drip_'+studentId+'_','');
-          _dripCache[studentId][date]=new Set(r.data||[]);
-          // Also restore into localStorage for cross-day carry-over
-          try{localStorage.setItem('brokeneng_drip_'+studentId+'_'+date,JSON.stringify(r.data||[]));}catch(e){}
-        });
-      }
+      // Load drip for ALL matching student IDs (cross-device duplicate handling)
+      var dripPromises=allIds.map(function(sid){
+        return _sb.from('course_config').select('id,data').like('id','drip_'+sid+'_%');
+      });
+      var dripResults=await Promise.all(dripPromises);
+      if(!_dripCache[studentId]) _dripCache[studentId]={};
+      dripResults.forEach(function(dripRes,ri){
+        var sid=allIds[ri];
+        if(!dripRes.error&&dripRes.data){
+          dripRes.data.forEach(function(r){
+            var date=r.id.replace('drip_'+sid+'_','');
+            // Merge into primary studentId cache
+            if(!_dripCache[studentId][date]) _dripCache[studentId][date]=new Set();
+            (r.data||[]).forEach(function(o){_dripCache[studentId][date].add(o);});
+            try{localStorage.setItem('brokeneng_drip_'+studentId+'_'+date,JSON.stringify([..._dripCache[studentId][date]]));}catch(e){}
+          });
+        }
+      });
     }catch(e){}
   }catch(e){console.warn('Supabase load error:',e);}
 }
