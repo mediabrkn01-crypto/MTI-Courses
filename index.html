@@ -636,12 +636,23 @@ async function sbLoadProgress(studentId){
     }catch(e){}
 
     console.log('[sbLoadProgress] Querying for IDs:',allIds);
-    // Fetch progress for ALL matching student IDs and merge
+    // Also find all student IDs that have progress linked to ANY of our IDs
+    // (catches quiz scores saved under other duplicate IDs)
+    var extraIds=[];
+    try{
+      var extraProg=await _sb.from('student_progress').select('student_id').in('student_id',allIds);
+      if(!extraProg.error&&extraProg.data){
+        extraProg.data.forEach(function(r){if(r.student_id&&allIds.indexOf(r.student_id)<0)extraIds.push(r.student_id);});
+      }
+    }catch(e){}
+    var queryIds=allIds.concat(extraIds);
+
+    // Fetch progress AND quiz scores for all IDs
     const[progRes,quizRes]=await Promise.all([
-      _sb.from('student_progress').select('lesson_id').in('student_id',allIds),
-      _sb.from('quiz_scores').select('lesson_id,pct,student_id').in('student_id',allIds)
+      _sb.from('student_progress').select('lesson_id').in('student_id',queryIds),
+      _sb.from('quiz_scores').select('lesson_id,pct,student_id').in('student_id',queryIds)
     ]);
-    console.log('[sbLoadProgress] Got',progRes.data&&progRes.data.length,'progress rows,',quizRes.data&&quizRes.data.length,'quiz rows');
+    console.log('[sbLoadProgress] Got',progRes.data&&progRes.data.length,'progress rows,',quizRes.data&&quizRes.data.length,'quiz rows for IDs:',queryIds);
     if(!progRes.error&&progRes.data){
       const ids=progRes.data.map(r=>r.lesson_id);
       const key='brokeneng_progress_'+studentId;
@@ -1573,7 +1584,8 @@ function getUnlockedSet(student){
     const lesson=ALL_LESSONS[i];
     const prev=ALL_LESSONS[i-1];
     if(!done.has(prev.order)) break;
-    if(hasRealQuiz(prev)&&!attempted.has(prev.order)) break;
+    // If quiz attempted OR lesson after quiz is already completed → don't block
+    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&!done.has(lesson.order)) break;
     if(allUnlocked.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
     // If lesson is already COMPLETED on any device, restore unlock (cross-device sync)
     if(done.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
