@@ -1558,6 +1558,7 @@ function getUnlockedSet(student){
   const explicit = new Set(student.accessList||[]);
   const progress = loadProgress(student.id);
   const done = new Set(ALL_LESSONS.filter(l=>progress.has(l.id)).map(l=>l.order));
+  console.log('[getUnlockedSet] progress IDs:',[...progress],'done orders:',[...done]);
 
   const allUnlocked = new Set(explicit);
   allUnlocked.add(1); // Day 1 always unlocked
