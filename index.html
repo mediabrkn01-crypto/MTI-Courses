@@ -618,20 +618,27 @@ async function sbLoadProgress(studentId){
     // Find all student IDs sharing the same email (handles duplicate imports)
     var allIds=[studentId];
     try{
-      var myEmail='';
+      var myEmail=''; var myName='';
       var stu=loadStudents()[studentId];
-      if(stu&&stu.email){
-        myEmail=stu.email.toLowerCase().trim();
+      if(stu){
+        if(stu.email) myEmail=stu.email.toLowerCase().trim();
+        if(stu.name) myName=stu.name.toLowerCase().trim();
       } else {
-        // Student not in localStorage (new device) — fetch from Supabase by ID
-        var stuRes=await _sb.from('students').select('email').eq('id',studentId).limit(1);
-        if(!stuRes.error&&stuRes.data&&stuRes.data.length>0&&stuRes.data[0].email){
-          myEmail=stuRes.data[0].email.toLowerCase().trim();
+        // Student not in localStorage — fetch from Supabase by ID
+        var stuRes=await _sb.from('students').select('email,name').eq('id',studentId).limit(1);
+        if(!stuRes.error&&stuRes.data&&stuRes.data.length>0){
+          if(stuRes.data[0].email) myEmail=stuRes.data[0].email.toLowerCase().trim();
+          if(stuRes.data[0].name) myName=stuRes.data[0].name.toLowerCase().trim();
         }
       }
+      // Find duplicate IDs by email (if has email) OR by name (if name-only account)
       if(myEmail){
         var dupRes=await _sb.from('students').select('id').ilike('email',myEmail);
         if(!dupRes.error&&dupRes.data) dupRes.data.forEach(function(r){if(r.id&&allIds.indexOf(r.id)<0) allIds.push(r.id);});
+      } else if(myName){
+        // Name-only student: find duplicates by name
+        var dupResN=await _sb.from('students').select('id').ilike('name',myName);
+        if(!dupResN.error&&dupResN.data) dupResN.data.forEach(function(r){if(r.id&&allIds.indexOf(r.id)<0) allIds.push(r.id);});
       }
     }catch(e){}
 
@@ -653,13 +660,19 @@ async function sbLoadProgress(studentId){
       _sb.from('quiz_scores').select('lesson_id,pct,student_id').in('student_id',queryIds)
     ]);
     console.log('[sbLoadProgress] Got',progRes.data&&progRes.data.length,'progress rows,',quizRes.data&&quizRes.data.length,'quiz rows for IDs:',queryIds);
+    if(progRes.data) console.log('[sbLoadProgress] Progress lesson_ids:',progRes.data.map(function(r){return r.lesson_id;}));
     if(!progRes.error&&progRes.data){
       const ids=progRes.data.map(r=>r.lesson_id);
-      const key='brokeneng_progress_'+studentId;
-      const existing=new Set(JSON.parse(localStorage.getItem(key)||'[]'));
-      ids.forEach(id=>existing.add(id));
-      _progressCache[studentId]=existing; // store in memory for Safari
-      try{localStorage.setItem(key,JSON.stringify([...existing]));}catch(e){}
+      // Trust Supabase data — don't filter by validCore (avoids dropping valid lesson IDs)
+      const existing=new Set(ids);
+      // Also merge any local progress
+      try{
+        var localRaw=JSON.parse(localStorage.getItem('brokeneng_progress_'+studentId)||'[]');
+        localRaw.forEach(function(id){existing.add(id);});
+      }catch(e){}
+      _progressCache[studentId]=existing;
+      try{localStorage.setItem('brokeneng_progress_'+studentId,JSON.stringify([...existing]));}catch(e){}
+      console.log('[sbLoadProgress] Parsed lesson IDs into cache:',ids);
     }
     if(!quizRes.error&&quizRes.data){
       var passedKey='brokeneng_passed_quizzes_'+studentId;
