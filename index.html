@@ -1601,11 +1601,11 @@ function getUnlockedSet(student){
     if(!done.has(prev.order)) break;
     // If quiz attempted OR lesson after quiz is already completed → don't block
     // Block if quiz not attempted AND next lesson not yet completed
-    // Exception: if quiz_scores table is completely empty for this student (0 quiz rows),
-    // treat all quizzes as attempted (quiz tracking not set up for this account)
-    var noQuizData=_quizAttemptedCache[student.id]&&_quizAttemptedCache[student.id].size===0&&
-                   _quizPassedCache[student.id]&&_quizPassedCache[student.id].size===0;
-    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&!done.has(lesson.order)&&!noQuizData) break;
+    // Exception: if student has zero quiz data in Supabase, bypass quiz gate (legacy accounts)
+    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&!done.has(lesson.order)){
+      var hasAnyQuizData=(attempted.size>0||(_quizPassedCache[student.id]&&_quizPassedCache[student.id].size>0));
+      if(hasAnyQuizData) break; // only block if quiz system is actually tracking this student
+    }
     if(allUnlocked.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
     // If lesson is already COMPLETED on any device, restore unlock (cross-device sync)
     if(done.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
