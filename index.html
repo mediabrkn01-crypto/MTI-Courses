@@ -1559,6 +1559,7 @@ function getUnlockedSet(student){
   const progress = loadProgress(student.id);
   const done = new Set(ALL_LESSONS.filter(l=>progress.has(l.id)).map(l=>l.order));
   console.log('[getUnlockedSet] progress IDs:',[...progress],'done orders:',[...done]);
+  console.log('[getUnlockedSet] dripCache for student:',(student&&_dripCache[student.id])?Object.keys(_dripCache[student.id]):'none','allUnlocked before loop:',[...allUnlocked]);
 
   const allUnlocked = new Set(explicit);
   allUnlocked.add(1); // Day 1 always unlocked
@@ -1599,7 +1600,12 @@ function getUnlockedSet(student){
     const prev=ALL_LESSONS[i-1];
     if(!done.has(prev.order)) break;
     // If quiz attempted OR lesson after quiz is already completed → don't block
-    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&!done.has(lesson.order)) break;
+    // Block if quiz not attempted AND next lesson not yet completed
+    // Exception: if quiz_scores table is completely empty for this student (0 quiz rows),
+    // treat all quizzes as attempted (quiz tracking not set up for this account)
+    var noQuizData=_quizAttemptedCache[student.id]&&_quizAttemptedCache[student.id].size===0&&
+                   _quizPassedCache[student.id]&&_quizPassedCache[student.id].size===0;
+    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&!done.has(lesson.order)&&!noQuizData) break;
     if(allUnlocked.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
     // If lesson is already COMPLETED on any device, restore unlock (cross-device sync)
     if(done.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
