@@ -635,11 +635,13 @@ async function sbLoadProgress(studentId){
       }
     }catch(e){}
 
+    console.log('[sbLoadProgress] Querying for IDs:',allIds);
     // Fetch progress for ALL matching student IDs and merge
     const[progRes,quizRes]=await Promise.all([
       _sb.from('student_progress').select('lesson_id').in('student_id',allIds),
       _sb.from('quiz_scores').select('lesson_id,pct,student_id').in('student_id',allIds)
     ]);
+    console.log('[sbLoadProgress] Got',progRes.data&&progRes.data.length,'progress rows,',quizRes.data&&quizRes.data.length,'quiz rows');
     if(!progRes.error&&progRes.data){
       const ids=progRes.data.map(r=>r.lesson_id);
       const key='brokeneng_progress_'+studentId;
@@ -701,6 +703,11 @@ async function sbLoadProgress(studentId){
         }
       });
     }catch(e){}
+    // Guarantee cache entries exist for this studentId (prevents undefined reads)
+    if(!_progressCache[studentId]) _progressCache[studentId]=new Set();
+    if(!_quizAttemptedCache[studentId]) _quizAttemptedCache[studentId]=new Set();
+    if(!_quizPassedCache[studentId]) _quizPassedCache[studentId]=new Set();
+    console.log('[Supabase] Progress loaded for',studentId,'— lessons:',_progressCache[studentId].size,'quizAttempted:',_quizAttemptedCache[studentId].size);
   }catch(e){console.warn('Supabase load error:',e);}
 }
 
@@ -1442,13 +1449,15 @@ const ALL_LESSONS=SECTIONS.flatMap(s=>s.lessons);
 // ─── PROGRESS STORE (persisted per student in localStorage) ──────────────────
 function getProgressKey(sid){return "brokeneng_progress_"+sid;}
 function loadProgress(sid){
-  // Use in-memory Supabase cache if available (works even when Safari localStorage is full)
+  // Supabase is the ONLY source of truth — _progressCache populated at login/refresh
   if(_progressCache[sid]) return _progressCache[sid];
+  // Fallback: localStorage (same device, before Supabase loads) — never used as primary source
   try{
-    var raw=JSON.parse(localStorage.getItem(getProgressKey(sid))||"[]");
+    var raw=JSON.parse(localStorage.getItem(getProgressKey(sid))||'[]');
     var validCore=new Set(ALL_LESSONS.map(function(l){return l.id;}));
     var validWV=typeof WV_DATA!=='undefined'?new Set(WV_DATA.map(function(f){return f.id;})):new Set();
-    return new Set(raw.filter(function(id){return validCore.has(id)||validWV.has(id);}));
+    var fromLocal=new Set(raw.filter(function(id){return validCore.has(id)||validWV.has(id);}));
+    return fromLocal;
   }
   catch{return new Set();}
 }
