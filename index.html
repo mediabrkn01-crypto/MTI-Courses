@@ -1559,7 +1559,6 @@ function getUnlockedSet(student){
   const progress = loadProgress(student.id);
   const done = new Set(ALL_LESSONS.filter(l=>progress.has(l.id)).map(l=>l.order));
   console.log('[getUnlockedSet] progress IDs:',[...progress],'done orders:',[...done]);
-  console.log('[getUnlockedSet] dripCache for student:',(student&&_dripCache[student.id])?Object.keys(_dripCache[student.id]):'none','allUnlocked before loop:',[...allUnlocked]);
 
   const allUnlocked = new Set(explicit);
   allUnlocked.add(1); // Day 1 always unlocked
