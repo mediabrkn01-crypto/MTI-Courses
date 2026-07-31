@@ -1555,72 +1555,89 @@ function avatarSmallHtml(student){
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 // 3-per-day drip unlock logic:
 function getUnlockedSet(student){
-  const explicit = new Set(student.accessList||[]);
   const progress = loadProgress(student.id);
   const done = new Set(ALL_LESSONS.filter(l=>progress.has(l.id)).map(l=>l.order));
-  console.log('[getUnlockedSet] progress IDs:',[...progress],'done orders:',[...done]);
-
-  const allUnlocked = new Set(explicit);
-  allUnlocked.add(1); // Day 1 always unlocked
-
-  // Unlock next lesson: previous complete + quiz attempted + daily drip limit
   const attempted = getAttemptedQuizzes(student.id);
-
-  // Carry-over all previously drip-unlocked lessons — read from Supabase cache first
-  if(_dripCache[student.id]){
-    Object.values(_dripCache[student.id]).forEach(function(s){s.forEach(function(o){allUnlocked.add(o);});});
-  }
-  // Also check localStorage (same device, same day)
-  for(let ki=0;ki<localStorage.length;ki++){
-    const k=localStorage.key(ki);
-    if(k&&k.startsWith('brokeneng_drip_'+student.id+'_')){
-      try{JSON.parse(localStorage.getItem(k)||'[]').forEach(o=>allUnlocked.add(o));}catch(e){}
-    }
-  }
-
+  const hasAnyQuizData=(attempted.size>0||(_quizPassedCache[student.id]&&_quizPassedCache[student.id].size>0));
   const todayStr=new Date().toISOString().slice(0,10);
-  const dripKey='brokeneng_drip_'+student.id+'_'+todayStr;
-  let todayNew;
-  // Read from Supabase-loaded memory cache first (cross-device), fall back to localStorage
-  if(_dripCache[student.id]&&_dripCache[student.id][todayStr]){
-    todayNew=new Set(_dripCache[student.id][todayStr]);
-  } else {
-    try{todayNew=new Set(JSON.parse(localStorage.getItem(dripKey)||'[]'));}
-    catch{todayNew=new Set();}
-  }
-  // Day 1 only: Lesson 1 is auto-unlocked and counts as slot 1
-  // Check if student has any drip history (i.e. has been on the platform before today)
-  var hasPriorDrip=Object.keys((_dripCache[student.id]||{})).some(function(d){return d<todayStr;});
-  // On first-ever day (no prior drip history and today's drip is empty), subtract 1 for auto-unlock
-  const effectiveDrip = (!hasPriorDrip && todayNew.size===0) ? DAILY_DRIP-1 : DAILY_DRIP;
+  const PHASE=4; // lessons per phase
 
+  const allUnlocked = new Set([1]); // Day 1 always unlocked
+
+  // Restore all previously drip-unlocked lessons from Supabase cache
+  if(_dripCache[student.id]){
+    Object.values(_dripCache[student.id]).forEach(function(daySet){
+      daySet.forEach(function(o){allUnlocked.add(o);});
+    });
+  }
+
+  // Determine which phase the student is currently in based on completed lessons
+  // Phase 1 = lessons 1-4, Phase 2 = lessons 5-8, etc.
   for(let i=1;i<ALL_LESSONS.length;i++){
     const lesson=ALL_LESSONS[i];
     const prev=ALL_LESSONS[i-1];
-    if(!done.has(prev.order)) break;
-    // If quiz attempted OR lesson after quiz is already completed → don't block
-    // Block if quiz not attempted AND next lesson not yet completed
-    // Exception: if student has zero quiz data in Supabase, bypass quiz gate (legacy accounts)
-    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&!done.has(lesson.order)){
-      var hasAnyQuizData=(attempted.size>0||(_quizPassedCache[student.id]&&_quizPassedCache[student.id].size>0));
-      if(hasAnyQuizData) break; // only block if quiz system is actually tracking this student
-    }
-    if(allUnlocked.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
-    // If lesson is already COMPLETED on any device, restore unlock (cross-device sync)
+
+    // Already unlocked (from drip cache or explicit access) — keep going
+    if(allUnlocked.has(lesson.order)){continue;}
+
+    // Already completed on another device — restore access
     if(done.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
-    // Otherwise apply drip limit for new unlocks
-    if(todayNew.size<effectiveDrip){
-      todayNew.add(lesson.order);
-      allUnlocked.add(lesson.order);
-      try{localStorage.setItem(dripKey,JSON.stringify([...todayNew]));}catch(e){}
-      // Update memory cache
-      if(!_dripCache[student.id]) _dripCache[student.id]={};
-      _dripCache[student.id][todayStr]=todayNew;
-      // Save to Supabase (async, best-effort)
-      if(typeof sbSaveDripUnlock==='function'){
-        sbSaveDripUnlock(student.id,todayStr,todayNew).catch(function(){});
+
+    // Previous lesson must be completed
+    if(!done.has(prev.order)) break;
+
+    // Quiz gate: previous lesson's quiz must be attempted (if quiz tracking active)
+    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&hasAnyQuizData) break;
+
+    // Phase boundary check: if this lesson starts a new phase (position % PHASE === 0),
+    // only unlock if today is a new day since the previous phase was completed
+    var lessonIdx=i; // 0-based index in ALL_LESSONS
+    if(lessonIdx % PHASE === 0){
+      // This is the first lesson of a new phase
+      // Find when the previous phase was completed (last completed lesson of prev phase)
+      // Check if we have a drip entry for this phase starting today
+      var phaseKey='phase_'+(Math.floor(lessonIdx/PHASE)+1);
+      var phaseDripDate=null;
+      if(_dripCache[student.id]){
+        Object.keys(_dripCache[student.id]).forEach(function(d){
+          var ds=_dripCache[student.id][d];
+          if(ds instanceof Set&&ds.has(lesson.order)) phaseDripDate=d;
+        });
       }
-    } else { break; }
+      if(phaseDripDate){
+        // Already drip-unlocked on a previous day — restore all 4
+        allUnlocked.add(lesson.order);
+        continue;
+      }
+      // Check if today is allowed to unlock this phase
+      // Find the date the previous phase block was last active
+      var prevPhaseLastLesson=ALL_LESSONS[lessonIdx-1];
+      var prevPhaseDripDate=null;
+      if(_dripCache[student.id]){
+        Object.keys(_dripCache[student.id]).forEach(function(d){
+          var ds=_dripCache[student.id][d];
+          if(ds instanceof Set&&ds.has(prevPhaseLastLesson.order)) prevPhaseDripDate=d;
+        });
+      }
+      // Allow if: no prior drip history (Day 1 student) OR prior phase was on a different day
+      var allowNewPhase=!prevPhaseDripDate||(prevPhaseDripDate<todayStr);
+      if(!allowNewPhase) break; // same day as previous phase — wait until tomorrow
+    }
+
+    // Unlock this lesson and track the drip
+    allUnlocked.add(lesson.order);
+    if(!_dripCache[student.id]) _dripCache[student.id]={};
+    if(!_dripCache[student.id][todayStr]) _dripCache[student.id][todayStr]=new Set();
+    _dripCache[student.id][todayStr].add(lesson.order);
+    if(typeof sbSaveDripUnlock==='function'){
+      sbSaveDripUnlock(student.id,todayStr,_dripCache[student.id][todayStr]).catch(function(){});
+    }
+    try{localStorage.setItem('brokeneng_drip_'+student.id+'_'+todayStr,JSON.stringify([..._dripCache[student.id][todayStr]]));}catch(e){}
+
+    // At phase boundary, unlock remaining 3 lessons of this phase in the same pass
+    if(lessonIdx % PHASE === 0){
+      // Continue looping — the next 3 will be unlocked by normal sequential flow
+    }
   }
 
   return allUnlocked;
@@ -5741,82 +5758,112 @@ window.adminQuizDelete=async function(order){
 };
 
 window.adminQuizPreview=function(order){
-  var qs=_dynamicQuizCache[order];
-  if(!qs||!qs.length){alert('No dynamic quiz for Day '+order);return;}
+  var qs=_dynamicQuizCache[order]?JSON.parse(JSON.stringify(_dynamicQuizCache[order])):[];
+  if(!qs.length){alert('No dynamic quiz for Day '+order);return;}
 
   var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
 
-  function renderList(){
-    var list=document.getElementById('qpreview-list');
-    if(!list) return;
-    list.innerHTML=qs.map(function(q,i){
-      return '<div style="margin-bottom:10px;padding:12px 14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:10px;">'
-        +'<p style="font-size:13px;font-weight:600;color:#fff;margin-bottom:8px">'+(i+1)+'. '+q.prompt+'</p>'
-        +'<div id="opts-'+i+'" style="display:flex;flex-direction:column;gap:3px">'
-        +q.options.map(function(o,oi){
-          return '<div draggable="true" data-qi="'+i+'" data-oi="'+oi+'" style="font-size:12px;padding:5px 10px;border-radius:6px;background:'+(o===q.answer?'rgba(34,197,94,.15)':'rgba(255,255,255,.04)')+';color:'+(o===q.answer?'#4ade80':'rgba(255,255,255,.6)')+';cursor:grab;display:flex;align-items:center;gap:8px;border:1px solid transparent">'
-            +'<span style="opacity:.4;flex-shrink:0">⠿</span>'
-            +(o===q.answer?'<span style="font-size:10px;flex-shrink:0">✓</span>':'')
-            +o
-            +'</div>';
-        }).join('')
-        +'</div></div>';
+  function renderEditor(){
+    var container=document.getElementById('qeditor-wrap');
+    if(!container) return;
+    container.innerHTML=qs.map(function(q,qi){
+      var optHtml=q.options.map(function(o,oi){
+        return '<div draggable="true" data-qi="'+qi+'" data-oi="'+oi+'" style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+          +'<span style="color:rgba(255,255,255,.3);cursor:grab;font-size:14px">⠿</span>'
+          +'<input data-opt="'+qi+'-'+oi+'" value="'+o.replace(/"/g,'&quot;')+'" style="flex:1;background:rgba(255,255,255,'+(o===q.answer?'.12':'.05')+');border:1px solid rgba(255,255,255,'+(o===q.answer?'.4':'.1')+');border-radius:6px;color:#fff;font-size:12px;padding:5px 8px;outline:none"/>'
+          +'<button onclick="setAnswer('+qi+','+oi+')" title="Set as correct" style="background:'+(o===q.answer?'rgba(34,197,94,.3)':'rgba(255,255,255,.08)')+';border:1px solid rgba(255,255,255,.1);border-radius:6px;color:'+(o===q.answer?'#4ade80':'rgba(255,255,255,.4)')+';font-size:11px;padding:3px 7px;cursor:pointer">'+(o===q.answer?'✓':'○')+'</button>'
+          +'<button onclick="delOption('+qi+','+oi+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:#f87171;font-size:11px;padding:3px 7px;cursor:pointer">✕</button>'
+          +'</div>';
+      }).join('');
+      return '<div style="margin-bottom:14px;padding:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px">'
+        +'<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px">'
+        +'<span style="color:rgba(255,255,255,.5);font-size:12px;font-weight:700;flex-shrink:0;margin-top:6px">'+(qi+1)+'.</span>'
+        +'<textarea data-prompt="'+qi+'" rows="2" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#fff;font-size:12px;padding:6px 8px;outline:none;resize:vertical">'+q.prompt+'</textarea>'
+        +'<button onclick="delQuestion('+qi+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#f87171;font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0">🗑</button>'
+        +'</div>'
+        +'<div id="opts-'+qi+'">'+ optHtml+'</div>'
+        +'<button onclick="addOption('+qi+')" style="margin-top:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;cursor:pointer">+ Add option</button>'
+        +'</div>';
     }).join('');
 
-    // Wire drag-and-drop on OPTIONS only, within the same question
-    var dragQi=null, dragOi=null;
-    list.querySelectorAll('[data-oi]').forEach(function(el){
-      el.addEventListener('dragstart',function(e){
-        dragQi=parseInt(el.dataset.qi); dragOi=parseInt(el.dataset.oi);
-        el.style.opacity='.4';
-        e.dataTransfer.effectAllowed='move';
-      });
+    // Wire drag-and-drop for options
+    var dragQi=null,dragOi=null;
+    container.querySelectorAll('[data-oi]').forEach(function(el){
+      el.addEventListener('dragstart',function(e){dragQi=parseInt(el.dataset.qi);dragOi=parseInt(el.dataset.oi);el.style.opacity='.4';e.dataTransfer.effectAllowed='move';});
       el.addEventListener('dragend',function(){el.style.opacity='1';});
-      el.addEventListener('dragover',function(e){
-        e.preventDefault();
-        if(parseInt(el.dataset.qi)===dragQi) el.style.borderColor='rgba(255,45,120,.5)';
-      });
-      el.addEventListener('dragleave',function(){el.style.borderColor='transparent';});
+      el.addEventListener('dragover',function(e){e.preventDefault();if(parseInt(el.dataset.qi)===dragQi)el.style.outline='1px solid rgba(255,45,120,.5)';});
+      el.addEventListener('dragleave',function(){el.style.outline='none';});
       el.addEventListener('drop',function(e){
-        e.preventDefault(); el.style.borderColor='transparent';
-        var toQi=parseInt(el.dataset.qi), toOi=parseInt(el.dataset.oi);
-        // Only allow reorder within the same question
-        if(dragQi===null||toQi!==dragQi||toOi===dragOi) return;
-        var opts=qs[dragQi].options;
-        var moved=opts.splice(dragOi,1)[0];
-        opts.splice(toOi,0,moved);
-        dragQi=null; dragOi=null;
-        renderList();
+        e.preventDefault();el.style.outline='none';
+        var tQi=parseInt(el.dataset.qi),tOi=parseInt(el.dataset.oi);
+        if(dragQi===null||tQi!==dragQi||tOi===dragOi) return;
+        var moved=qs[dragQi].options.splice(dragOi,1)[0];
+        var wasAnswer=(moved===qs[dragQi].answer);
+        qs[dragQi].options.splice(tOi,0,moved);
+        if(wasAnswer) qs[dragQi].answer=moved;
+        dragQi=null;dragOi=null;renderEditor();
       });
     });
   }
 
-  overlay.innerHTML='<div style="background:#12121f;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:24px;width:100%;max-width:580px;margin:auto">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-    +'<h3 style="font-family:Montserrat,sans-serif;font-weight:800;color:#fff;font-size:16px">Day '+order+' Quiz ('+qs.length+' questions)</h3>'
+  // Collect edits from inputs before any action
+  function collectEdits(){
+    qs.forEach(function(q,qi){
+      var pEl=document.querySelector('[data-prompt="'+qi+'"]');
+      if(pEl) q.prompt=pEl.value.trim();
+      q.options.forEach(function(o,oi){
+        var iEl=document.querySelector('[data-opt="'+qi+'-'+oi+'"]');
+        if(iEl){
+          var newVal=iEl.value.trim();
+          if(q.answer===q.options[oi]) q.answer=newVal;
+          q.options[oi]=newVal;
+        }
+      });
+    });
+  }
+
+  window.delQuestion=function(qi){collectEdits();qs.splice(qi,1);renderEditor();};
+  window.delOption=function(qi,oi){collectEdits();qs[qi].options.splice(oi,1);if(!qs[qi].options.includes(qs[qi].answer))qs[qi].answer=qs[qi].options[0]||'';renderEditor();};
+  window.setAnswer=function(qi,oi){collectEdits();qs[qi].answer=qs[qi].options[oi];renderEditor();};
+  window.addOption=function(qi){collectEdits();qs[qi].options.push('New option');renderEditor();};
+  window.addQuestion=function(){
+    collectEdits();
+    qs.push({id:'q'+(qs.length+1),prompt:'New question?',options:['Option A','Option B','Option C','Option D'],answer:'Option A'});
+    renderEditor();
+    setTimeout(function(){overlay.scrollTop=overlay.scrollHeight;},50);
+  };
+
+  overlay.innerHTML='<div style="background:#12121f;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:20px;width:100%;max-width:600px;margin:auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+    +'<h3 style="font-family:Montserrat,sans-serif;font-weight:800;color:#fff;font-size:15px">⚡ Day '+order+' Quiz Editor</h3>'
     +'<button onclick="window._closeQuizPreview()" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;color:#fff;font-size:14px;padding:4px 10px;cursor:pointer">✕</button>'
     +'</div>'
-    +'<p style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:14px">Drag ⠿ to reorder answer options within each question.</p>'
-    +'<div id="qpreview-list"></div>'
-    +'<button onclick="window._saveQuizOrder('+order+')" style="margin-top:14px;width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px;cursor:pointer;font-family:Montserrat,sans-serif">💾 Save New Order</button>'
+    +'<p style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:12px">Edit questions/options inline • Drag ⠿ to reorder options • ○ to set correct answer • ✕ to delete</p>'
+    +'<div id="qeditor-wrap"></div>'
+    +'<button onclick="addQuestion()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:rgba(255,255,255,.5);font-size:12px;padding:8px;cursor:pointer">+ Add Question</button>'
+    +'<div style="display:flex;gap:8px;margin-top:12px">'
+    +'<button onclick="window._saveQuizOrder('+order+')" style="flex:1;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px;cursor:pointer;font-family:Montserrat,sans-serif">💾 Save All Changes</button>'
+    +'</div>'
     +'<div id="qpreview-save-status" style="font-size:12px;text-align:center;margin-top:8px"></div>'
     +'</div>';
 
   window._closeQuizPreview=function(){try{overlay.remove();}catch(e){}};
   window._saveQuizOrder=async function(ord){
+    collectEdits();
     var st=document.getElementById('qpreview-save-status');
     if(st) st.textContent='Saving...';
     try{
       await sbSaveQuiz(ord,qs);
-      if(st){st.style.color='#4ade80';st.textContent='✓ Order saved to Supabase!';}
+      _dynamicQuizCache[ord]=qs;
+      if(st){st.style.color='#4ade80';st.textContent='✓ Saved to Supabase!';}
       setTimeout(function(){renderAdminQuiz();},800);
     }catch(e){
       if(st){st.style.color='#f87171';st.textContent='Error: '+e.message;}
     }
   };
   document.body.appendChild(overlay);
-  renderList();
+  renderEditor();
 };
 
 // ── LOCAL QUIZ TEXT PARSER ────────────────────────────────────────────────────
