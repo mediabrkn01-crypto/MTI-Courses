@@ -5671,7 +5671,10 @@ function renderAdminQuiz(){
         ?'<button onclick="adminQuizPreview('+lesson.order+')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">Preview</button>'
          +'<button onclick="adminQuizDelete('+lesson.order+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#f87171;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">Delete</button>'
          +'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">Replace<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>'
-        :'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">⚡ Upload Quiz<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>';
+        :hasHard
+          ?'<button onclick="adminQuizEditHardcoded('+lesson.order+')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">✏️ Edit</button>'
+           +'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">⚡ Upload Quiz<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>'
+          :'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">⚡ Upload Quiz<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>';
       return '<tr id="quiz-row-'+lesson.order+'">'
         +'<td style="font-weight:600;color:#fff">Day '+lesson.order+'</td>'
         +'<td style="font-size:13px;color:rgba(255,255,255,.7)">'+title+'</td>'
@@ -5755,6 +5758,21 @@ window.adminQuizDelete=async function(order){
   if(!confirm('Delete dynamic quiz for Day '+order+'? Hardcoded quiz will be used instead.')) return;
   await sbDeleteQuiz(order);
   renderAdminQuiz();
+};
+
+window.adminQuizEditHardcoded=function(order){
+  // Convert hardcoded quiz format (answer as index) to dynamic format (answer as string)
+  var raw=QUIZ_BANK[order];
+  if(!raw||!raw.length){alert('No hardcoded quiz for Day '+order);return;}
+  // Deep copy and normalise
+  var qs=raw.map(function(q,i){
+    var opts=Array.isArray(q.options)?q.options.slice():[];
+    var ans=typeof q.answer==='number'?(opts[q.answer]||opts[0]):q.answer;
+    return {id:q.id||('q'+(i+1)),prompt:q.prompt||'',options:opts,answer:ans};
+  });
+  // Load into dynamic cache so adminQuizPreview can open it
+  _dynamicQuizCache[order]=qs;
+  adminQuizPreview(order);
 };
 
 window.adminQuizPreview=function(order){
