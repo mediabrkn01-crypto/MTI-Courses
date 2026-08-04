@@ -6124,31 +6124,59 @@ function sbdBreak(){
   _sbd.stress=0;
   _wvSpeechWord=w;_wvAudio=null;
 
+  function applyIPA(ipa){
+    // Strip surrounding slashes/brackets
+    ipa=ipa.replace(/^[\/\[\]]|[\/\[\]]$/g,'').trim();
+    // Remove any literal ? characters from bad API responses
+    if(!ipa||ipa.indexOf('?')!==-1) return false;
+    _sbd.verified=true;
+    var res=sbdSyllabifyIPA(ipa);
+    if(res.syls.length>0){
+      _sbd.ipaSyls=res.syls;
+      _sbd.stress=res.stress;
+      if(res.syls.length!==_sbd.syls.length){
+        _sbd.syls=sbdRedistribute(w,res.syls.length);
+      }
+    } else {
+      _sbd.ipaSyls=_sbd.syls.map(function(){return '';});
+      _sbd.ipaSyls[0]=ipa.replace(/[ˈˌ.]/g,'');
+    }
+    return true;
+  }
+
+  // Try Free Dictionary API first
   fetch('https://api.dictionaryapi.dev/api/v2/entries/en/'+encodeURIComponent(w))
     .then(function(r){return r.json();})
     .then(function(data){
       var ipa='';
       if(Array.isArray(data)&&data[0]){
-        (data[0].phonetics||[]).forEach(function(p){if(p.text&&!ipa)ipa=p.text;});
+        // Prefer US phonetics (usually more complete IPA)
+        var phonetics=data[0].phonetics||[];
+        // Try audio-backed phonetics first (more reliable)
+        phonetics.forEach(function(p){if(p.text&&p.audio&&!ipa)ipa=p.text;});
+        // Fall back to any phonetic with text
+        if(!ipa) phonetics.forEach(function(p){if(p.text&&!ipa)ipa=p.text;});
         if(!ipa&&data[0].phonetic)ipa=data[0].phonetic;
       }
-      ipa=(ipa||'').replace(/^\/|\/$/g,'');
-      if(ipa){
-        _sbd.verified=true;
-        var res=sbdSyllabifyIPA(ipa);
-        if(res.syls.length>0){
-          _sbd.ipaSyls=res.syls;
-          _sbd.stress=res.stress;
-          if(res.syls.length!==_sbd.syls.length){
-            _sbd.syls=sbdRedistribute(w,res.syls.length);
-          }
-        }else{
-          _sbd.ipaSyls=_sbd.syls.map(function(){return '';});
-          _sbd.ipaSyls[0]=ipa.replace(/[ˈˌ.]/g,'');
-        }
+      var ok=ipa&&applyIPA(ipa);
+      if(ok){
+        sbdRender();
+        if(status)status.textContent='';
+      } else {
+        // Fallback: try Datamuse API for syllable count + build phonetic respelling
+        fetch('https://api.datamuse.com/words?sp='+encodeURIComponent(w)+'&md=s&max=1')
+          .then(function(r2){return r2.json();})
+          .then(function(d2){
+            if(d2&&d2[0]&&d2[0].numSyllables){
+              var n=d2[0].numSyllables;
+              if(n!==_sbd.syls.length) _sbd.syls=sbdRedistribute(w,n);
+              _sbd.ipaSyls=_sbd.syls.map(function(){return '';});
+            }
+            sbdRender();
+            if(status)status.textContent='Phonetic approximation — no exact IPA found';
+          })
+          .catch(function(){sbdRender();if(status)status.textContent='Best-guess split';});
       }
-      sbdRender();
-      if(status)status.textContent=_sbd.verified?'':'No dictionary entry — best-guess split';
     })
     .catch(function(){sbdRender();if(status)status.textContent='Offline — best-guess split';});
 }
