@@ -5526,7 +5526,7 @@ function renderQuiz(lessonId){
         sess=r?.data?.session;
       }
       if(sess){
-        var resp=await fetch(SUPABASE_URL.replace(/\/$/','')+'/functions/v1/submit-quiz',{
+        var resp=await fetch(SUPABASE_URL.replace(/\/$/,'')+'/functions/v1/submit-quiz',{
           method:'POST',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+sess.access_token},
           body:JSON.stringify({lessonOrder:lessonOrder,responses:userResponses})
