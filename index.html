@@ -90,7 +90,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .sb-toggle{flex-shrink:0;width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:0}
 .sb-toggle:hover{color:#fff;background:rgba(255,45,120,.15);border-color:rgba(255,45,120,.3)}
 .sb-toggle svg{width:16px;height:16px}
-.sb-logo-mark{display:none;width:36px;height:36px;border-radius:10px;background:var(--grad);align-items:center;justify-content:center;font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;color:#fff;box-shadow:0 2px 12px rgba(255,45,120,.4);flex-shrink:0}
+.sb-logo-mark{display:none;width:38px;height:38px;object-fit:contain;flex-shrink:0;cursor:pointer}
 .sb-item svg.nav-ic{width:19px;height:19px;flex-shrink:0}
 .sb-item.active svg.nav-ic{color:#fff}
 .sb-item .sb-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
@@ -106,8 +106,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   html.sb-collapsed .sb-lbl,html.sb-collapsed .sb-sec,html.sb-collapsed .sb-voice-info,
   html.sb-collapsed .sb-nowplaying,html.sb-collapsed .sb-logo-full,html.sb-collapsed .sb-uname,
   html.sb-collapsed .sb-foot .sb-out,html.sb-collapsed .sb-bdg,html.sb-collapsed .sb-lock-ic{display:none!important}
-  html.sb-collapsed .sb-logo-mark{display:flex}
-  html.sb-collapsed .sb-brand{flex-direction:column;gap:10px;justify-content:center}
+  html.sb-collapsed .sb-logo-mark{display:block}
+  html.sb-collapsed .sb-brand{flex-direction:column;gap:10px;justify-content:center;align-items:center}
+  html.sb-collapsed .sb-logo{justify-content:center;width:100%}
   html.sb-collapsed .sb-item{justify-content:center;padding:11px 0;margin:2px 12px;gap:0}
   html.sb-collapsed .sb-voice{justify-content:center;padding:9px 0;margin:10px 14px}
   html.sb-collapsed .sb-user{justify-content:center;padding:8px 0}
@@ -118,6 +119,21 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
     content:attr(data-tip);position:absolute;left:calc(100% + 12px);top:50%;transform:translateY(-50%);
     background:rgba(18,18,32,.98);border:1px solid rgba(255,45,120,.28);color:#fff;font-size:12px;font-weight:600;
     padding:6px 11px;border-radius:9px;white-space:nowrap;z-index:300;box-shadow:0 8px 24px rgba(0,0,0,.55);pointer-events:none;font-family:'Montserrat',sans-serif}
+}
+/* Collapsed sidebar — dock-style hover (pointer devices only) */
+@media(hover:hover) and (pointer:fine){
+  html.sb-collapsed .sb-logo-mark{transition:transform .2s ease,filter .2s ease}
+  html.sb-collapsed .sb-logo-mark:hover{transform:scale(1.12);filter:drop-shadow(0 0 7px rgba(255,45,120,.55))}
+  html.sb-collapsed .sb-item{transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}
+  html.sb-collapsed .sb-item:hover{transform:scale(1.15);filter:brightness(1.18)}
+  html.sb-collapsed .sb-item.active:hover{transform:scale(1.1)}
+  html.sb-collapsed .sb-voice{transition:transform .18s ease,filter .18s ease}
+  html.sb-collapsed .sb-voice:hover{transform:scale(1.14);filter:brightness(1.2) drop-shadow(0 0 5px rgba(255,45,120,.4))}
+  html.sb-collapsed .sb-user{transition:transform .18s ease,filter .18s ease}
+  html.sb-collapsed .sb-user:hover{transform:scale(1.1);filter:brightness(1.15)}
+  html.sb-collapsed .sb-toggle{transition:transform .15s ease,color .15s,background .15s,border-color .15s}
+  html.sb-collapsed .sb-toggle:hover{transform:scale(1.1)}
+  html.sb-collapsed .sb-toggle:active{transform:scale(0.96)}
 }
 /* MAIN */
 #main-content{min-height:100vh;display:flex;flex-direction:column;position:relative;z-index:1}
@@ -1981,7 +1997,7 @@ function sidebarHtml(active){
     <div class="sb-brand">
       <div class="sb-logo" onclick="closeSidebar();navigate('dashboard')" style="cursor:pointer;display:flex;align-items:center;min-width:0">
         <img class="sb-logo-full" src="${getLogoSrc()}" style="max-height:36px;max-width:150px;object-fit:contain;display:block" onerror="this.style.display='none'"/>
-        <div class="sb-logo-mark">BE</div>
+        <img class="sb-logo-mark" src="${SITE_IMAGES.symbolLogo||SITE_IMAGES.mainLogo}" style="width:38px;height:38px;object-fit:contain;" alt="Broken English" onerror="this.src='${SITE_IMAGES.mainLogo}';this.style.width='auto';this.style.maxWidth='38px'"/>
       </div>
       <button class="sb-toggle" onclick="toggleSidebarCollapse()" aria-label="Toggle navigation sidebar" title="Toggle sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
