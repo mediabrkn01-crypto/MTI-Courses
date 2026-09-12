@@ -99,6 +99,7 @@ function publicStatus(row: any, serverNow: string) {
     expires_at: row.expires_at,
     revoked: !!row.revoked_at,
     duration_minutes: row.duration_minutes,
+    counsellor_whatsapp: row.counsellor_whatsapp ?? null,
   };
 }
 
@@ -152,11 +153,14 @@ Deno.serve(async (req) => {
     if (action === "create") {
       const token = generateToken();
       const hash = await sha256Hex(token);
-      const duration = Math.max(1, Math.min(600, parseInt(body?.duration_minutes ?? 15, 10) || 15));
+      // Duration is admin-chosen, clamped server-side to 1..80 minutes.
+      const duration = Math.max(1, Math.min(80, parseInt(body?.duration_minutes ?? 15, 10) || 15));
+      const counsellor = String(body?.counsellor_whatsapp || "").replace(/[^0-9]/g, "").slice(0, 15) || null;
 
       const { data, error } = await admin.from("demo_access_links").insert({
         token_hash: hash,
         duration_minutes: duration,
+        counsellor_whatsapp: counsellor,
         status: "not_started",
         student_name: body?.student_name || null,
         student_phone: body?.student_phone || null,
@@ -192,7 +196,7 @@ Deno.serve(async (req) => {
     // ── LIST (admin) ────────────────────────────────────────────────────────
     if (action === "list") {
       const { data, error } = await admin.from("demo_access_links")
-        .select("id,duration_minutes,created_at,activated_at,expires_at,revoked_at,status,student_name,student_phone,student_email,created_by,last_seen_at,activation_count")
+        .select("id,duration_minutes,counsellor_whatsapp,created_at,activated_at,expires_at,revoked_at,status,student_name,student_phone,student_email,created_by,last_seen_at,activation_count")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) return json({ error: "server_error", detail: error.message }, 500);
