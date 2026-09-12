@@ -550,8 +550,7 @@ body.demo-active .top-bar,body.demo-active .admin-top-bar{top:60px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-<script>emailjs.init("r2UjQEe1MNj-YflSv");</script>
+<!-- EmailJS removed: forgot-password now uses Supabase Auth resetPasswordForEmail() -->
 </head>
 <body>
 
@@ -568,28 +567,9 @@ body.demo-active .top-bar,body.demo-active .admin-top-bar{top:60px}
 
 <script>
 (function(){
-  // 1. Block right-click everywhere
-  document.addEventListener('contextmenu',e=>{
-    if(e.target.closest('input,textarea,[contenteditable]'))return; // allow copy/paste in fields
-    e.preventDefault();return false;
-  });
-
-  // 2. Block screenshot/recording keyboard shortcuts
-  document.addEventListener('keydown',e=>{
-    // Block PrintScreen, Cmd+Shift+3/4/5 (Mac), Win+PrintScreen
-    if(e.key==='PrintScreen'||
-       (e.metaKey&&e.shiftKey&&['3','4','5','s','S'].includes(e.key))||
-       (e.ctrlKey&&e.shiftKey&&['s','S'].includes(e.key))){
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }
-    // Block F12, Ctrl+U (view source), Ctrl+S (save), Ctrl+Shift+I
-    if(e.key==='F12'||(e.ctrlKey&&['u','s','U','S'].includes(e.key))||
-       (e.ctrlKey&&e.shiftKey&&['i','I'].includes(e.key))){
-      e.preventDefault();
-    }
-  },true);
+  // Note: F12/DevTools/right-click blocking removed — not real security.
+  // Real protection is via Supabase Auth + server-authoritative access checks.
+  // Kept: drag/PiP/tab-blur as harmless deterrents only.
 
   // 3. Block text selection on video areas
   document.addEventListener('selectstart',e=>{
@@ -621,14 +601,8 @@ body.demo-active .top-bar,body.demo-active .admin-top-bar{top:60px}
     }
   });
 
-  // 7. DevTools detection — blur content if opened
-  let devOpen=false;
-  const threshold=160;
-  setInterval(()=>{
-    const w=window.outerWidth-window.innerWidth>threshold||window.outerHeight-window.innerHeight>threshold;
-    if(w&&!devOpen){devOpen=true;document.body.classList.add('tab-hidden');}
-    if(!w&&devOpen){devOpen=false;document.body.classList.remove('tab-hidden');}
-  },1000);
+  // DevTools detection removed — breaks legitimate users (accessibility tools,
+  // browser extensions) and provides no real security. Authorization is server-side.
 })();
 </script>
 <div id="app"></div>
@@ -683,7 +657,8 @@ function waitForSb(maxMs){
 async function sbLoadAllStudents(){
   try{
     if(typeof _sb==='undefined')return false;
-    const{data,error}=await _sb.from('students').select('*');
+    // SECURITY: never select password_hash — students table RLS restricts reads anyway
+    const{data,error}=await _sb.from('students').select('id,name,email,valid_until,access_list,created_at,completed_at');
     if(error||!data)return false;
     var local=loadStudents();
     data.forEach(function(d){
@@ -691,7 +666,7 @@ async function sbLoadAllStudents(){
         id:d.id,
         name:d.name,
         email:d.email,
-        password:d.password_hash,
+        // password intentionally omitted — never bring credentials to browser
         validUntil:d.valid_until||null,
         accessList:d.access_list||[1],
         createdAt:d.created_at||new Date().toISOString(),
@@ -705,11 +680,11 @@ async function sbLoadAllStudents(){
 
 async function sbSaveStudent(student){
   try{
+    // SECURITY: never write password_hash from browser — passwords managed server-side via Supabase Auth
     const{error}=await _sb.from('students').upsert({
       id: student.id,
       name: student.name,
       email: student.email,
-      password_hash: student.password,
       valid_until: student.validUntil||null,
       access_list: student.accessList||[1],
       completed_at: student.completedAt||null,
@@ -1016,8 +991,10 @@ const LOGO_BASE64 = LOGO_URL;
 const FAVICON_BASE64 = FAVICON_URL;
 
 // ── 2. ADMIN LOGIN ────────────────────────────────────────────────────────────
-const ADMIN_EMAIL    = "admin@brokenenglish.com"; // ← your admin email
-const ADMIN_PASSWORD = "admin1234";               // ← your admin password
+// Admin credentials removed from frontend.
+// Admin authentication now uses Supabase Auth + admin_users table.
+// Run scripts/bootstrap-admin.js to create the admin account.
+// NEVER hard-code admin credentials here — they are visible to anyone.
 
 // ── 3. COURSE DRIP SETTING ───────────────────────────────────────────────────
 const DAILY_UNLOCK_LIMIT = 4; // 4 lessons per phase/day (phase-based unlock system)
@@ -1096,7 +1073,7 @@ const SAMPLE_VIDEO = "https://interactive-examples.mdn.mozilla.net/media/cc0-vid
 // ╚═══════════════════════════════════════════════════════════════════════════╝
 
 // Wire config into the rest of the code
-const ADMIN_CREDENTIALS = { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
+// ADMIN_CREDENTIALS removed — admin auth is server-side only via Supabase Auth
 const DAILY_DRIP = DAILY_UNLOCK_LIMIT;
 const QUALITIES  = [{label:"1080p",src:SAMPLE_VIDEO},{label:"720p",src:SAMPLE_VIDEO},{label:"480p",src:SAMPLE_VIDEO}];
 
@@ -1370,136 +1347,153 @@ function isDemoSession(){return !!(currentSession&&currentSession.role==='demo')
 
 let adminUnlockAll=false;
 
+// ── XSS SAFETY HELPERS ────────────────────────────────────────────────────────
+// Use escapeHtml() whenever injecting user/DB data into innerHTML.
+function escapeHtml(s){
+  if(s==null)return'';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function escapeAttr(s){return escapeHtml(s);}
+// Safe URL: allow only https: (and mailto: for email links). Reject javascript:/data:
+function safeUrl(u){
+  if(!u)return'#';
+  try{var p=new URL(u);if(['https:','mailto:'].includes(p.protocol))return u;}catch(_){}
+  return '#';
+}
+// TTS Edge Function endpoint (ElevenLabs key lives server-side only)
+var TTS_ENDPOINT = (typeof SUPABASE_URL!=='undefined'?SUPABASE_URL:'') + '/functions/v1/tts';
+
 // ─── QUIZ BANK ────────────────────────────────────────────────────────────────
 const QUIZ_BANK={
   // ── Day 1: Foundational Phonetics ──────────────────────────────────────────
   1:[
-    {id:"d1q1",prompt:"What is the core definition of a syllable?",options:["A block of letters that contains a silent consonant.","A complete unit of spoken language consisting of one vowel sound.","Any combination of three letters or more.","A word that cannot be broken down into smaller pieces."],answer:1},
-    {id:"d1q2",prompt:"How many syllables are in 'communication'?",options:["4","5","6","7"],answer:1},
-    {id:"d1q3",prompt:"Why is English considered 'non-phonetic'?",options:["Because it uses the Cyrillic alphabet instead of Latin.","Letters are always pronounced exactly the same way.","There is no direct relationship between spelling and sound.","It lacks any complex vowel sounds."],answer:2},
-    {id:"d1q4",prompt:"How many letters vs. sounds does English have?",options:["44 letters; 26 sounds.","26 letters; 26 sounds.","26 letters; 44 sounds.","44 letters; 44 sounds."],answer:2},
-    {id:"d1q5",prompt:"What does throat vibration prove about a sound?",options:["The sound is unvoiced.","The sound is voiced.","The sound is an elongated nasal sound.","The mouth is fully open."],answer:1},
-    {id:"d1q6",prompt:"Which word has exactly three syllables?",options:["Communication","Beautiful","Object","Act"],answer:1},
-    {id:"d1q7",prompt:"What is the purpose of the IPA (International Phonetic Alphabet)?",options:["To dictate absolute grammatical rules globally.","To provide universal, unambiguous symbols for sounds.","To replace standard English spellings in dictionaries.","To translate English words into multiple languages."],answer:1},
+    {id:"d1q1",prompt:"What is the core definition of a syllable?",options:["A block of letters that contains a silent consonant.","A complete unit of spoken language consisting of one vowel sound.","Any combination of three letters or more.","A word that cannot be broken down into smaller pieces."]},
+    {id:"d1q2",prompt:"How many syllables are in 'communication'?",options:["4","5","6","7"]},
+    {id:"d1q3",prompt:"Why is English considered 'non-phonetic'?",options:["Because it uses the Cyrillic alphabet instead of Latin.","Letters are always pronounced exactly the same way.","There is no direct relationship between spelling and sound.","It lacks any complex vowel sounds."]},
+    {id:"d1q4",prompt:"How many letters vs. sounds does English have?",options:["44 letters; 26 sounds.","26 letters; 26 sounds.","26 letters; 44 sounds.","44 letters; 44 sounds."]},
+    {id:"d1q5",prompt:"What does throat vibration prove about a sound?",options:["The sound is unvoiced.","The sound is voiced.","The sound is an elongated nasal sound.","The mouth is fully open."]},
+    {id:"d1q6",prompt:"Which word has exactly three syllables?",options:["Communication","Beautiful","Object","Act"]},
+    {id:"d1q7",prompt:"What is the purpose of the IPA (International Phonetic Alphabet)?",options:["To dictate absolute grammatical rules globally.","To provide universal, unambiguous symbols for sounds.","To replace standard English spellings in dictionaries.","To translate English words into multiple languages."]},
   ],
   // ── Day 2: ED Endings ──────────────────────────────────────────────────────
   2:[
-    {id:"d5q1",prompt:"What is the key fix for MTI (Mother Tongue Influence) with the /ɪ/ sound?",options:["Dropping all final short consonants.","Using a crisp /ɪ/ sound, not the long /i:/.","Elongating the unstressed suffix.","Using rising intonation structures."],answer:1},
-    {id:"d5q2",prompt:"What is the mouth position for the short /ɪ/ sound?",options:["Smile wide and pull back tongue tightly.","Relaxed, minimal jaw drop.","Drop jaw fully with rounded lips.","Rest tongue flat against lower teeth."],answer:1},
-    {id:"d5q3",prompt:"Where does the primary stress fall in the word 'competition'?",options:["Initial (com-).","Secondary (pe-).","Penultimate (-ti-).","Ultimate (-on)."],answer:2},
-    {id:"d5q4",prompt:"What MTI error typically occurs in the word 'ambition'?",options:["Reducing the target to a weak schwa.","Stretching /ɪ/ to the long /i:/.","Introducing an intrusive glide sound.","Dropping the nasal termination."],answer:1},
-    {id:"d5q5",prompt:"Which word is the minimal pair example for the short /ɪ/ sound?",options:["Seat","Sit","Sat","Sight"],answer:1},
-    {id:"d5q6",prompt:"What is the key warning when applying stress to a syllable?",options:["Accelerate the unstressed syllable structure.","Don't warp the vowel quality when stressing.","Always apply extreme throat friction.","Eliminate nasal elements entirely."],answer:1},
-    {id:"d5q7",prompt:"What makes 'happy' phonetically unusual at the end?",options:["Uses a unique trilled vocalic structure.","It uses an intermediate sound between /ɪ/ and /i:/.","Features a silent terminal suffix.","Stress is placed equally on both segments."],answer:1},
+    {id:"d5q1",prompt:"What is the key fix for MTI (Mother Tongue Influence) with the /ɪ/ sound?",options:["Dropping all final short consonants.","Using a crisp /ɪ/ sound, not the long /i:/.","Elongating the unstressed suffix.","Using rising intonation structures."]},
+    {id:"d5q2",prompt:"What is the mouth position for the short /ɪ/ sound?",options:["Smile wide and pull back tongue tightly.","Relaxed, minimal jaw drop.","Drop jaw fully with rounded lips.","Rest tongue flat against lower teeth."]},
+    {id:"d5q3",prompt:"Where does the primary stress fall in the word 'competition'?",options:["Initial (com-).","Secondary (pe-).","Penultimate (-ti-).","Ultimate (-on)."]},
+    {id:"d5q4",prompt:"What MTI error typically occurs in the word 'ambition'?",options:["Reducing the target to a weak schwa.","Stretching /ɪ/ to the long /i:/.","Introducing an intrusive glide sound.","Dropping the nasal termination."]},
+    {id:"d5q5",prompt:"Which word is the minimal pair example for the short /ɪ/ sound?",options:["Seat","Sit","Sat","Sight"]},
+    {id:"d5q6",prompt:"What is the key warning when applying stress to a syllable?",options:["Accelerate the unstressed syllable structure.","Don't warp the vowel quality when stressing.","Always apply extreme throat friction.","Eliminate nasal elements entirely."]},
+    {id:"d5q7",prompt:"What makes 'happy' phonetically unusual at the end?",options:["Uses a unique trilled vocalic structure.","It uses an intermediate sound between /ɪ/ and /i:/.","Features a silent terminal suffix.","Stress is placed equally on both segments."]},
   ],
   // ── Day 3: Pluralization ───────────────────────────────────────────────────
   3:[
-    {id:"d3q1",prompt:"How is the plural 's' pronounced after a voiced consonant?",options:["Unvoiced /s/ friction.","Voiced /z/ vibration.","Weak transitional schwa.","Completely silent glide."],answer:1},
-    {id:"d3q2",prompt:"Which word uses the unvoiced /s/ for its plural?",options:["Houses","Books","Uses","Pins"],answer:1},
-    {id:"d3q3",prompt:"How is the possessive 's' in 'cat's' pronounced?",options:["Voiced /z/ vibration.","Unvoiced /s/ friction.","Syllabic /ɪz/.","Complete elision."],answer:1},
-    {id:"d3q4",prompt:"What governs the pronunciation of a final 's'?",options:["The number of vowels inside the root stem.","The historical spelling of the prefix.","The preceding sound's voicing.","The sentence stress timing rules."],answer:2},
-    {id:"d3q5",prompt:"How is 'uses' (plural noun) pronounced?",options:["Voiced /z/.","Unvoiced /s/.","Weak schwa extension.","Silent termination."],answer:0},
-    {id:"d3q6",prompt:"How does 'close' differ as an adjective vs. a verb?",options:["Adj /s/, Verb /z/.","Adj /z/, Verb /s/.","Both are unvoiced /s/.","Both are voiced /z/."],answer:0},
-    {id:"d3q7",prompt:"Which is a correctly matched voiced/unvoiced consonant pair?",options:["/p/ and /s/.","/f/ and /v/.","/t/ and /k/.","/m/ and /n/."],answer:1},
+    {id:"d3q1",prompt:"How is the plural 's' pronounced after a voiced consonant?",options:["Unvoiced /s/ friction.","Voiced /z/ vibration.","Weak transitional schwa.","Completely silent glide."]},
+    {id:"d3q2",prompt:"Which word uses the unvoiced /s/ for its plural?",options:["Houses","Books","Uses","Pins"]},
+    {id:"d3q3",prompt:"How is the possessive 's' in 'cat's' pronounced?",options:["Voiced /z/ vibration.","Unvoiced /s/ friction.","Syllabic /ɪz/.","Complete elision."]},
+    {id:"d3q4",prompt:"What governs the pronunciation of a final 's'?",options:["The number of vowels inside the root stem.","The historical spelling of the prefix.","The preceding sound's voicing.","The sentence stress timing rules."]},
+    {id:"d3q5",prompt:"How is 'uses' (plural noun) pronounced?",options:["Voiced /z/.","Unvoiced /s/.","Weak schwa extension.","Silent termination."]},
+    {id:"d3q6",prompt:"How does 'close' differ as an adjective vs. a verb?",options:["Adj /s/, Verb /z/.","Adj /z/, Verb /s/.","Both are unvoiced /s/.","Both are voiced /z/."]},
+    {id:"d3q7",prompt:"Which is a correctly matched voiced/unvoiced consonant pair?",options:["/p/ and /s/.","/f/ and /v/.","/t/ and /k/.","/m/ and /n/."]},
   ],
   // ── Day 4: Age Endings ────────────────────────────────────────────────────
   4:[
-    {id:"d4q1",prompt:"How is the '-age' suffix pronounced in more than 90% of English words?",options:["/eɪdʒ/ (like the standalone word 'age')","/ɪdʒ/ (with a short 'i' sound)","/ɑːʒ/ (with a French 'zh' sound)","It remains completely silent"],answer:1},
-    {id:"d4q2",prompt:"Under what specific condition is '-age' pronounced as /eɪdʒ/ (e.g. page, cage, rage)?",options:["When it comes immediately after a vowel sound","Only when the word originates from French","When it is part of a stressed syllable","When the word has three or more syllables"],answer:2},
-    {id:"d4q3",prompt:"Why does the word 'enrage' maintain the /eɪdʒ/ pronunciation at the end?",options:["Because the stress falls on the second syllable ('-rage')","Because the stress falls on the first syllable ('en-')","Because it is a direct French loanword","Because it ends with a silent consonant"],answer:0},
-    {id:"d4q4",prompt:"Which word is an unstressed '-age' exception pronounced with the short /ɪdʒ/ sound?",options:["Camouflage","Mirage","Manage","Stage"],answer:2},
-    {id:"d4q5",prompt:"How is '-age' typically pronounced in French loanwords such as 'mirage' or 'collage'?",options:["/ɪdʒ/","/ɑːʒ/ (a long 'a' sound followed by a 'zh' sound)","/æɡ/","/eɪɡ/"],answer:1},
-    {id:"d4q6",prompt:"What is the meaning of the French-derived word 'sillage'?",options:["The design or ability to blend into surroundings","The act of using spies to extract information","The trail of scent a perfume leaves behind in a room after a person has left","A deliberate act intended to destroy something"],answer:2},
-    {id:"d4q7",prompt:"How does 'voyage' change when used in 'bon voyage' vs. standalone English?",options:["It stays exactly the same in both contexts","In English it ends with /ɪdʒ/ ('voy-ij'), but in the French expression it ends with /ʒ/ ('bon voy-ahzh')","In English it ends with /ɑːʒ/, but in the French expression it ends with /ɪdʒ/","It becomes completely silent in the expression"],answer:1},
+    {id:"d4q1",prompt:"How is the '-age' suffix pronounced in more than 90% of English words?",options:["/eɪdʒ/ (like the standalone word 'age')","/ɪdʒ/ (with a short 'i' sound)","/ɑːʒ/ (with a French 'zh' sound)","It remains completely silent"]},
+    {id:"d4q2",prompt:"Under what specific condition is '-age' pronounced as /eɪdʒ/ (e.g. page, cage, rage)?",options:["When it comes immediately after a vowel sound","Only when the word originates from French","When it is part of a stressed syllable","When the word has three or more syllables"]},
+    {id:"d4q3",prompt:"Why does the word 'enrage' maintain the /eɪdʒ/ pronunciation at the end?",options:["Because the stress falls on the second syllable ('-rage')","Because the stress falls on the first syllable ('en-')","Because it is a direct French loanword","Because it ends with a silent consonant"]},
+    {id:"d4q4",prompt:"Which word is an unstressed '-age' exception pronounced with the short /ɪdʒ/ sound?",options:["Camouflage","Mirage","Manage","Stage"]},
+    {id:"d4q5",prompt:"How is '-age' typically pronounced in French loanwords such as 'mirage' or 'collage'?",options:["/ɪdʒ/","/ɑːʒ/ (a long 'a' sound followed by a 'zh' sound)","/æɡ/","/eɪɡ/"]},
+    {id:"d4q6",prompt:"What is the meaning of the French-derived word 'sillage'?",options:["The design or ability to blend into surroundings","The act of using spies to extract information","The trail of scent a perfume leaves behind in a room after a person has left","A deliberate act intended to destroy something"]},
+    {id:"d4q7",prompt:"How does 'voyage' change when used in 'bon voyage' vs. standalone English?",options:["It stays exactly the same in both contexts","In English it ends with /ɪdʒ/ ('voy-ij'), but in the French expression it ends with /ʒ/ ('bon voy-ahzh')","In English it ends with /ɑːʒ/, but in the French expression it ends with /ɪdʒ/","It becomes completely silent in the expression"]},
   ],
   // ── Day 5: Short Vowels ────────────────────────────────────────────────────
   5:[
-    {id:"d2q1",prompt:"What is the role of vocal cords in speech?",options:["They capture air from the lungs without vibrating.","They produce vibration; the mouth shapes it.","They determine the alphabetical spelling of a word.","They are only used during whispered speech."],answer:1},
-    {id:"d2q2",prompt:"What is the difference between voiced and unvoiced sounds?",options:["Unvoiced sounds involve heavy throat friction.","Voiced sounds are strictly nasal.","Voiced sounds involve vocal cord vibration.","Unvoiced sounds can only be made with lips open."],answer:2},
-    {id:"d2q3",prompt:"What category do all vowel sounds fall into?",options:["All are unvoiced.","All are voiced.","Some are voiced and some are nasal.","They do not require any vibration."],answer:1},
-    {id:"d2q4",prompt:"How do you pronounce '-ed' after an unvoiced consonant?",options:["As a weak schwa sound.","As a voiced /d/ vibration.","As a sharp /t/ sound.","It remains completely silent."],answer:2},
-    {id:"d2q5",prompt:"What is the rule for verbs ending in /t/ or /d/ when adding -ed?",options:["Drop the final letter entirely.","Add an 'id' (/ɪd/) syllable.","Pronounce it as a sharp /t/.","Elide the preceding vowel."],answer:1},
-    {id:"d2q6",prompt:"How are adjective exceptions like 'blessed' or 'learned' pronounced?",options:["Pronounced as a single consonant cluster.","Pronounced with a full 'id' suffix as a separate syllable.","Dropping the structural ending entirely.","Converting the final sound to a nasal glide."],answer:1},
-    {id:"d2q7",prompt:"How does the word 'house' differ as a noun vs. a verb in pronunciation?",options:["Noun /z/, Verb /s/.","Noun and Verb are both /s/.","Noun /s/, Verb /z/.","Noun and Verb are both /z/."],answer:2},
+    {id:"d2q1",prompt:"What is the role of vocal cords in speech?",options:["They capture air from the lungs without vibrating.","They produce vibration; the mouth shapes it.","They determine the alphabetical spelling of a word.","They are only used during whispered speech."]},
+    {id:"d2q2",prompt:"What is the difference between voiced and unvoiced sounds?",options:["Unvoiced sounds involve heavy throat friction.","Voiced sounds are strictly nasal.","Voiced sounds involve vocal cord vibration.","Unvoiced sounds can only be made with lips open."]},
+    {id:"d2q3",prompt:"What category do all vowel sounds fall into?",options:["All are unvoiced.","All are voiced.","Some are voiced and some are nasal.","They do not require any vibration."]},
+    {id:"d2q4",prompt:"How do you pronounce '-ed' after an unvoiced consonant?",options:["As a weak schwa sound.","As a voiced /d/ vibration.","As a sharp /t/ sound.","It remains completely silent."]},
+    {id:"d2q5",prompt:"What is the rule for verbs ending in /t/ or /d/ when adding -ed?",options:["Drop the final letter entirely.","Add an 'id' (/ɪd/) syllable.","Pronounce it as a sharp /t/.","Elide the preceding vowel."]},
+    {id:"d2q6",prompt:"How are adjective exceptions like 'blessed' or 'learned' pronounced?",options:["Pronounced as a single consonant cluster.","Pronounced with a full 'id' suffix as a separate syllable.","Dropping the structural ending entirely.","Converting the final sound to a nasal glide."]},
+    {id:"d2q7",prompt:"How does the word 'house' differ as a noun vs. a verb in pronunciation?",options:["Noun /z/, Verb /s/.","Noun and Verb are both /s/.","Noun /s/, Verb /z/.","Noun and Verb are both /z/."]},
   ],
   // ── Day 6: Short /ɪ/ vs Long /iː/ & Word Stress ──────────────────────────
   6:[
-    {id:"d6q1",prompt:"What is the main characteristic of the short /ɪ/ sound when it occurs in a stressed syllable?",options:["It should be elongated or held longer.","It increases in loudness and pitch, but remains short.","It changes into a long /iː/ sound.","It becomes completely silent."],answer:1},
-    {id:"d6q2",prompt:"What does the acronym MTI stand for in language learning?",options:["Maximum Tone Intonation","Mother Tongue Interference","Multilingual Talk Interaction","Mispronounced Tongue Inflection"],answer:1},
-    {id:"d6q3",prompt:"Which description accurately matches the mouth and tongue position for the short /ɪ/ sound?",options:["Smile broadly, pull the lips tight, and push the tongue forward.","Relax the mouth, drop the jaw slightly, and place the tip of the tongue against the inner side of the bottom teeth.","Open the mouth wide, round the lips into an 'O' shape, and pull the tongue all the way back.","Keep the lips tense, close the teeth completely, and flatten the tongue."],answer:1},
-    {id:"d6q4",prompt:"In the word 'competition', which syllable receives the primary stress and what vowel does it contain?",options:["The first syllable ('com'), containing a long /iː/ sound.","The second syllable ('pe'), containing a short /e/ sound.","The third syllable ('ti'), containing a short /ɪ/ sound (com-pe-TI-tion).","The last syllable ('tion'), containing a schwa sound."],answer:2},
-    {id:"d6q5",prompt:"Match the short /ɪ/ words with their long /iː/ minimal pair counterparts: Sit→?, Bit→?, Fit→?, Hit→?",options:["Sit-Seat, Bit-Beat, Fit-Feet, Hit-Heat","Sit-Beat, Bit-Seat, Fit-Heat, Hit-Feet","Sit-Seat, Bit-Heat, Fit-Feet, Bit-Beat","Sit-Feet, Bit-Beat, Fit-Seat, Hit-Heat"],answer:0},
-    {id:"d6q6",prompt:"True or False: When stressing a syllable with a short /ɪ/ sound (like 'ambition'), you should change the vowel to a long /iː/ to make it stand out.",options:["True — you must elongate the vowel to stress it.","False — the vowel quality must remain constant even when stressed.","True — only in multi-syllable words.","False — only applies to unstressed syllables."],answer:1},
-    {id:"d6q7",prompt:"Where does the final vowel sound in the word 'happy' lie?",options:["Exactly identical to the long /iː/ sound in 'feet'.","Exactly identical to the short /ɪ/ sound in 'sit'.","A unique intermediate sound falling somewhere between short /ɪ/ and long /iː/."],answer:2},
+    {id:"d6q1",prompt:"What is the main characteristic of the short /ɪ/ sound when it occurs in a stressed syllable?",options:["It should be elongated or held longer.","It increases in loudness and pitch, but remains short.","It changes into a long /iː/ sound.","It becomes completely silent."]},
+    {id:"d6q2",prompt:"What does the acronym MTI stand for in language learning?",options:["Maximum Tone Intonation","Mother Tongue Interference","Multilingual Talk Interaction","Mispronounced Tongue Inflection"]},
+    {id:"d6q3",prompt:"Which description accurately matches the mouth and tongue position for the short /ɪ/ sound?",options:["Smile broadly, pull the lips tight, and push the tongue forward.","Relax the mouth, drop the jaw slightly, and place the tip of the tongue against the inner side of the bottom teeth.","Open the mouth wide, round the lips into an 'O' shape, and pull the tongue all the way back.","Keep the lips tense, close the teeth completely, and flatten the tongue."]},
+    {id:"d6q4",prompt:"In the word 'competition', which syllable receives the primary stress and what vowel does it contain?",options:["The first syllable ('com'), containing a long /iː/ sound.","The second syllable ('pe'), containing a short /e/ sound.","The third syllable ('ti'), containing a short /ɪ/ sound (com-pe-TI-tion).","The last syllable ('tion'), containing a schwa sound."]},
+    {id:"d6q5",prompt:"Match the short /ɪ/ words with their long /iː/ minimal pair counterparts: Sit→?, Bit→?, Fit→?, Hit→?",options:["Sit-Seat, Bit-Beat, Fit-Feet, Hit-Heat","Sit-Beat, Bit-Seat, Fit-Heat, Hit-Feet","Sit-Seat, Bit-Heat, Fit-Feet, Bit-Beat","Sit-Feet, Bit-Beat, Fit-Seat, Hit-Heat"]},
+    {id:"d6q6",prompt:"True or False: When stressing a syllable with a short /ɪ/ sound (like 'ambition'), you should change the vowel to a long /iː/ to make it stand out.",options:["True — you must elongate the vowel to stress it.","False — the vowel quality must remain constant even when stressed.","True — only in multi-syllable words.","False — only applies to unstressed syllables."]},
+    {id:"d6q7",prompt:"Where does the final vowel sound in the word 'happy' lie?",options:["Exactly identical to the long /iː/ sound in 'feet'.","Exactly identical to the short /ɪ/ sound in 'sit'.","A unique intermediate sound falling somewhere between short /ɪ/ and long /iː/."]},
   ],
   // ── Day 7: Consonant Clusters ──────────────────────────────────────────────
   7:[
-    {id:"d7q1",prompt:"What is a consonant cluster?",options:["A group of identical vowel sounds inside a word.","Consecutive consonants without an intervening vowel.","Silent segments that alter stress patterns.","Words containing only nasal sound elements."],answer:1},
-    {id:"d7q2",prompt:"Which word begins with a three-consonant cluster?",options:["Problem","String","Practice","Challenge"],answer:1},
-    {id:"d7q3",prompt:"What is epenthetic vowel insertion?",options:["Dropping a letter to simplify a phrase transition.","Adding an extra vowel where there should be none (e.g. 'is-tation').","Stressing the wrong internal syllable segment.","Merging matching consonants at word boundaries."],answer:1},
-    {id:"d7q4",prompt:"What is the correct pronunciation sequence for 'tests'?",options:["Dropping the final sibilant sound entirely.","/t/ → /s/ → /t/ → /s/ sequence.","Replacing internal elements with a stop T.","Merging into a singular elongated sound block."],answer:1},
-    {id:"d7q5",prompt:"Which word contains a four-sound consonant cluster?",options:["Contexts","Twelfths","Months","Prospects"],answer:1},
-    {id:"d7q6",prompt:"What is the tip for pronouncing 'prospects' correctly?",options:["Drop the internal plosive elements completely.","Maintain a crisp sequence of all sounds.","Apply a weak schwa between consonants.","Elongate the ultimate vowel element."],answer:1},
-    {id:"d7q7",prompt:"Which word has a consonant cluster at the end?",options:["Blue","Act","No","See"],answer:1},
+    {id:"d7q1",prompt:"What is a consonant cluster?",options:["A group of identical vowel sounds inside a word.","Consecutive consonants without an intervening vowel.","Silent segments that alter stress patterns.","Words containing only nasal sound elements."]},
+    {id:"d7q2",prompt:"Which word begins with a three-consonant cluster?",options:["Problem","String","Practice","Challenge"]},
+    {id:"d7q3",prompt:"What is epenthetic vowel insertion?",options:["Dropping a letter to simplify a phrase transition.","Adding an extra vowel where there should be none (e.g. 'is-tation').","Stressing the wrong internal syllable segment.","Merging matching consonants at word boundaries."]},
+    {id:"d7q4",prompt:"What is the correct pronunciation sequence for 'tests'?",options:["Dropping the final sibilant sound entirely.","/t/ → /s/ → /t/ → /s/ sequence.","Replacing internal elements with a stop T.","Merging into a singular elongated sound block."]},
+    {id:"d7q5",prompt:"Which word contains a four-sound consonant cluster?",options:["Contexts","Twelfths","Months","Prospects"]},
+    {id:"d7q6",prompt:"What is the tip for pronouncing 'prospects' correctly?",options:["Drop the internal plosive elements completely.","Maintain a crisp sequence of all sounds.","Apply a weak schwa between consonants.","Elongate the ultimate vowel element."]},
+    {id:"d7q7",prompt:"Which word has a consonant cluster at the end?",options:["Blue","Act","No","See"]},
   ],
   // ── Day 8: Word Stress ─────────────────────────────────────────────────────
   8:[
-    {id:"d8q1",prompt:"What is the definition of word stress?",options:["Pronouncing every syllable at the same volume.","One syllable louder, longer, and higher in pitch than others.","A technique to speed up the delivery of words.","Reducing all unstressed syllables to silence."],answer:1},
-    {id:"d8q2",prompt:"What is the typical stress pattern for two-syllable nouns?",options:["Second syllable stressed.","First syllable stressed.","Both syllables equally stressed.","Stress shifts depending on the sentence."],answer:1},
-    {id:"d8q3",prompt:"Which suffix most commonly shifts stress to the syllable before it?",options:["-ness","-ful","-tion / -sion","-ly"],answer:0},
-    {id:"d8q4",prompt:"Where does stress fall in words ending in '-ic' (e.g. 'academic')?",options:["Always on the first syllable.","On the syllable immediately before the '-ic' suffix.","Evenly distributed across all syllables.","On the final syllable '-ic' itself."],answer:1},
-    {id:"d8q5",prompt:"What happens to vowels in unstressed syllables in English?",options:["They are always clearly and fully pronounced.","They often reduce to a schwa /ə/ sound.","They are always completely dropped.","They shift to a long vowel sound."],answer:1},
-    {id:"d8q6",prompt:"What is the stress pattern for compound nouns like 'blackbird'?",options:["Equal stress on both words.","Primary stress on the second word.","Primary stress on the first word.","Stress alternates depending on context."],answer:2},
-    {id:"d8q7",prompt:"Why does incorrect word stress cause more confusion than mispronounced sounds?",options:["It changes the grammatical tense of the sentence.","Listeners process rhythm and beats first; wrong stress breaks the pattern.","It eliminates all vowels from the word.","It makes words sound like a different language entirely."],answer:1},
+    {id:"d8q1",prompt:"What is the definition of word stress?",options:["Pronouncing every syllable at the same volume.","One syllable louder, longer, and higher in pitch than others.","A technique to speed up the delivery of words.","Reducing all unstressed syllables to silence."]},
+    {id:"d8q2",prompt:"What is the typical stress pattern for two-syllable nouns?",options:["Second syllable stressed.","First syllable stressed.","Both syllables equally stressed.","Stress shifts depending on the sentence."]},
+    {id:"d8q3",prompt:"Which suffix most commonly shifts stress to the syllable before it?",options:["-ness","-ful","-tion / -sion","-ly"]},
+    {id:"d8q4",prompt:"Where does stress fall in words ending in '-ic' (e.g. 'academic')?",options:["Always on the first syllable.","On the syllable immediately before the '-ic' suffix.","Evenly distributed across all syllables.","On the final syllable '-ic' itself."]},
+    {id:"d8q5",prompt:"What happens to vowels in unstressed syllables in English?",options:["They are always clearly and fully pronounced.","They often reduce to a schwa /ə/ sound.","They are always completely dropped.","They shift to a long vowel sound."]},
+    {id:"d8q6",prompt:"What is the stress pattern for compound nouns like 'blackbird'?",options:["Equal stress on both words.","Primary stress on the second word.","Primary stress on the first word.","Stress alternates depending on context."]},
+    {id:"d8q7",prompt:"Why does incorrect word stress cause more confusion than mispronounced sounds?",options:["It changes the grammatical tense of the sentence.","Listeners process rhythm and beats first; wrong stress breaks the pattern.","It eliminates all vowels from the word.","It makes words sound like a different language entirely."]},
   ],
   // ── Day 9: Verb vs Noun Syllable Stress (existing — kept as-is) ────────────
-  9:[{id:"s3q1",prompt:"What general phonetic rule is shared regarding two-syllable verbs in English?",options:["Typically stressed on the first syllable.","Typically stressed on the second syllable.","Pronounced with completely silent vowels.","They do not have any syllable stress."],answer:1},{id:"s3q2",prompt:"For most two-syllable nouns and adjectives, where does syllable stress usually land?",options:["On the first syllable.","On the second syllable.","Evenly on both syllables.","It alternates depending on mood."],answer:0},{id:"s3q3",prompt:"Which word is stressed on the first syllable for both noun and verb forms?",options:["Regret","Project","Comment","Record"],answer:2},{id:"s3q4",prompt:"How does 'desert' pronunciation change from noun to verb?",options:["Noun: de-SERT, Verb: DE-Core","Noun: DE-zert, Verb: de-SERT","The noun drops the 's'.","Both are identical."],answer:1},{id:"s3q5",prompt:"What happens to the vowel in 'rebel' and 'record' when switching noun to verb?",options:["It becomes elongated.","The /ɛ/ weakens to /ɪ/ or schwa because the syllable becomes unstressed.","The first syllable becomes silent.","It changes to a nasal sound."],answer:1},{id:"s3q6",prompt:"Which word meaning 'sweet course after a meal' sounds like de-SERT?",options:["Dessert","Desert","Preference","Permit"],answer:0},{id:"s3q7",prompt:"In 'They will present the award tonight', how should 'present' be stressed?",options:["PRE-sent (noun)","pre-SENT (verb)","No stress","Both equally"],answer:1}],
+  9:[{id:"s3q1",prompt:"What general phonetic rule is shared regarding two-syllable verbs in English?",options:["Typically stressed on the first syllable.","Typically stressed on the second syllable.","Pronounced with completely silent vowels.","They do not have any syllable stress."]},{id:"s3q2",prompt:"For most two-syllable nouns and adjectives, where does syllable stress usually land?",options:["On the first syllable.","On the second syllable.","Evenly on both syllables.","It alternates depending on mood."]},{id:"s3q3",prompt:"Which word is stressed on the first syllable for both noun and verb forms?",options:["Regret","Project","Comment","Record"]},{id:"s3q4",prompt:"How does 'desert' pronunciation change from noun to verb?",options:["Noun: de-SERT, Verb: DE-Core","Noun: DE-zert, Verb: de-SERT","The noun drops the 's'.","Both are identical."]},{id:"s3q5",prompt:"What happens to the vowel in 'rebel' and 'record' when switching noun to verb?",options:["It becomes elongated.","The /ɛ/ weakens to /ɪ/ or schwa because the syllable becomes unstressed.","The first syllable becomes silent.","It changes to a nasal sound."]},{id:"s3q6",prompt:"Which word meaning 'sweet course after a meal' sounds like de-SERT?",options:["Dessert","Desert","Preference","Permit"]},{id:"s3q7",prompt:"In 'They will present the award tonight', how should 'present' be stressed?",options:["PRE-sent (noun)","pre-SENT (verb)","No stress","Both equally"]}],
   // ── Day 10: TH Sound Mechanics (existing) ──────────────────────────────────
-  10:[{id:"s5q1",prompt:"What physical action makes the English 'TH' sounds correctly?",options:["Pressing tongue against soft palate.","Sticking tip of tongue between the teeth.","Curling tongue backward.","Keeping teeth tightly closed."],answer:1},{id:"s5q2",prompt:"What is the key difference between 'TH' in 'think' and 'this'?",options:["Think uses a stop; this uses continuous.","Think is unvoiced; this is voiced.","Think is British; this is American.","Think is behind teeth; this is between lips."],answer:1},{id:"s5q3",prompt:"Which grammatical categories help predict voiced/unvoiced final TH?",options:["Nouns unvoiced; verbs voiced.","Verbs unvoiced; adjectives voiced.","Nouns voiced; adjectives unvoiced.","Adjectives unvoiced; verbs voiced."],answer:0},{id:"s5q4",prompt:"What happens to the vowel in 'thank' in American English?",options:["It drops out.","It shifts toward an 'ae' sound.","It becomes long 'O'.","It becomes silent."],answer:1},{id:"s5q5",prompt:"When should 'the' be pronounced as 'thuh'?",options:["Before a vowel letter.","Before a consonant sound.","At the end of a sentence.","When adding stress."],answer:1},{id:"s5q6",prompt:"Why do we say 'thee' before 'apple' or 'orange'?",options:["Old British law.","To sound formal.","To remove an awkward linguistic jump.","They are proper nouns."],answer:2},{id:"s5q7",prompt:"When do you always use 'thee' even before a consonant?",options:["Speaking quickly.","When adding heavy stress or emphasis.","Talking to a trainer.","Never any exception."],answer:1}],
+  10:[{id:"s5q1",prompt:"What physical action makes the English 'TH' sounds correctly?",options:["Pressing tongue against soft palate.","Sticking tip of tongue between the teeth.","Curling tongue backward.","Keeping teeth tightly closed."]},{id:"s5q2",prompt:"What is the key difference between 'TH' in 'think' and 'this'?",options:["Think uses a stop; this uses continuous.","Think is unvoiced; this is voiced.","Think is British; this is American.","Think is behind teeth; this is between lips."]},{id:"s5q3",prompt:"Which grammatical categories help predict voiced/unvoiced final TH?",options:["Nouns unvoiced; verbs voiced.","Verbs unvoiced; adjectives voiced.","Nouns voiced; adjectives unvoiced.","Adjectives unvoiced; verbs voiced."]},{id:"s5q4",prompt:"What happens to the vowel in 'thank' in American English?",options:["It drops out.","It shifts toward an 'ae' sound.","It becomes long 'O'.","It becomes silent."]},{id:"s5q5",prompt:"When should 'the' be pronounced as 'thuh'?",options:["Before a vowel letter.","Before a consonant sound.","At the end of a sentence.","When adding stress."]},{id:"s5q6",prompt:"Why do we say 'thee' before 'apple' or 'orange'?",options:["Old British law.","To sound formal.","To remove an awkward linguistic jump.","They are proper nouns."]},{id:"s5q7",prompt:"When do you always use 'thee' even before a consonant?",options:["Speaking quickly.","When adding heavy stress or emphasis.","Talking to a trainer.","Never any exception."]}],
   // ── Day 11: Silent Letters (existing) ─────────────────────────────────────
-  11:[{id:"s6q1",prompt:"Why does English have so many silent letters?",options:["A law made it harder for non-natives.","Pronunciation changed; spellings were frozen by printing presses.","Printers added letters to get paid more.","Silent letters only exist in American English."],answer:1},{id:"s6q2",prompt:"Which word contains a structurally silent 'W'?",options:["Window","Sword","Reward","Vow"],answer:1},{id:"s6q3",prompt:"How is 'receipt' correctly pronounced?",options:["'P' is silent.","'C' is silent, 'P' is popped.","Both 'P' and 'T' are silent.","Pronounced like 're-kept'."],answer:0},{id:"s6q4",prompt:"What rule applies to 'B' after 'M' at word end (thumb, lamb)?",options:["'B' is always pronounced.","'M' becomes silent.","'B' is almost always silent.","Combination becomes 'V'."],answer:2},{id:"s6q5",prompt:"In which word is 'D' completely silent?",options:["Decided","Wednesday","Driveway","Underneath"],answer:1},{id:"s6q6",prompt:"Which term features a structurally silent 'J'?",options:["Judge","Marijuana","Project","Rendezvous"],answer:1},{id:"s6q7",prompt:"Which consonants are virtually never silent in English?",options:["P and T","W and H","F and V","B and D"],answer:2}],
+  11:[{id:"s6q1",prompt:"Why does English have so many silent letters?",options:["A law made it harder for non-natives.","Pronunciation changed; spellings were frozen by printing presses.","Printers added letters to get paid more.","Silent letters only exist in American English."]},{id:"s6q2",prompt:"Which word contains a structurally silent 'W'?",options:["Window","Sword","Reward","Vow"]},{id:"s6q3",prompt:"How is 'receipt' correctly pronounced?",options:["'P' is silent.","'C' is silent, 'P' is popped.","Both 'P' and 'T' are silent.","Pronounced like 're-kept'."]},{id:"s6q4",prompt:"What rule applies to 'B' after 'M' at word end (thumb, lamb)?",options:["'B' is always pronounced.","'M' becomes silent.","'B' is almost always silent.","Combination becomes 'V'."]},{id:"s6q5",prompt:"In which word is 'D' completely silent?",options:["Decided","Wednesday","Driveway","Underneath"]},{id:"s6q6",prompt:"Which term features a structurally silent 'J'?",options:["Judge","Marijuana","Project","Rendezvous"]},{id:"s6q7",prompt:"Which consonants are virtually never silent in English?",options:["P and T","W and H","F and V","B and D"]}],
   // ── Day 12: The 3 "O" Sounds ──────────────────────────────────────────────
   12:[
-    {id:"d12q1",prompt:"Which type of 'O' sound requires a distinct jaw drop where you can fit two fingers vertically between your teeth?",options:["Diphthong O","Long O","Short O","Schwa O"],answer:2},
-    {id:"d12q2",prompt:"A director said 'own it' when she actually meant 'on it'. What sound should have been used for 'on it'?",options:["Diphthong O","Short O","Long O","Schwa O"],answer:1},
-    {id:"d12q3",prompt:"Word pairs like 'ROT vs ROTE' and 'NOT vs NOTE' — what is the sound change from the first word to the second?",options:["Long O changing to Short O","Short O changing to Diphthong O","Diphthong O changing to Long O","Short O changing to Long O"],answer:1},
-    {id:"d12q4",prompt:"Which of the following words features a Long O sound, typically found in words with an 'O + R' letter combination?",options:["Hot","Floor","Goat","Box"],answer:1},
-    {id:"d12q5",prompt:"If a speaker pronounces 'Messi is the goat' as 'Messi is the god', which pronunciation error occurred?",options:["Using a Short O instead of a Diphthong O","Using a Long O instead of a Short O","Using a Diphthong O instead of a Long O","Using a Short O instead of a Long O"],answer:0},
-    {id:"d12q6",prompt:"What are the starting and ending positions for the Diphthong O sound?",options:["Starting at /a/ and ending at /i/","Monophthong /ɔ/ with a steady mouth shape","Starting at /o/ and gliding into /u/","Starting at /u/ and gliding into /o/"],answer:2},
-    {id:"d12q7",prompt:"Identify the option where ALL three words contain a Short O sound:",options:["Boss, Bose, Box","Hot, Not, On","Core, Bore, Door","Go, Slow, Note"],answer:1},
+    {id:"d12q1",prompt:"Which type of 'O' sound requires a distinct jaw drop where you can fit two fingers vertically between your teeth?",options:["Diphthong O","Long O","Short O","Schwa O"]},
+    {id:"d12q2",prompt:"A director said 'own it' when she actually meant 'on it'. What sound should have been used for 'on it'?",options:["Diphthong O","Short O","Long O","Schwa O"]},
+    {id:"d12q3",prompt:"Word pairs like 'ROT vs ROTE' and 'NOT vs NOTE' — what is the sound change from the first word to the second?",options:["Long O changing to Short O","Short O changing to Diphthong O","Diphthong O changing to Long O","Short O changing to Long O"]},
+    {id:"d12q4",prompt:"Which of the following words features a Long O sound, typically found in words with an 'O + R' letter combination?",options:["Hot","Floor","Goat","Box"]},
+    {id:"d12q5",prompt:"If a speaker pronounces 'Messi is the goat' as 'Messi is the god', which pronunciation error occurred?",options:["Using a Short O instead of a Diphthong O","Using a Long O instead of a Short O","Using a Diphthong O instead of a Long O","Using a Short O instead of a Long O"]},
+    {id:"d12q6",prompt:"What are the starting and ending positions for the Diphthong O sound?",options:["Starting at /a/ and ending at /i/","Monophthong /ɔ/ with a steady mouth shape","Starting at /o/ and gliding into /u/","Starting at /u/ and gliding into /o/"]},
+    {id:"d12q7",prompt:"Identify the option where ALL three words contain a Short O sound:",options:["Boss, Bose, Box","Hot, Not, On","Core, Bore, Door","Go, Slow, Note"]},
   ],
   // ── Day 13: Mastering the R and L Consonant Sounds ───────────────────────
   13:[
-    {id:"d13q1",prompt:"Which best describes the correct tongue position for the American English R sound (/r/)?",options:["The tip of the tongue presses firmly against the back of the front teeth.","The tongue pulls back into the mouth, and the sides touch the upper back teeth without the tip touching the roof of the mouth.","The tongue rests completely flat on the bottom of the mouth.","The tip of the tongue flickers rapidly against the alveolar ridge."],answer:1},
-    {id:"d13q2",prompt:"What lip shape should you form when producing the R sound?",options:["Wide and flat, like a forced smile.","Completely relaxed and hanging open.","A tight, slight circle (similar to a W sound shape) to project the sound.","A wide, vertical jaw drop."],answer:2},
-    {id:"d13q3",prompt:"What is the primary physical difference between the Light L (as in 'Light') and the Dark L (as in 'Ball')?",options:["Light L uses the back of the tongue; Dark L only uses the lips.","Light L involves the tongue tip touching the alveolar ridge; Dark L relies on tension and lifting in the back of the tongue.","Light L is unvoiced; Dark L is voiced.","Light L requires a major jaw drop; Dark L requires none."],answer:1},
-    {id:"d13q4",prompt:"In minimal pairs like 'LIGHT vs RIGHT', if a speaker says 'bLight' instead of 'bRight', what went wrong?",options:["They kept the tongue flat instead of raising the sides.","They dropped their jaw too much.","They mistakenly touched the tip of the tongue to the roof of the mouth instead of pulling it back.","They accidentally nasalized the vowel."],answer:2},
-    {id:"d13q5",prompt:"Which of the following words features a Dark L sound?",options:["Lemon","Reply","Control","Level (the first L)"],answer:2},
-    {id:"d13q6",prompt:"When R follows a vowel (as in 'Car' or 'Bird'), what must a speaker do for proper American pronunciation?",options:["Drop the R entirely and lengthen the vowel sound.","Transition smoothly from the vowel shape into the pulled-back R tongue position before the syllable ends.","Substitute a Schwa sound for the R.","Keep the tongue tip locked against the bottom teeth."],answer:1},
-    {id:"d13q7",prompt:"Which option has ALL three words containing a clear initial Light L sound?",options:["Low, Long, Lip","Girl, Pearl, World","Car, Far, Star","Full, Pull, Cool"],answer:0},
+    {id:"d13q1",prompt:"Which best describes the correct tongue position for the American English R sound (/r/)?",options:["The tip of the tongue presses firmly against the back of the front teeth.","The tongue pulls back into the mouth, and the sides touch the upper back teeth without the tip touching the roof of the mouth.","The tongue rests completely flat on the bottom of the mouth.","The tip of the tongue flickers rapidly against the alveolar ridge."]},
+    {id:"d13q2",prompt:"What lip shape should you form when producing the R sound?",options:["Wide and flat, like a forced smile.","Completely relaxed and hanging open.","A tight, slight circle (similar to a W sound shape) to project the sound.","A wide, vertical jaw drop."]},
+    {id:"d13q3",prompt:"What is the primary physical difference between the Light L (as in 'Light') and the Dark L (as in 'Ball')?",options:["Light L uses the back of the tongue; Dark L only uses the lips.","Light L involves the tongue tip touching the alveolar ridge; Dark L relies on tension and lifting in the back of the tongue.","Light L is unvoiced; Dark L is voiced.","Light L requires a major jaw drop; Dark L requires none."]},
+    {id:"d13q4",prompt:"In minimal pairs like 'LIGHT vs RIGHT', if a speaker says 'bLight' instead of 'bRight', what went wrong?",options:["They kept the tongue flat instead of raising the sides.","They dropped their jaw too much.","They mistakenly touched the tip of the tongue to the roof of the mouth instead of pulling it back.","They accidentally nasalized the vowel."]},
+    {id:"d13q5",prompt:"Which of the following words features a Dark L sound?",options:["Lemon","Reply","Control","Level (the first L)"]},
+    {id:"d13q6",prompt:"When R follows a vowel (as in 'Car' or 'Bird'), what must a speaker do for proper American pronunciation?",options:["Drop the R entirely and lengthen the vowel sound.","Transition smoothly from the vowel shape into the pulled-back R tongue position before the syllable ends.","Substitute a Schwa sound for the R.","Keep the tongue tip locked against the bottom teeth."]},
+    {id:"d13q7",prompt:"Which option has ALL three words containing a clear initial Light L sound?",options:["Low, Long, Lip","Girl, Pearl, World","Car, Far, Star","Full, Pull, Cool"]},
   ],
   // ── Day 14: Consonant Sounds & Mechanics (existing) ───────────────────────
-  14:[{id:"s1q1",prompt:"How many sounds and letters are there in English?",options:["26 sounds, 44 letters","44 sounds, 26 letters","44 sounds, 44 letters","24 sounds, 26 letters"],answer:1},{id:"s1q2",prompt:"What distinguishes voiced /b/ from unvoiced /p/?",options:["Completely different mouth position.","The /b/ is unvoiced; /p/ is voiced.","The /b/ is voiced; /p/ is unvoiced.","The /b/ cannot end a word."],answer:2},{id:"s1q3",prompt:"What is noted about /t/ and /d/ in Indian English?",options:["They are dropped at word end.","Substituted with /f/ and /v/.","A retroflex pronunciation with tongue curled back.","Pronounced as nasal sounds."],answer:2},{id:"s1q4",prompt:"Which sounds can you 'hold or retain' airflow of?",options:["/p/ and /b/","/k/ and /g/","/t/ and /d/","/f/ and /v/"],answer:3},{id:"s1q5",prompt:"Why do /m/, /n/, /ŋ/ stop working if you pinch your nose?",options:["They are aspirated.","They are nasal and need air through the nose.","They are unvoiced lip friction sounds.","They are trilled sounds."],answer:1},{id:"s1q6",prompt:"What is the difference between 'light L' and 'dark L'?",options:["Light L voiced; dark L unvoiced.","Light L before vowels; dark L pulled back at word end.","Light L native; dark L is an accent mistake.","Light L American; dark L British."],answer:1},{id:"s1q7",prompt:"What memory phrase helps with /w/ vs /v/?",options:["Bite W's, kiss V's.","Roll W's, drop V's.","Kiss W's, bite V's.","Hold W's, release V's."],answer:2}],
+  14:[{id:"s1q1",prompt:"How many sounds and letters are there in English?",options:["26 sounds, 44 letters","44 sounds, 26 letters","44 sounds, 44 letters","24 sounds, 26 letters"]},{id:"s1q2",prompt:"What distinguishes voiced /b/ from unvoiced /p/?",options:["Completely different mouth position.","The /b/ is unvoiced; /p/ is voiced.","The /b/ is voiced; /p/ is unvoiced.","The /b/ cannot end a word."]},{id:"s1q3",prompt:"What is noted about /t/ and /d/ in Indian English?",options:["They are dropped at word end.","Substituted with /f/ and /v/.","A retroflex pronunciation with tongue curled back.","Pronounced as nasal sounds."]},{id:"s1q4",prompt:"Which sounds can you 'hold or retain' airflow of?",options:["/p/ and /b/","/k/ and /g/","/t/ and /d/","/f/ and /v/"]},{id:"s1q5",prompt:"Why do /m/, /n/, /ŋ/ stop working if you pinch your nose?",options:["They are aspirated.","They are nasal and need air through the nose.","They are unvoiced lip friction sounds.","They are trilled sounds."]},{id:"s1q6",prompt:"What is the difference between 'light L' and 'dark L'?",options:["Light L voiced; dark L unvoiced.","Light L before vowels; dark L pulled back at word end.","Light L native; dark L is an accent mistake.","Light L American; dark L British."]},{id:"s1q7",prompt:"What memory phrase helps with /w/ vs /v/?",options:["Bite W's, kiss V's.","Roll W's, drop V's.","Kiss W's, bite V's.","Hold W's, release V's."]}],
   // ── Day 15: British vs American (existing + new questions merged) ──────────
-  15:[{id:"s7q1",prompt:"When do American speakers apply a 'Flap T' (soft D sound)?",options:["When a word starts with capital letter.","At very end of sentence.","Between two vowels or between R and a vowel.","When emphasizing in formal speech."],answer:2},{id:"s7q2",prompt:"What happens during a 'Stop T' in American English?",options:["'T' replaced by 'K'.","Mouth forms T but air is held, not released.","Speaker skips the sound.","Preceding vowel is lengthened."],answer:1},{id:"s7q3",prompt:"What happens to 'T' in identity, internet in casual American speech?",options:["Becomes 'Z'.","Gets heavily aspirated.","Goes silent after 'N'.","Word loses a syllable."],answer:2},{id:"s7q4",prompt:"What is 'Y-dropping' in American English?",options:["Dropping Y from plural nouns.","Omitting the 'yoo' /j/ glide in 'new' or 'Tuesday'.","Not pronouncing Y-starting words.","Replacing Y with F."],answer:1},{id:"s7q5",prompt:"How does 'R' differ between British and American English?",options:["British always pronounces R; American ignores it.","British R is silent unless before a vowel; American R is always pronounced.","American R only at word start.","No difference."],answer:1},{id:"s7q6",prompt:"Which pair shows American long 'I' vs British 'E'?",options:["Dance vs Dance","Hot vs Hat","Semi/Anti: British 'em-ee'/'an-tee' vs American 'sem-eye'/'an-tie'","Home vs Whom"],answer:2},{id:"s7q7",prompt:"How does 'laboratory' stress differ between dialects?",options:["British drops two syllables.","British: la-BOR-a-tory; American: LAB-ra-tory.","American adds extra O.","Identical; only tone changes."],answer:1}],
+  15:[{id:"s7q1",prompt:"When do American speakers apply a 'Flap T' (soft D sound)?",options:["When a word starts with capital letter.","At very end of sentence.","Between two vowels or between R and a vowel.","When emphasizing in formal speech."]},{id:"s7q2",prompt:"What happens during a 'Stop T' in American English?",options:["'T' replaced by 'K'.","Mouth forms T but air is held, not released.","Speaker skips the sound.","Preceding vowel is lengthened."]},{id:"s7q3",prompt:"What happens to 'T' in identity, internet in casual American speech?",options:["Becomes 'Z'.","Gets heavily aspirated.","Goes silent after 'N'.","Word loses a syllable."]},{id:"s7q4",prompt:"What is 'Y-dropping' in American English?",options:["Dropping Y from plural nouns.","Omitting the 'yoo' /j/ glide in 'new' or 'Tuesday'.","Not pronouncing Y-starting words.","Replacing Y with F."]},{id:"s7q5",prompt:"How does 'R' differ between British and American English?",options:["British always pronounces R; American ignores it.","British R is silent unless before a vowel; American R is always pronounced.","American R only at word start.","No difference."]},{id:"s7q6",prompt:"Which pair shows American long 'I' vs British 'E'?",options:["Dance vs Dance","Hot vs Hat","Semi/Anti: British 'em-ee'/'an-tee' vs American 'sem-eye'/'an-tie'","Home vs Whom"]},{id:"s7q7",prompt:"How does 'laboratory' stress differ between dialects?",options:["British drops two syllables.","British: la-BOR-a-tory; American: LAB-ra-tory.","American adds extra O.","Identical; only tone changes."]}],
   // ── Day 16: Diphthongs ────────────────────────────────────────────────────
   16:[
-    {id:"d16q1",prompt:"What is the difference between a monophthong and a diphthong?",options:["Nasal configuration vs. open oral framing.","One fixed vowel position vs. a glide between two positions.","Stressed syllable versus weak unstressed form.","Voiced element versus unvoiced burst marker."],answer:1},
-    {id:"d16q2",prompt:"What does failing to transition through a diphthong cause?",options:["Rapid speech acceleration patterns.","Complete loss of sentence stress structure.","Heavy mother-tongue influence (MTI).","Automatic insertion of glottal stops."],answer:2},
-    {id:"d16q3",prompt:"Which diphthong ends in the /ɪ/ sound?",options:["Go","Rain","Now","Core"],answer:1},
-    {id:"d16q4",prompt:"How does 'near/here' differ between American and British English?",options:["American shifts directly to a pure schwa sound.","Both options omit rhotic influences entirely.","British uses a schwa because 'R' is silent; American uses the rhotic /r/.","British implements a hard flap T component."],answer:2},
-    {id:"d16q5",prompt:"How is 'now' typically pronounced in Indian English vs. standard?",options:["Simpler /a/ sound instead of the full diphthong.","Complex dynamic glide transition tracking.","Absolute elimination of internal vowels.","Heavy elongation of nasal boundaries."],answer:0},
-    {id:"d16q6",prompt:"What is the modern trend for the word 'tour'?",options:["Becoming a short monophthong sound.","Merging toward /ɔː/ so it sounds like 'tore'.","Shifting stress layout to absolute fronting.","Dropping initial consonant segments."],answer:1},
-    {id:"d16q7",prompt:"Which correctly pairs the diphthongs for 'fear' vs. 'fair'?",options:["/eə/ vs. /ɪə/.","Identical in rhotic styles.","fear = /ɪə/, fair = /eə/."],answer:2},
+    {id:"d16q1",prompt:"What is the difference between a monophthong and a diphthong?",options:["Nasal configuration vs. open oral framing.","One fixed vowel position vs. a glide between two positions.","Stressed syllable versus weak unstressed form.","Voiced element versus unvoiced burst marker."]},
+    {id:"d16q2",prompt:"What does failing to transition through a diphthong cause?",options:["Rapid speech acceleration patterns.","Complete loss of sentence stress structure.","Heavy mother-tongue influence (MTI).","Automatic insertion of glottal stops."]},
+    {id:"d16q3",prompt:"Which diphthong ends in the /ɪ/ sound?",options:["Go","Rain","Now","Core"]},
+    {id:"d16q4",prompt:"How does 'near/here' differ between American and British English?",options:["American shifts directly to a pure schwa sound.","Both options omit rhotic influences entirely.","British uses a schwa because 'R' is silent; American uses the rhotic /r/.","British implements a hard flap T component."]},
+    {id:"d16q5",prompt:"How is 'now' typically pronounced in Indian English vs. standard?",options:["Simpler /a/ sound instead of the full diphthong.","Complex dynamic glide transition tracking.","Absolute elimination of internal vowels.","Heavy elongation of nasal boundaries."]},
+    {id:"d16q6",prompt:"What is the modern trend for the word 'tour'?",options:["Becoming a short monophthong sound.","Merging toward /ɔː/ so it sounds like 'tore'.","Shifting stress layout to absolute fronting.","Dropping initial consonant segments."]},
+    {id:"d16q7",prompt:"Which correctly pairs the diphthongs for 'fear' vs. 'fair'?",options:["/eə/ vs. /ɪə/.","Identical in rhotic styles.","fear = /ɪə/, fair = /eə/."]},
   ],
   // ── Day 17: Strong and Weak Forms (existing) ───────────────────────────────
-  17:[{id:"s2q1",prompt:"What two categories can English words be divided into for sentence rhythm?",options:["Nouns and Prepositions","Content words and Function words","British and American words","Stressed and Unstressed words"],answer:1},{id:"s2q2",prompt:"Which of these is a 'content word'?",options:["of","to","table","from"],answer:2},{id:"s2q3",prompt:"When must a function word use its strong form?",options:["At the very beginning of a sentence.","Before a proper noun.","At the very end of a sentence.","When spoken by American."],answer:2},{id:"s2q4",prompt:"Which vowel sound creates weak forms of 'to', 'at', 'for'?",options:["Long 'oo'","Short 'i'","Schwa /ə/","Long 'ay'"],answer:2},{id:"s2q5",prompt:"What is the strong-form pronunciation of 'of'?",options:["Pronounced with /v/ sound at end.","Pronounced like 'off'.","Always has silent 'o'.","Pronounced with long 'oh'."],answer:0},{id:"s2q6",prompt:"How does weak-form 'can' sound in casual speech?",options:["/kæn/","/kən/ with schwa","/kɑːnt/","/keɪn/"],answer:1},{id:"s2q7",prompt:"What happens to 'has', 'have', 'her' in their weak forms?",options:["Vowel disappears.","Trailing consonants doubled.","Initial 'H' is dropped.","Replaced with nasal sound."],answer:2}],
+  17:[{id:"s2q1",prompt:"What two categories can English words be divided into for sentence rhythm?",options:["Nouns and Prepositions","Content words and Function words","British and American words","Stressed and Unstressed words"]},{id:"s2q2",prompt:"Which of these is a 'content word'?",options:["of","to","table","from"]},{id:"s2q3",prompt:"When must a function word use its strong form?",options:["At the very beginning of a sentence.","Before a proper noun.","At the very end of a sentence.","When spoken by American."]},{id:"s2q4",prompt:"Which vowel sound creates weak forms of 'to', 'at', 'for'?",options:["Long 'oo'","Short 'i'","Schwa /ə/","Long 'ay'"]},{id:"s2q5",prompt:"What is the strong-form pronunciation of 'of'?",options:["Pronounced with /v/ sound at end.","Pronounced like 'off'.","Always has silent 'o'.","Pronounced with long 'oh'."]},{id:"s2q6",prompt:"How does weak-form 'can' sound in casual speech?",options:["/kæn/","/kən/ with schwa","/kɑːnt/","/keɪn/"]},{id:"s2q7",prompt:"What happens to 'has', 'have', 'her' in their weak forms?",options:["Vowel disappears.","Trailing consonants doubled.","Initial 'H' is dropped.","Replaced with nasal sound."]}],
   // ── Day 18: Schwa & Connected Speech (existing) ────────────────────────────
-  18:[{id:"s8q1",prompt:"What is the Schwa /ə/ sound?",options:["Sharp long vowel in stressed syllables.","Completely silent letter.","Relaxed neutral short vowel in unstressed syllables.","Trilled consonant at back of throat."],answer:2},{id:"s8q2",prompt:"In 'Photograph' vs 'Photography', how does the first vowel change?",options:["Stays identical.","In PHO-tograph first O is clear; in pho-TOG-raphy it weakens to schwa.","In PHO-tograph first O is schwa; in Photography it becomes 'oo'.","Stress moves to final syllable."],answer:1},{id:"s8q3",prompt:"When consonant-ending word meets vowel-starting word ('an apple'), what happens?",options:["A pause is placed between words.","Final consonant links smoothly to vowel, sounding like 'a-napple'.","Vowel at start is dropped.","Consonant is silenced."],answer:1},{id:"s8q4",prompt:"What happens when two vowels meet at a word boundary ('Go on')?",options:["A transitional glide /w/ or /j/ is inserted.","First word is dropped.","Both vowels become nasal.","A sharp glottal stop is required."],answer:0},{id:"s8q5",prompt:"Why does 'and' sound like 'n' in 'Rock and Roll'?",options:["'And' is a content word needing emphasis.","'And' is a function word weakened in connected speech.","Pronunciation mistake in American English.","'a' and 'd' cannot be together."],answer:1},{id:"s8q6",prompt:"Which syllables in 'Banana' have the schwa /ə/?",options:["Only the first","Only the middle","Both first and last","None"],answer:2},{id:"s8q7",prompt:"Why do native speakers use weak forms and linking so much?",options:["To sound formal and robotic.","To maintain natural rhythmic flow where stressed words carry the melody.","English lacks enough letters.","To confuse learners."],answer:1}],
+  18:[{id:"s8q1",prompt:"What is the Schwa /ə/ sound?",options:["Sharp long vowel in stressed syllables.","Completely silent letter.","Relaxed neutral short vowel in unstressed syllables.","Trilled consonant at back of throat."]},{id:"s8q2",prompt:"In 'Photograph' vs 'Photography', how does the first vowel change?",options:["Stays identical.","In PHO-tograph first O is clear; in pho-TOG-raphy it weakens to schwa.","In PHO-tograph first O is schwa; in Photography it becomes 'oo'.","Stress moves to final syllable."]},{id:"s8q3",prompt:"When consonant-ending word meets vowel-starting word ('an apple'), what happens?",options:["A pause is placed between words.","Final consonant links smoothly to vowel, sounding like 'a-napple'.","Vowel at start is dropped.","Consonant is silenced."]},{id:"s8q4",prompt:"What happens when two vowels meet at a word boundary ('Go on')?",options:["A transitional glide /w/ or /j/ is inserted.","First word is dropped.","Both vowels become nasal.","A sharp glottal stop is required."]},{id:"s8q5",prompt:"Why does 'and' sound like 'n' in 'Rock and Roll'?",options:["'And' is a content word needing emphasis.","'And' is a function word weakened in connected speech.","Pronunciation mistake in American English.","'a' and 'd' cannot be together."]},{id:"s8q6",prompt:"Which syllables in 'Banana' have the schwa /ə/?",options:["Only the first","Only the middle","Both first and last","None"]},{id:"s8q7",prompt:"Why do native speakers use weak forms and linking so much?",options:["To sound formal and robotic.","To maintain natural rhythmic flow where stressed words carry the melody.","English lacks enough letters.","To confuse learners."]}],
   // ── Day 19: Sentence Rhythm & Connected Speech (existing + new) ────────────
-  19:[{id:"s9q1",prompt:"What is 'Sentence Stress' in spoken English?",options:["Anxiety when reading long paragraphs.","Making every word the same length and pitch.","Giving extra volume and clarity to key words.","Shouting the final word."],answer:2},{id:"s9q2",prompt:"'I didn't steal YOUR keys' — what is implied?",options:["No keys were stolen.","The speaker stole someone else's keys.","They stole something else belonging to you.","Someone else stole your keys."],answer:1},{id:"s9q3",prompt:"What intonation is typical for Wh- questions?",options:["Rising at end.","Falling at end.","Flat monotone.","Zig-zag pitch."],answer:1},{id:"s9q4",prompt:"What pitch movement is expected at the end of a Yes/No question?",options:["Sharp drop.","Rising intonation.","Whispering last word.","No change."],answer:1},{id:"s9q5",prompt:"What are 'Thought Groups'?",options:["Silent periods for thinking.","Small phrases spoken together with a single intonation, separated by tiny pauses.","Vocabulary lists by category.","Dialects for business."],answer:1},{id:"s9q6",prompt:"What is 'catenation' in connected speech?",options:["Elision.","Assimilation.","Linking a final consonant to the next word's initial vowel.","Intrusion."],answer:2},{id:"s9q7",prompt:"In 'an apple', what happens in connected speech?",options:["Pause clearly between both components.","The /n/ moves forward and links to 'apple', sounding like 'a-napple'.","Eliminate terminal nasal tracks completely.","Introduce an explicit glottal stop buffer."],answer:1},{id:"s9q8",prompt:"What is elision in connected speech?",options:["Forcing extreme breath pressure on matching stops.","Dropping or omitting /t/ or /d/ for a smoother transition.","Adding extra vowel segments into consonant groups.","Shifting base vocal pitch to peak configurations."],answer:1},{id:"s9q9",prompt:"What creates an intrusive /w/ between words?",options:["Tongue curled backward into a retroflex posture.","Lips naturally rounded from /uː/ or /oʊ/ at the end of the previous word.","Lower teeth biting upper lip structures.","Dropping standard respiratory velocity metrics."],answer:1},{id:"s9q10",prompt:"What is a 'linking R' in British English?",options:["A silent structural marker used only for formatting.","An 'R' that is activated when the next word starts with a vowel.","Replaced entirely by an open schwa segment.","Exclusive to localized American vernaculars."],answer:1}],
+  19:[{id:"s9q1",prompt:"What is 'Sentence Stress' in spoken English?",options:["Anxiety when reading long paragraphs.","Making every word the same length and pitch.","Giving extra volume and clarity to key words.","Shouting the final word."]},{id:"s9q2",prompt:"'I didn't steal YOUR keys' — what is implied?",options:["No keys were stolen.","The speaker stole someone else's keys.","They stole something else belonging to you.","Someone else stole your keys."]},{id:"s9q3",prompt:"What intonation is typical for Wh- questions?",options:["Rising at end.","Falling at end.","Flat monotone.","Zig-zag pitch."]},{id:"s9q4",prompt:"What pitch movement is expected at the end of a Yes/No question?",options:["Sharp drop.","Rising intonation.","Whispering last word.","No change."]},{id:"s9q5",prompt:"What are 'Thought Groups'?",options:["Silent periods for thinking.","Small phrases spoken together with a single intonation, separated by tiny pauses.","Vocabulary lists by category.","Dialects for business."]},{id:"s9q6",prompt:"What is 'catenation' in connected speech?",options:["Elision.","Assimilation.","Linking a final consonant to the next word's initial vowel.","Intrusion."]},{id:"s9q7",prompt:"In 'an apple', what happens in connected speech?",options:["Pause clearly between both components.","The /n/ moves forward and links to 'apple', sounding like 'a-napple'.","Eliminate terminal nasal tracks completely.","Introduce an explicit glottal stop buffer."]},{id:"s9q8",prompt:"What is elision in connected speech?",options:["Forcing extreme breath pressure on matching stops.","Dropping or omitting /t/ or /d/ for a smoother transition.","Adding extra vowel segments into consonant groups.","Shifting base vocal pitch to peak configurations."]},{id:"s9q9",prompt:"What creates an intrusive /w/ between words?",options:["Tongue curled backward into a retroflex posture.","Lips naturally rounded from /uː/ or /oʊ/ at the end of the previous word.","Lower teeth biting upper lip structures.","Dropping standard respiratory velocity metrics."]},{id:"s9q10",prompt:"What is a 'linking R' in British English?",options:["A silent structural marker used only for formatting.","An 'R' that is activated when the next word starts with a vowel.","Replaced entirely by an open schwa segment.","Exclusive to localized American vernaculars."]}],
   // ── Day 20: Advanced Shadowing (existing) ─────────────────────────────────
-  20:[{id:"s4q1",prompt:"What psychological shift happens when you become fluent in a new language?",options:["You lose your native language ability.","Voice shifts to higher pitch.","A new language personality awakens, changing mannerisms.","Vocabulary becomes formal only."],answer:2},{id:"s4q2",prompt:"Why choose a language model of the same gender?",options:["Certain words are gender-specific.","Pitch, frequency, intonation align more easily.","Easier to find YouTube videos.","Native speakers only listen to same gender."],answer:1},{id:"s4q3",prompt:"Which is NOT a guideline for choosing a language model?",options:["Celebrity with large video presence.","Someone you admire so you don't get bored.","Native speaker with neutral accent.","Professional English teacher or professor."],answer:3},{id:"s4q4",prompt:"What is the first step of mechanical shadowing?",options:["Recording and playing back your voice.","Getting the transcript and reading it aloud first.","Memorizing the speech without text.","Setting playback speed to double."],answer:1},{id:"s4q5",prompt:"What should you focus on in the second shadowing step?",options:["Overall sentence rhythm.","Dictionary meanings.","Individual word pronunciation, syllable stress, basic sounds.","Facial expressions and gestures."],answer:2},{id:"s4q6",prompt:"What phonetic feature appears when Downey says 'about us' naturally?",options:["Flap T — 'T' between vowels sounds like soft 'D'.","Completely silent 'T'.","Heavy British glottal stop.","Retroflex T."],answer:0},{id:"s4q7",prompt:"Will you become an exact vocal copy of your language model?",options:["Yes, 100% identical after months.","No — you absorb rhythm but keep your unique vocal character.","No — native accent blocks all change.","Yes, but only with fictional characters."],answer:1}],
+  20:[{id:"s4q1",prompt:"What psychological shift happens when you become fluent in a new language?",options:["You lose your native language ability.","Voice shifts to higher pitch.","A new language personality awakens, changing mannerisms.","Vocabulary becomes formal only."]},{id:"s4q2",prompt:"Why choose a language model of the same gender?",options:["Certain words are gender-specific.","Pitch, frequency, intonation align more easily.","Easier to find YouTube videos.","Native speakers only listen to same gender."]},{id:"s4q3",prompt:"Which is NOT a guideline for choosing a language model?",options:["Celebrity with large video presence.","Someone you admire so you don't get bored.","Native speaker with neutral accent.","Professional English teacher or professor."]},{id:"s4q4",prompt:"What is the first step of mechanical shadowing?",options:["Recording and playing back your voice.","Getting the transcript and reading it aloud first.","Memorizing the speech without text.","Setting playback speed to double."]},{id:"s4q5",prompt:"What should you focus on in the second shadowing step?",options:["Overall sentence rhythm.","Dictionary meanings.","Individual word pronunciation, syllable stress, basic sounds.","Facial expressions and gestures."]},{id:"s4q6",prompt:"What phonetic feature appears when Downey says 'about us' naturally?",options:["Flap T — 'T' between vowels sounds like soft 'D'.","Completely silent 'T'.","Heavy British glottal stop.","Retroflex T."]},{id:"s4q7",prompt:"Will you become an exact vocal copy of your language model?",options:["Yes, 100% identical after months.","No — you absorb rhythm but keep your unique vocal character.","No — native accent blocks all change.","Yes, but only with fictional characters."]}],
 };
 const PLACEHOLDER_QUIZ=[
   {id:"pq1",prompt:"Placeholder question 1 — replace with real content.",hint:"Hint: think back to the class recap.",options:["Option A","Option B","Option C","Option D"],answer:0},
@@ -2256,53 +2250,63 @@ window.doStudentLogin=async()=>{
   const loginBtn=document.getElementById("login-btn-main");
   if(loginBtn){loginBtn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>Signing in...</span>';loginBtn.disabled=true;}
 
-  // 1. Try Supabase first (works across all devices, no localStorage dependency)
+  // ── Auth path 1: Supabase Auth (JWT-based, server-verified) ──────────────────
   var byEmail=null;
+  var usedSupabaseAuth=false;
   if(typeof _sb!=="undefined"){
     try{
-      // Try email match first, then name match — use limit(1) to handle duplicate rows
-      var sbRes=await _sb.from("students").select("*").eq("email",email).limit(1);
-      if(sbRes.error||!sbRes.data||!sbRes.data.length){
-        // Try by name (case-insensitive via ilike)
-        var sbRes2=await _sb.from("students").select("*").ilike("name",email).limit(1);
-        if(!sbRes2.error&&sbRes2.data&&sbRes2.data.length) sbRes=sbRes2;
+      var authResult=await _sb.auth.signInWithPassword({email,password:pass});
+      if(!authResult.error&&authResult.data&&authResult.data.user){
+        usedSupabaseAuth=true;
+        // Load student profile by auth_user_id (not by password)
+        var profRes=await _sb.from('students')
+          .select('id,name,email,valid_until,access_list,created_at,completed_at,password_reset_required')
+          .eq('auth_user_id',authResult.data.user.id).limit(1);
+        if(!profRes.error&&profRes.data&&profRes.data.length){
+          var d=profRes.data[0];
+          byEmail={id:d.id,name:d.name,email:d.email,
+            validUntil:d.valid_until||null,accessList:d.access_list||[1],
+            createdAt:d.created_at||new Date().toISOString(),
+            completedAt:d.completed_at||null,
+            passwordResetRequired:!!d.password_reset_required};
+        }
       }
-      if(!sbRes.error&&sbRes.data&&sbRes.data.length){
-        var d=sbRes.data[0];
-        byEmail={
-          id:d.id,name:d.name,email:d.email,
-          password:d.password_hash,
-          validUntil:d.valid_until||null,
-          accessList:d.access_list||[1],
-          createdAt:d.created_at||new Date().toISOString(),
-          completedAt:d.completed_at||null
-        };
-        // Sync to localStorage best-effort
-        try{
-          var ls=loadStudents();
-          ls[byEmail.id]=byEmail;
-          localStorage.setItem("brokeneng_students",JSON.stringify(ls));
-        }catch(e){}
-      }
-    }catch(e){console.warn("Supabase login lookup failed:",e);}
+    }catch(e){console.warn("Supabase Auth login:",e);}
   }
 
-  // 2. Fall back to localStorage if Supabase unavailable
-  if(!byEmail){
-    const students=loadStudents();
-    byEmail=Object.values(students).find(s=>(s.email&&s.email.toLowerCase()===email)||(s.name&&s.name.trim().toLowerCase()===email))||null;
+  // ── Auth path 2: Legacy password (students not yet migrated) ─────────────────
+  // Removed once all students are migrated via scripts/migrate-students.js
+  if(!byEmail&&!usedSupabaseAuth&&typeof _sb!=="undefined"){
+    try{
+      var legRes=await _sb.from("students")
+        .select("id,name,email,password_hash,valid_until,access_list,created_at,completed_at,auth_user_id")
+        .eq("email",email).limit(1);
+      if(!legRes.error&&legRes.data&&legRes.data.length){
+        var ld=legRes.data[0];
+        // Legacy path: only if not yet migrated + password matches
+        if(!ld.auth_user_id&&ld.password_hash===pass){
+          byEmail={id:ld.id,name:ld.name,email:ld.email,
+            validUntil:ld.valid_until||null,accessList:ld.access_list||[1],
+            createdAt:ld.created_at||new Date().toISOString(),
+            completedAt:ld.completed_at||null};
+        }
+      }
+    }catch(e){console.warn("Legacy auth:",e);}
+  }
+
+  // ── Auth path 3: localStorage (offline/network error) ────────────────────────
+  if(!byEmail&&!usedSupabaseAuth){
+    var cachedStudents=loadStudents();
+    var found=Object.values(cachedStudents).find(function(s){
+      return s.email&&s.email.toLowerCase()===email&&s.password===pass;
+    })||null;
+    if(found)byEmail=found;
   }
 
   if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
 
   if(!byEmail){
-    errEl.textContent="No account found. Check your email/username or contact admin.";
-    errEl.style.display="block";
-    return;
-  }
-
-  if(byEmail.password!==pass){
-    errEl.textContent="Incorrect password.";
+    errEl.textContent="Incorrect email or password."; // Neutral — don't reveal if email exists
     errEl.style.display="block";
     return;
   }
@@ -2315,6 +2319,14 @@ window.doStudentLogin=async()=>{
   }
 
   errEl.style.display="none";
+
+  // Force password reset for migrated students with compromised legacy passwords
+  if(byEmail.passwordResetRequired){
+    window._pendingStudentId=byEmail.id;
+    showForcePasswordReset(email);
+    return;
+  }
+
   currentSession={role:"student",studentId:byEmail.id};
   saveSession(currentSession);
   try{ sessionStorage.clear(); }catch(e){}
@@ -2326,9 +2338,9 @@ window.doStudentLogin=async()=>{
   // Fire data sync in background (doesn't block splash/dashboard)
   waitForSb().then(function(ok){
     if(!ok) return;
-    sbLoadELSettings().catch(function(){});
     sbLoadProgress(byEmail.id).catch(function(){});
     sbLoadVideos().catch(function(){});
+    // Note: EL settings no longer synced to localStorage — TTS is server-side
   }).catch(function(){});
 
 };
@@ -2425,7 +2437,7 @@ function renderAdminLogin(){
   </div>`;
   var ap=document.getElementById("adm-pass");if(ap)ap.addEventListener("keydown",e=>{if(e.key==="Enter")doAdminLogin();});
 }
-window.doAdminLogin=()=>{
+window.doAdminLogin=async()=>{
   const email=(document.getElementById("adm-email")?.value||'').trim().toLowerCase();
   const pass=document.getElementById("adm-pass")?.value||'';
   if(!email||!pass)return;
@@ -2433,29 +2445,33 @@ window.doAdminLogin=()=>{
   var er=document.getElementById("adm-err");
   if(btn){btn.disabled=true;btn.textContent='Signing in...';}
   if(er)er.style.display='none';
-  function _success(){currentSession={role:"admin"};saveSession(currentSession);navigate("admin");}
-  function _fail(){if(er)er.style.display='block';if(btn){btn.disabled=false;btn.textContent='Sign In as Admin';}}
-  // Fetch creds directly from Supabase — never trust localStorage on mobile
-  if(typeof _sb!=='undefined'){
-    _sb.from('course_config').select('data').eq('id','admin_cred').single().then(function(r){
-      if(!r.error&&r.data&&r.data.data&&r.data.data.email){
-        var d=r.data.data;
-        // also update local cache best-effort
-        try{localStorage.setItem('brokeneng_admin_cred',JSON.stringify(d));}catch(e){}
-        if(email===d.email.toLowerCase()&&pass===d.password){_success();}
-        else{_fail();}
-      } else {
-        // Supabase returned nothing — check local/default
-        var cred=getAdminCredentials();
-        if(email===cred.email.toLowerCase()&&pass===cred.password){_success();}else{_fail();}
-      }
-    }).catch(function(){
-      var cred=getAdminCredentials();
-      if(email===cred.email.toLowerCase()&&pass===cred.password){_success();}else{_fail();}
-    });
-  } else {
-    var cred=getAdminCredentials();
-    if(email===cred.email.toLowerCase()&&pass===cred.password){_success();}else{_fail();}
+  function _fail(){if(er){er.textContent='Invalid admin credentials.';er.style.display='block';}if(btn){btn.disabled=false;btn.textContent='Sign In as Admin';}}
+
+  // ── Admin auth via Supabase Auth + admin_users table ───────────────────────
+  // Admin credentials are NEVER stored in course_config or localStorage.
+  // Use scripts/bootstrap-admin.js to create the admin Supabase Auth account.
+  if(typeof _sb==='undefined'){_fail();return;}
+  try{
+    var {data:authData,error:authErr}=await _sb.auth.signInWithPassword({email,password:pass});
+    if(authErr||!authData?.user){_fail();return;}
+
+    // Verify admin_users row (is_admin() via RLS — only succeeds if user is in admin_users)
+    var {data:adminRow,error:adminErr}=await _sb.from('admin_users')
+      .select('auth_user_id').eq('auth_user_id',authData.user.id).maybeSingle();
+
+    if(adminErr||!adminRow){
+      // Not in admin_users — sign out the Supabase session and reject
+      await _sb.auth.signOut().catch(function(){});
+      _fail();return;
+    }
+
+    // Authenticated admin
+    currentSession={role:"admin",authUserId:authData.user.id};
+    saveSession(currentSession);
+    navigate("admin");
+  }catch(e){
+    console.warn("Admin login error:",e);
+    _fail();
   }
 };
 
@@ -3815,46 +3831,19 @@ function renderAdminImages(){
 }
 
 
-function getAdminCredentials(){
-  try{
-    var saved=JSON.parse(localStorage.getItem('brokeneng_admin_cred')||'null');
-    if(saved&&saved.email&&saved.password) return saved;
-  }catch(e){}
-  return {email:ADMIN_EMAIL, password:ADMIN_PASSWORD};
-}
+// Admin credential functions removed — admin now authenticates via Supabase Auth.
+// Run scripts/bootstrap-admin.js to set up the admin account.
+// Delete course_config WHERE id = 'admin_cred' after bootstrap.
+function getAdminCredentials(){ return {email:'',password:''}; } // stub for any remaining references
 window.saveAdminCredentials=function(){
-  var email=document.getElementById('adm-new-email').value.trim();
-  var pass=document.getElementById('adm-new-pass').value;
-  var pass2=document.getElementById('adm-new-pass2').value;
-  var msg=document.getElementById('adm-cred-msg');
-  if(!email){alert('Email required.');return;}
-  if(pass&&pass!==pass2){alert('Passwords do not match.');return;}
-  var saved=getAdminCredentials();
-  var newCred={email:email, password:pass||saved.password};
-  localStorage.setItem('brokeneng_admin_cred',JSON.stringify(newCred));
-  sbSaveAdminCred(newCred);
-  if(msg){msg.style.display='inline';setTimeout(function(){msg.style.display='none';},2500);}
+  // Admin password changes are now done via Supabase Auth (password reset flow)
+  alert('To change admin password, use "Admin Forgot Password" on the login screen.\nAdmin credentials are managed via Supabase Auth — not stored in this app.');
 };
-
-async function sbSaveAdminCred(cred){
-  try{
-    if(typeof _sb==='undefined')return;
-    await _sb.from('course_config').upsert({id:'admin_cred',data:cred});
-  }catch(e){console.warn('admin cred sync:',e);}
-}
-async function sbLoadAdminCred(){
-  try{
-    if(typeof _sb==='undefined')return;
-    var r=await _sb.from('course_config').select('data').eq('id','admin_cred').single();
-    if(r.error||!r.data||!r.data.data)return;
-    var d=r.data.data;
-    if(d.email&&d.password)localStorage.setItem('brokeneng_admin_cred',JSON.stringify(d));
-  }catch(e){}
-}
+async function sbSaveAdminCred(){ /* removed */ }
+async function sbLoadAdminCred(){ /* removed — admin_cred row should be deleted from course_config */ }
 
 function renderAdminSettings(){
-  // Load current EL settings
-  var elKey=localStorage.getItem('brokeneng_el_key')||'';
+  // SECURITY: API key never stored in browser — only voice preference
   var elVoice=localStorage.getItem('brokeneng_el_voice')||'21m00Tcm4TlvDq8ikWAM';
   app.innerHTML=adminTopBar('settings')+`
   <div style="padding:24px;max-width:1280px;position:relative;z-index:1">
@@ -3866,10 +3855,9 @@ function renderAdminSettings(){
     <div class="lg" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,45,120,.25);background:rgba(255,45,120,.05)">
       <p style="font-weight:700;font-size:15px;color:var(--g1);margin-bottom:4px">🎙 ElevenLabs Voice Engine</p>
       <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Set once here — all students get your custom voice model automatically.</p>
-      <div style="margin-bottom:12px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">API Key</label>
-        <input id="el-api-key" type="password" value="${elKey}" placeholder="sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-          style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box;font-family:JetBrains Mono,monospace"/>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;margin-bottom:12px">
+        <svg width="16" height="16" fill="none" stroke="#4ade80" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        <span style="font-size:12px;color:#4ade80;font-weight:600">API key configured server-side — rotate it via ElevenLabs dashboard + <code style="background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px">supabase secrets set ELEVENLABS_API_KEY=...</code></span>
       </div>
       <div style="margin-bottom:12px">
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">Voice ID</label>
@@ -3878,7 +3866,7 @@ function renderAdminSettings(){
         <div style="font-size:10px;color:var(--muted);margin-top:4px">Default: Rachel (21m00Tcm4TlvDq8ikWAM). Find voice IDs at elevenlabs.io/voice-library</div>
       </div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button onclick="adminSaveELSettings()" class="btn-primary" style="width:auto;padding:9px 20px;font-size:13px">Save & Push to All Students</button>
+        <button onclick="adminSaveELSettings()" class="btn-primary" style="width:auto;padding:9px 20px;font-size:13px">Save Voice Preference</button>
         <button onclick="adminTestEL()" style="padding:9px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">🔊 Test Voice</button>
         <span id="el-status" style="font-size:12px;color:var(--muted)"></span>
       </div>
@@ -3916,25 +3904,12 @@ function renderAdminSettings(){
       },
       {
         title:'Admin Credentials',
-        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px">Change the admin login email and password. Takes effect immediately.</p>
-        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-          <div>
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">Email</label>
-            <input id="adm-new-email" type="email" value="${getAdminCredentials().email}" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 14px;outline:none;box-sizing:border-box"/>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">New Password</label>
-            <div style="position:relative"><input id="adm-new-pass" type="password" placeholder="Enter new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 40px 10px 14px;outline:none;box-sizing:border-box"/><button type="button" onclick="togglePw('adm-new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;display:block;margin-bottom:4px">Confirm Password</label>
-            <div style="position:relative"><input id="adm-new-pass2" type="password" placeholder="Repeat new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;padding:10px 40px 10px 14px;outline:none;box-sizing:border-box"/><button type="button" onclick="togglePw('adm-new-pass2',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
-          </div>
+        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px">Admin authentication is now managed via Supabase Auth.</p>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;margin-bottom:14px">
+          <svg width="16" height="16" fill="none" stroke="#4ade80" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span style="font-size:12px;color:#4ade80;font-weight:600">Credentials managed server-side — no passwords stored in browser</span>
         </div>
-        <div style="display:flex;align-items:center;gap:12px">
-          <button onclick="saveAdminCredentials()" style="background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px 22px;cursor:pointer;font-family:Montserrat,sans-serif">Save Credentials</button>
-          <span id="adm-cred-msg" style="font-size:12px;color:#4ade80;display:none">✓ Saved!</span>
-        </div>`
+        <p style="font-size:12px;color:var(--muted);line-height:1.6">To change the admin password: use <strong style="color:#fff">Admin Forgot Password</strong> on the login screen, or update directly in Supabase Auth → Users dashboard.</p>`
       },
       {
         title:'Data Management',
@@ -5419,6 +5394,7 @@ function renderQuiz(lessonId){
   const QUESTIONS=getQuiz(lesson);
   const total=QUESTIONS.length;
   let current=0,correct=0,answered=false;
+  var userResponses={}; // { questionId: choiceIndex } — submitted to server at end
 
   document.body.style.overflow='hidden';
 
@@ -5441,6 +5417,8 @@ function renderQuiz(lessonId){
     .be-opt.correct{background:rgba(34,197,94,.1)!important;border-color:rgba(34,197,94,.5)!important}
     .be-opt.wrong{background:rgba(239,68,68,.08)!important;border-color:rgba(239,68,68,.4)!important}
     .be-opt.dim{opacity:.4}
+    .be-opt.selected{background:rgba(99,102,241,.12)!important;border-color:rgba(99,102,241,.5)!important}
+    .be-opt.selected .be-opt-letter{border-color:rgba(99,102,241,.6);color:#a5b4fc;background:rgba(99,102,241,.15)}
     .be-opt-letter{display:flex;width:32px;height:32px;flex-shrink:0;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid rgba(255,255,255,.2);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;color:rgba(255,255,255,.5);transition:all .15s}
     .be-opt.correct .be-opt-letter{border-color:rgba(34,197,94,.6);color:#4ade80;background:rgba(34,197,94,.15)}
     .be-opt.wrong .be-opt-letter{border-color:rgba(239,68,68,.5);color:#f87171;background:rgba(239,68,68,.12)}
@@ -5500,25 +5478,22 @@ function renderQuiz(lessonId){
       +'<div id="next-wrap" style="display:none"><button class="be-next-btn" onclick="nextQuestion()">'+(idx<total-1?"Next Question →":"See Results")+'</button></div>';
     updateProgress();
 
-    // Normalise answer: dynamic quizzes use text string, hardcoded use numeric index
-    var correctIdx=typeof q.answer==='number'?q.answer:q.options.indexOf(q.answer);
-
+    // SECURITY: q.answer is stripped from QUIZ_BANK — answers graded server-side only.
+    // Collect student responses; submit all at end via submit-quiz Edge Function.
     window.pickAnswer=(oi)=>{
       if(answered)return;answered=true;
-      const isCorrect=oi===correctIdx;if(isCorrect)correct++;
+      // Record response (questionId = q.id if available, else positional index)
+      var qid=q.id||String(idx);
+      userResponses[qid]=oi;
+      // Disable all buttons and mark selected (no correct/incorrect reveal — server grades)
       q.options.forEach((_,i)=>{
         const btn=document.getElementById("opt-"+i);btn.disabled=true;
-        if(i===correctIdx) btn.classList.add("correct");
-        else if(i===oi) btn.classList.add("wrong");
+        if(i===oi) btn.classList.add("selected");
         else btn.classList.add("dim");
       });
-      const fb=document.getElementById("feedback-box");fb.style.display="flex";
-      fb.style.cssText=isCorrect
-        ?"display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 18px;margin-top:18px;font-size:13px;font-weight:600;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#4ade80"
-        :"display:flex;align-items:flex-start;gap:10px;border-radius:12px;padding:14px 18px;margin-top:18px;font-size:13px;font-weight:600;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171";
-      fb.innerHTML=isCorrect
-        ?'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Correct! Well done.</span>'
-        :'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><div><div>Incorrect</div><div style="font-size:11px;font-weight:400;margin-top:2px;opacity:.8">Answer: '+String.fromCharCode(65+correctIdx)+') '+q.options[correctIdx]+'</div></div>';
+      const fb=document.getElementById("feedback-box");
+      fb.style.cssText="display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 18px;margin-top:18px;font-size:13px;font-weight:600;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);color:#a5b4fc";
+      fb.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Answer recorded. Results shown at the end.</span>';
       document.getElementById("next-wrap").style.display="block";
     };
   }
@@ -5529,45 +5504,80 @@ function renderQuiz(lessonId){
     else showResults();
   };
 
-  function showResults(){
-    var score=Math.round((correct/total)*100);var passed=score>=70;
-    if(currentSession?.studentId){
-      const _lesson=ALL_LESSONS.find(l=>l.id===lessonId);
-      if(_lesson){
-        saveAttemptedQuiz(currentSession.studentId, _lesson.order);
-        if(passed) savePassedQuiz(currentSession.studentId, _lesson.order);
-        // Save to Supabase so quiz scores sync across all devices
-        if(typeof sbSaveQuizScore==='function'){
-          sbSaveQuizScore(currentSession.studentId, _lesson.id, correct, total).catch(function(){});
-        }
+  // Submit all answers server-side and show results
+  async function showResults(){
+    document.getElementById("progress-fill").style.width="100%";
+    document.getElementById("q-counter").textContent="Grading…";
+    document.getElementById("q-score").textContent="";
+    document.getElementById("question-slot").innerHTML=
+      '<div style="text-align:center;padding:40px 0">'
+      +'<div style="font-size:14px;color:var(--muted)">Submitting answers…</div>'
+      +'</div>';
+
+    var lessonOrder=0;
+    var _lesson=ALL_LESSONS.find(l=>l.id===lessonId);
+    if(_lesson) lessonOrder=_lesson.order||0;
+
+    var serverResult=null;
+    try{
+      var sess=null;
+      if(typeof _sb!=='undefined'){
+        var r=await _sb.auth.getSession();
+        sess=r?.data?.session;
+      }
+      if(sess){
+        var resp=await fetch(SUPABASE_URL.replace(/\/$/','')+'/functions/v1/submit-quiz',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':'Bearer '+sess.access_token},
+          body:JSON.stringify({lessonOrder:lessonOrder,responses:userResponses})
+        });
+        if(resp.ok) serverResult=await resp.json();
+      }
+    }catch(e){console.warn('submit-quiz error:',e);}
+
+    // Fallback: if Edge Function unavailable, count how many answers match local total
+    var serverAvailable=serverResult&&!serverResult.legacy;
+    var finalCorrect=serverAvailable?Math.round((serverResult.score/100)*serverResult.total):0;
+    var finalTotal=serverAvailable?serverResult.total:total;
+    var finalScore=serverAvailable?serverResult.score:0;
+    var passed=serverAvailable?serverResult.passed:false;
+
+    // Update local progress
+    if(currentSession?.studentId&&_lesson){
+      saveAttemptedQuiz(currentSession.studentId, _lesson.order);
+      if(passed) savePassedQuiz(currentSession.studentId, _lesson.order);
+      if(typeof sbSaveQuizScore==='function'&&serverAvailable){
+        sbSaveQuizScore(currentSession.studentId,_lesson.id,finalCorrect,finalTotal).catch(function(){});
       }
     }
-    document.getElementById("progress-fill").style.width="100%";
+
     document.getElementById("q-counter").textContent="Complete";
-    document.getElementById("q-score").textContent=correct+"/"+total+" correct";
+    document.getElementById("q-score").textContent=serverAvailable?(finalCorrect+"/"+finalTotal+" correct"):"";
     var col=passed?"#4ade80":"var(--g1)";
     var borderCol=passed?"rgba(34,197,94,.4)":"rgba(255,45,120,.4)";
     var bgCol=passed?"rgba(34,197,94,.08)":"rgba(255,45,120,.08)";
     document.getElementById("question-slot").innerHTML=
       '<div style="text-align:center;padding:16px 0 40px">'
       +'<div style="width:100px;height:100px;border-radius:50%;margin:0 auto 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+bgCol+';border:2px solid '+borderCol+';box-shadow:0 0 40px '+borderCol+'">'
-        +'<span style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:26px;color:'+col+'">'+score+'%</span>'
-        +'<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:'+col+';opacity:.7">'+(passed?"Passed":"Failed")+'</span>'
+        +'<span style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:26px;color:'+col+'">'+(serverAvailable?finalScore+'%':'✓')+'</span>'
+        +'<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:'+col+';opacity:.7">'+(serverAvailable?(passed?"Passed":"Failed"):"Submitted")+'</span>'
       +'</div>'
-      +'<h2 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:6px">'+(passed?"Great job! 🎉":"Keep practicing")+'</h2>'
-      +'<p style="color:var(--muted);font-size:13px;margin-bottom:36px">'+correct+' of '+total+' correct — pass mark 70%</p>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px">'
-        +'<div style="border-radius:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);padding:20px;text-align:center">'
-          +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#4ade80">'+correct+'</div>'
-          +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Correct</div>'
+      +'<h2 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:6px">'+(serverAvailable?(passed?"Great job! 🎉":"Keep practicing"):"Quiz Submitted")+'</h2>'
+      +'<p style="color:var(--muted);font-size:13px;margin-bottom:36px">'+(serverAvailable?(finalCorrect+' of '+finalTotal+' correct — pass mark 70%'):"Your answers have been recorded.")+'</p>'
+      +(serverAvailable?
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px">'
+          +'<div style="border-radius:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);padding:20px;text-align:center">'
+            +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#4ade80">'+finalCorrect+'</div>'
+            +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Correct</div>'
+          +'</div>'
+          +'<div style="border-radius:14px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);padding:20px;text-align:center">'
+            +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#f87171">'+(finalTotal-finalCorrect)+'</div>'
+            +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Wrong</div>'
+          +'</div>'
         +'</div>'
-        +'<div style="border-radius:14px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);padding:20px;text-align:center">'
-          +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#f87171">'+(total-correct)+'</div>'
-          +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Wrong</div>'
-        +'</div>'
-      +'</div>'
+      :'')
       +'<div style="display:flex;flex-direction:column;gap:10px">'
-        +(!passed?'<button id="retake-btn" class="be-next-btn">Retake Quiz</button>':'')
+        +(!passed&&serverAvailable?'<button id="retake-btn" class="be-next-btn">Retake Quiz</button>':'')
         +'<button id="dash-btn" style="background:none;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:13px;font-size:13px;color:var(--muted);cursor:pointer;font-family:Inter,sans-serif;transition:all .15s" onmouseover="this.style.borderColor=\'rgba(255,45,120,.3)\';this.style.color=\'#fff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\';this.style.color=\'var(--muted)\'">Back to Dashboard</button>'
       +'</div></div>';
     var rb=document.getElementById("retake-btn");
@@ -6279,56 +6289,98 @@ window.navigateToPhase=function(phaseIndex){
 };
 
 // ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+// Now uses Supabase Auth resetPasswordForEmail(). Never emails the actual password.
 window.showStudentForgotPassword=function(){
   var html='<div id="fp-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'+
     '<div style="background:#1a1a2e;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;position:relative">'+
     '<button onclick="document.getElementById(\'fp-overlay\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer">✕</button>'+
-    '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:6px">Forgot Password?</h3>'+
-    '<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:18px">Enter your registered email address and we\'ll send your password to your inbox.</p>'+
+    '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:6px">Reset Password</h3>'+
+    '<p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:18px">Enter your email and we\'ll send a secure reset link. The link expires in 1 hour.</p>'+
     '<input id="fp-input" type="email" placeholder="Your email address" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:12px"/>'+
-    '<button id="fp-send-btn" onclick="doStudentForgotLookup()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Send Password to Email</button>'+
+    '<button id="fp-send-btn" onclick="doStudentForgotLookup()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Send Reset Link</button>'+
     '<div id="fp-result" style="margin-top:14px;font-size:13px;text-align:center"></div>'+
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
   setTimeout(function(){var el=document.getElementById('fp-input');if(el)el.focus();},100);
 };
-window.doStudentForgotLookup=function(){
+window.doStudentForgotLookup=async function(){
   var q=(document.getElementById('fp-input')?.value||'').trim().toLowerCase();
   var res=document.getElementById('fp-result');
   var btn=document.getElementById('fp-send-btn');
   if(!q||!res)return;
-  var students=loadStudents();
-  var found=Object.values(students).find(function(s){
-    return (s.email||'').toLowerCase()===q;
-  });
-  if(!found){
-    res.innerHTML='<div style="color:rgba(255,45,120,.8)">No account found with that email. Contact your admin.</div>';
-    return;
-  }
   if(btn){btn.disabled=true;btn.textContent='Sending...';}
-  emailjs.send('service_n7b31id','template_35h569c',{
-    to_email: found.email,
-    student_name: found.name,
-    password: found.password
-  }).then(function(){
-    res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;color:#4ade80;font-weight:700">✓ Password sent to '+found.email+'</div>';
-    if(btn){btn.disabled=false;btn.textContent='Send Password to Email';}
-  }).catch(function(err){
-    res.innerHTML='<div style="color:rgba(255,45,120,.8)">Failed to send email. Try again or contact admin.</div>';
-    if(btn){btn.disabled=false;btn.textContent='Send Password to Email';}
-    console.warn('EmailJS error:',err);
-  });
+
+  try{
+    if(typeof _sb==='undefined') throw new Error('not_ready');
+    // Supabase sends reset link server-side; we never see or email the password
+    var {error}=await _sb.auth.resetPasswordForEmail(q,{
+      redirectTo: 'https://academy.brokenenglish.in/?reset=1'
+    });
+    // Always show the same message (prevents email enumeration)
+    res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;color:#4ade80;font-weight:700">If an account exists for this email, a reset link has been sent.</div>';
+    if(error) console.warn('Reset email note:',error.message); // log but don't show user
+  }catch(e){
+    res.innerHTML='<div style="color:rgba(255,45,120,.8)">Could not send reset email. Try again or contact admin.</div>';
+  }
+  if(btn){btn.disabled=false;btn.textContent='Send Reset Link';}
 };
-window.showAdminForgotPassword=function(){
-  var html='<div id="fp-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'+
-    '<div style="background:#1a1a2e;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;position:relative">'+
-    '<button onclick="document.getElementById(\'fp-overlay\').remove()" style="position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer">✕</button>'+
-    '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:6px">Admin Forgot Password</h3>'+
-    '<p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.6;margin-bottom:18px">Admin passwords are stored securely in Supabase.<br/>To reset your password, go to your <b style="color:#fff">Supabase dashboard → course_config table → admin_cred row</b> and update the password field directly.</p>'+
-    '<a href="https://supabase.com" target="_blank" style="display:block;width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif;text-align:center;text-decoration:none;box-sizing:border-box">Open Supabase</a>'+
-    '<p style="margin-top:14px;text-align:center;font-size:12px;color:rgba(255,255,255,.35)">Or contact <a href="mailto:mediabrkn01@gmail.com" style="color:rgba(255,45,120,.7)">mediabrkn01@gmail.com</a></p>'+
+
+// ── FORCE PASSWORD RESET (migrated students) ──────────────────────────────────
+window.showForcePasswordReset=function(email){
+  var html='<div id="fpr-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'+
+    '<div style="background:#1a1a2e;border:1px solid rgba(255,113,0,.4);border-radius:20px;padding:32px 28px;width:100%;max-width:420px">'+
+    '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Create a New Password</h3>'+
+    '<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6">For your security, please create a new password. Your previous password was stored insecurely and must be changed before you can continue.</p>'+
+    '<input id="fpr-pass" type="password" placeholder="New password (min 8 characters)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:10px"/>'+
+    '<input id="fpr-pass2" type="password" placeholder="Confirm new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:14px"/>'+
+    '<button id="fpr-btn" onclick="doForcePasswordReset()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Set New Password</button>'+
+    '<div id="fpr-err" style="display:none;margin-top:12px;font-size:13px;color:#f87171;text-align:center"></div>'+
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
+  setTimeout(function(){var el=document.getElementById('fpr-pass');if(el)el.focus();},100);
+};
+window.doForcePasswordReset=async function(){
+  var p1=(document.getElementById('fpr-pass')?.value||'');
+  var p2=(document.getElementById('fpr-pass2')?.value||'');
+  var errEl=document.getElementById('fpr-err');
+  var btn=document.getElementById('fpr-btn');
+  if(!p1||p1.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
+  if(p1!==p2){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    if(typeof _sb==='undefined')throw new Error('not_ready');
+    var {error}=await _sb.auth.updateUser({password:p1});
+    if(error)throw error;
+    // Clear reset flag in students table
+    if(window._pendingStudentId){
+      await _sb.from('students').update({password_reset_required:false}).eq('id',window._pendingStudentId).catch(function(){});
+    }
+    document.getElementById('fpr-overlay')?.remove();
+    // Now complete login
+    if(window._pendingStudentId){
+      currentSession={role:"student",studentId:window._pendingStudentId};
+      delete window._pendingStudentId;
+      saveSession(currentSession);
+      navigate("dashboard");
+    }
+  }catch(e){
+    errEl.textContent='Failed to set password: '+e.message+'. Try logging in again.';
+    errEl.style.display='block';
+    if(btn){btn.disabled=false;btn.textContent='Set New Password';}
+  }
+};
+window.showAdminForgotPassword=async function(){
+  // Admin uses Supabase Auth — send password reset email via Supabase
+  var email=(document.getElementById('adm-email')?.value||'').trim().toLowerCase();
+  if(!email||typeof _sb==='undefined'){
+    alert('Enter your admin email first, then click Forgot Password.');
+    return;
+  }
+  // Supabase sends reset link — we don't reveal if email exists or not
+  await _sb.auth.resetPasswordForEmail(email,{
+    redirectTo:'https://academy.brokenenglish.in/?reset=1'
+  }).catch(function(){});
+  alert('If that email has an admin account, a reset link has been sent.');
 };
 
 // ── ADMIN QUIZ UPLOAD FUNCTIONS ───────────────────────────────────────────────
@@ -6742,58 +6794,53 @@ function parseQuizFromJSON(text){
   }catch(e){ throw new Error('Invalid JSON: '+e.message); }
 }
 
-// ── ELEVENLABS ADMIN FUNCTIONS ────────────────────────────────────────────────
+// ── ELEVENLABS ADMIN — key is a Supabase Edge Function secret ────────────────
+// Admin saves only voice preference (not the API key) to DB.
+// Set the API key: supabase secrets set ELEVENLABS_API_KEY=your_key
 async function adminSaveELSettings(){
-  var key=document.getElementById('el-api-key').value.trim();
-  var voice=document.getElementById('el-voice-id').value.trim()||'21m00Tcm4TlvDq8ikWAM';
+  var voice=document.getElementById('el-voice-id')?.value?.trim()||'21m00Tcm4TlvDq8ikWAM';
   var status=document.getElementById('el-status');
-  if(!key){ if(status) status.textContent='⚠ Enter an API key'; return; }
-  localStorage.setItem('brokeneng_el_key',key);
-  localStorage.setItem('brokeneng_el_voice',voice);
   EL_VOICE=voice;
-  if(status) status.textContent='Saving...';
+  localStorage.setItem('brokeneng_el_voice',voice);
+  if(status) status.textContent='Saving voice preference...';
   try{
-    var err=await _sb.from('course_config').upsert({id:'el_settings',data:{key:key,voice:voice},updated_at:new Date().toISOString()},{onConflict:'id'});
+    var err=await _sb.from('course_config').upsert({id:'el_voice_pref',data:{voice:voice},updated_at:new Date().toISOString()},{onConflict:'id'});
     if(err.error) throw err.error;
-    if(status){status.textContent='✓ Saved — all students will use this voice';status.style.color='#4ade80';}
+    if(status){status.textContent='✓ Voice saved — API key is set server-side';status.style.color='#4ade80';}
   }catch(e){
-    if(status){status.textContent='Saved locally (Supabase: '+e.message+')';status.style.color='var(--g1)';}
+    if(status){status.textContent='Saved locally ('+e.message+')';status.style.color='var(--g1)';}
   }
 }
 async function adminTestEL(){
-  var key=document.getElementById('el-api-key').value.trim();
-  var voice=document.getElementById('el-voice-id').value.trim()||'21m00Tcm4TlvDq8ikWAM';
+  var voice=document.getElementById('el-voice-id')?.value?.trim()||EL_VOICE;
   var status=document.getElementById('el-status');
-  if(!key){if(status)status.textContent='⚠ Enter an API key first';return;}
-  if(status)status.textContent='Testing...';
+  if(status)status.textContent='Testing TTS Edge Function...';
   try{
-    var r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+voice,{
+    var {data:{session}}=await _sb.auth.getSession();
+    if(!session?.access_token)throw new Error('Not authenticated');
+    var r=await fetch(TTS_ENDPOINT,{
       method:'POST',
-      headers:{'xi-api-key':key,'Content-Type':'application/json','Accept':'audio/mpeg'},
-      body:JSON.stringify({text:'Hello, welcome to Broken English.',model_id:'eleven_multilingual_v2',voice_settings:{stability:0.5,similarity_boost:0.75}})
+      headers:{'Authorization':'Bearer '+session.access_token,'Content-Type':'application/json'},
+      body:JSON.stringify({text:'Hello, welcome to Broken English.',voiceId:voice})
     });
-    if(!r.ok){
-      var msg='HTTP '+r.status;
-      try{var j=await r.json();if(j.detail&&j.detail.message)msg=j.detail.message;else if(j.detail&&typeof j.detail==='string')msg=j.detail;}catch(_){}
-      throw new Error(msg);
-    }
+    if(!r.ok)throw new Error('HTTP '+r.status);
     var buf=await r.arrayBuffer();
     new Audio(URL.createObjectURL(new Blob([buf],{type:'audio/mpeg'}))).play();
-    if(status){status.textContent='✓ Voice working!';status.style.color='#4ade80';}
+    if(status){status.textContent='✓ TTS Edge Function working!';status.style.color='#4ade80';}
   }catch(e){
     if(status){status.textContent='✗ '+e.message;status.style.color='#f87171';}
   }
 }
 async function sbLoadELSettings(){
+  // API key never downloaded to browser — only voice preference
   try{
     if(typeof _sb==='undefined')return;
-    var r=await _sb.from('course_config').select('data').eq('id','el_settings').single();
-    if(r.error||!r.data||!r.data.data)return;
-    var d=r.data.data;
-    if(d.key)localStorage.setItem('brokeneng_el_key',d.key);
-    if(d.voice){localStorage.setItem('brokeneng_el_voice',d.voice);EL_VOICE=d.voice;}
-    console.log('EL settings synced ✓');
-  }catch(e){console.warn('EL load:',e);}
+    var r=await _sb.from('course_config').select('data').eq('id','el_voice_pref').single();
+    if(!r.error&&r.data&&r.data.data&&r.data.data.voice){
+      EL_VOICE=r.data.data.voice;
+      localStorage.setItem('brokeneng_el_voice',EL_VOICE);
+    }
+  }catch(e){}
 }
 
 
@@ -6805,8 +6852,9 @@ var _wvAudio=null,_wvSpeechWord='',_wvTimer=null;
 // ElevenLabs voice — Rachel (natural British/American accent, great for pronunciation)
 var EL_VOICE=localStorage.getItem('brokeneng_el_voice')||'21m00Tcm4TlvDq8ikWAM';
 
-function wvGetKey(){ return localStorage.getItem('brokeneng_el_key')||''; }
-function wvSetKey(k){ localStorage.setItem('brokeneng_el_key',k.trim()); }
+// ElevenLabs API key removed from browser localStorage — proxied via TTS Edge Function
+function wvGetKey(){ return '_server'; } // key lives in Edge Function secrets only
+function wvSetKey(k){ /* no-op: key is set via Supabase CLI secrets set */ }
 
 function wvSpeakWord(){
   if(_wvAudio){ _wvAudio.currentTime=0; _wvAudio.play(); return; }
@@ -6816,46 +6864,44 @@ function wvSpeakWord(){
   }
 }
 
+// TTS is proxied via Edge Function — API key never reaches the browser
 function wvPlayElevenLabs(word, onSuccess, onFail){
-  var key=wvGetKey();
-  if(!key){ onFail(); return; }
-  fetch('https://api.elevenlabs.io/v1/text-to-speech/'+EL_VOICE,{
-    method:'POST',
-    headers:{'xi-api-key':key,'Content-Type':'application/json','Accept':'audio/mpeg'},
-    body:JSON.stringify({text:word,model_id:'eleven_multilingual_v2',voice_settings:{stability:0.5,similarity_boost:0.75}})
-  })
-  .then(function(r){
-    if(!r.ok) throw new Error('ElevenLabs error '+r.status);
-    return r.arrayBuffer();
-  })
-  .then(function(buf){
-    var blob=new Blob([buf],{type:'audio/mpeg'});
-    var url=URL.createObjectURL(blob);
-    _wvAudio=new Audio(url);
-    _wvAudio.play();
-    onSuccess();
-  })
-  .catch(function(e){ console.warn('ElevenLabs:',e); onFail(); });
+  if(!TTS_ENDPOINT||TTS_ENDPOINT==='/functions/v1/tts'){ onFail(); return; }
+  _sb.auth.getSession().then(function(res){
+    var token=res?.data?.session?.access_token;
+    if(!token){ onFail(); return; }
+    fetch(TTS_ENDPOINT,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+      body:JSON.stringify({text:word,voiceId:EL_VOICE})
+    })
+    .then(function(r){
+      if(!r.ok)throw new Error('TTS error '+r.status);
+      return r.arrayBuffer();
+    })
+    .then(function(buf){
+      var blob=new Blob([buf],{type:'audio/mpeg'});
+      var url=URL.createObjectURL(blob);
+      _wvAudio=new Audio(url);
+      _wvAudio.play();
+      onSuccess();
+    })
+    .catch(function(e){console.warn('TTS:',e);onFail();});
+  }).catch(function(){onFail();});
 }
 
-// Show API key settings panel
+// ElevenLabs API key settings panel removed — key is now a server-side secret.
+// Students use TTS via the /functions/v1/tts Edge Function; no key in browser.
 function wvShowKeySettings(){
-  var cur=wvGetKey();
   var el=document.getElementById('wv-el-settings');
   if(el){ el.remove(); return; }
   var panel=document.createElement('div');
   panel.id='wv-el-settings';
   panel.style.cssText='position:fixed;bottom:80px;right:24px;z-index:9999;background:rgba(13,13,28,.98);border:1px solid rgba(255,45,120,.3);border-radius:14px;padding:16px;width:320px;backdrop-filter:blur(30px);box-shadow:0 8px 32px rgba(0,0,0,.5)';
-  panel.innerHTML='<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:#fff;margin-bottom:10px">🎙 ElevenLabs API Key</div>'
-    +'<input id="wv-el-key-input" type="password" placeholder="Paste your ElevenLabs API key..." value="'+cur+'"'
-    +' style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:9px 12px;outline:none;box-sizing:border-box;font-family:JetBrains Mono,monospace"/>'
-    +'<div style="display:flex;gap:8px;margin-top:10px">'
-      +'<button onclick="var k=document.getElementById(\'wv-el-key-input\').value;wvSetKey(k);document.getElementById(\'wv-el-settings\').remove();var s=document.getElementById(\'wv-pron-status\');if(s)s.textContent=\'ElevenLabs key saved ✓\';" style="flex:1;background:var(--grad);border:none;border-radius:8px;padding:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:Montserrat,sans-serif">Save</button>'
-      +'<button onclick="document.getElementById(\'wv-el-settings\').remove()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;color:var(--muted);font-size:12px;cursor:pointer">✕</button>'
-    +'</div>'
-    +'<div style="font-size:10px;color:var(--muted);margin-top:8px">Key stored locally in your browser only. Get yours at elevenlabs.io</div>';
+  panel.innerHTML='<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:13px;color:#fff;margin-bottom:8px">🎙 ElevenLabs TTS</div>'
+    +'<p style="font-size:11px;color:rgba(255,255,255,.5);line-height:1.5;margin:0 0 10px">Voice is powered by the Broken English server. No API key needed here.</p>'
+    +'<button onclick="document.getElementById(\'wv-el-settings\').remove()" style="width:100%;background:var(--grad);border:none;border-radius:8px;padding:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:Montserrat,sans-serif">OK</button>';
   document.body.appendChild(panel);
-  document.getElementById('wv-el-key-input').focus();
 }
 
 function wvPronounce(word){
