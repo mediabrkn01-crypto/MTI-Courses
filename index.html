@@ -90,7 +90,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 .sb-toggle{flex-shrink:0;width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.06);border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;padding:0}
 .sb-toggle:hover{color:#fff;background:rgba(255,45,120,.15);border-color:rgba(255,45,120,.3)}
 .sb-toggle svg{width:16px;height:16px}
-.sb-logo-mark{display:none;width:38px;height:38px;object-fit:contain;flex-shrink:0;cursor:pointer}
+.sb-logo-img{display:block;width:128px;max-height:38px;object-fit:contain;flex-shrink:0;cursor:pointer;transition:width .26s cubic-bezier(.4,0,.2,1),filter .2s ease,transform .2s ease}
 .sb-item svg.nav-ic{width:19px;height:19px;flex-shrink:0}
 .sb-item.active svg.nav-ic{color:#fff}
 .sb-item .sb-icon{width:20px;height:20px;display:flex;align-items:center;justify-content:center;color:var(--muted)}
@@ -104,9 +104,9 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
   html.sb-collapsed #sidebar{overflow:visible}
   html.sb-collapsed .sb-nav{overflow:visible}
   html.sb-collapsed .sb-lbl,html.sb-collapsed .sb-sec,html.sb-collapsed .sb-voice-info,
-  html.sb-collapsed .sb-nowplaying,html.sb-collapsed .sb-logo-full,html.sb-collapsed .sb-uname,
+  html.sb-collapsed .sb-nowplaying,html.sb-collapsed .sb-uname,
   html.sb-collapsed .sb-foot .sb-out,html.sb-collapsed .sb-bdg,html.sb-collapsed .sb-lock-ic{display:none!important}
-  html.sb-collapsed .sb-logo-mark{display:block}
+  html.sb-collapsed .sb-logo-img{width:50px}
   html.sb-collapsed .sb-brand{flex-direction:column;gap:10px;justify-content:center;align-items:center}
   html.sb-collapsed .sb-logo{justify-content:center;width:100%}
   html.sb-collapsed .sb-item{justify-content:center;padding:11px 0;margin:2px 12px;gap:0}
@@ -122,15 +122,14 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-h
 }
 /* Collapsed sidebar — dock-style hover (pointer devices only) */
 @media(hover:hover) and (pointer:fine){
-  html.sb-collapsed .sb-logo-mark{transition:transform .2s ease,filter .2s ease}
-  html.sb-collapsed .sb-logo-mark:hover{transform:scale(1.12);filter:drop-shadow(0 0 7px rgba(255,45,120,.55))}
+  html.sb-collapsed .sb-logo-img:hover{transform:scale(1.08);filter:drop-shadow(0 0 6px rgba(255,45,120,.45))}
   html.sb-collapsed .sb-item{transition:transform .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}
-  html.sb-collapsed .sb-item:hover{transform:scale(1.15);filter:brightness(1.18)}
-  html.sb-collapsed .sb-item.active:hover{transform:scale(1.1)}
+  html.sb-collapsed .sb-item:hover{transform:scale(1.12);filter:brightness(1.15)}
+  html.sb-collapsed .sb-item.active:hover{transform:scale(1.08)}
   html.sb-collapsed .sb-voice{transition:transform .18s ease,filter .18s ease}
-  html.sb-collapsed .sb-voice:hover{transform:scale(1.14);filter:brightness(1.2) drop-shadow(0 0 5px rgba(255,45,120,.4))}
+  html.sb-collapsed .sb-voice:hover{transform:scale(1.1);filter:brightness(1.15) drop-shadow(0 0 5px rgba(255,45,120,.35))}
   html.sb-collapsed .sb-user{transition:transform .18s ease,filter .18s ease}
-  html.sb-collapsed .sb-user:hover{transform:scale(1.1);filter:brightness(1.15)}
+  html.sb-collapsed .sb-user:hover{transform:scale(1.08);filter:brightness(1.12)}
   html.sb-collapsed .sb-toggle{transition:transform .15s ease,color .15s,background .15s,border-color .15s}
   html.sb-collapsed .sb-toggle:hover{transform:scale(1.1)}
   html.sb-collapsed .sb-toggle:active{transform:scale(0.96)}
@@ -1992,12 +1991,11 @@ function sidebarHtml(active){
   const earnedBadges=BADGES.filter(b=>b.check&&b.check({completed:completedCount,quizzes:0})).length;
 
   return `
-  <div id="sidebar">
+  <div id="sidebar" onpointerenter="sbHoverExpand()" onpointerleave="sbHoverCollapse()" onfocusin="sbHoverExpand()" onfocusout="sbHoverCollapse()">
     <!-- BRAND -->
     <div class="sb-brand">
       <div class="sb-logo" onclick="closeSidebar();navigate('dashboard')" style="cursor:pointer;display:flex;align-items:center;min-width:0">
-        <img class="sb-logo-full" src="${getLogoSrc()}" style="max-height:36px;max-width:150px;object-fit:contain;display:block" onerror="this.style.display='none'"/>
-        <img class="sb-logo-mark" src="${SITE_IMAGES.symbolLogo||SITE_IMAGES.mainLogo}" style="width:38px;height:38px;object-fit:contain;" alt="Broken English" onerror="this.src='${SITE_IMAGES.mainLogo}';this.style.width='auto';this.style.maxWidth='38px'"/>
+        <img class="sb-logo-img" src="${getLogoSrc()}" alt="Broken English" onerror="this.style.display='none'"/>
       </div>
       <button class="sb-toggle" onclick="toggleSidebarCollapse()" aria-label="Toggle navigation sidebar" title="Toggle sidebar">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/></svg>
@@ -2099,6 +2097,23 @@ function toggleSidebarCollapse(){
   var nowCollapsed=!el.classList.contains('sb-collapsed');
   el.classList.toggle('sb-collapsed', nowCollapsed);
   try{ localStorage.setItem('brokeneng_sidebar_state', nowCollapsed?'collapsed':'expanded'); }catch(e){}
+}
+// Desktop sidebar hover expand/collapse — pointer devices only, no mobile
+var _sbHoverT=null;
+function _sbIsPointer(){return window.matchMedia('(hover:hover) and (pointer:fine)').matches;}
+function sbHoverExpand(){
+  if(!_sbIsPointer())return;
+  clearTimeout(_sbHoverT);
+  document.documentElement.classList.remove('sb-collapsed');
+}
+function sbHoverCollapse(){
+  if(!_sbIsPointer())return;
+  clearTimeout(_sbHoverT);
+  _sbHoverT=setTimeout(function(){
+    var sb=document.getElementById('sidebar');
+    if(sb&&sb.contains(document.activeElement))return; // keep open for keyboard nav
+    document.documentElement.classList.add('sb-collapsed');
+  },200);
 }
 applySidebarPref();
 // Escape closes the mobile drawer
