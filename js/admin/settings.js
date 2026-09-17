@@ -39,12 +39,30 @@ function renderAdminSettings(){
 
     <!-- MAINTENANCE MODE SECTION -->
     <div class="lg" id="maint-section" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,100,0,.3);background:rgba(255,100,0,.05)">
-      <p style="font-weight:700;font-size:15px;color:#f97316;margin-bottom:4px">🚧 Maintenance Mode</p>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">When enabled, students see a full-screen update notice. Admin access preserved. Students already in app see it within 15 seconds.</p>
+      <p style="font-weight:700;font-size:15px;color:#f97316;margin-bottom:4px">🚧 System Maintenance</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Global maintenance blocks ALL students and demo users. One selected test account bypasses it for production verification. Admin always has access.</p>
+
       <div id="maint-status-row" style="margin-bottom:14px;font-size:12px;color:var(--muted)">Loading status...</div>
+      <div id="maint-active-info" style="display:none;margin-bottom:14px;padding:12px 14px;background:rgba(255,100,0,.08);border:1px solid rgba(255,100,0,.2);border-radius:8px;font-size:12px;line-height:1.8">
+        <div style="color:#f97316;font-weight:700;margin-bottom:4px">🔴 Maintenance is ACTIVE</div>
+        <div style="color:rgba(255,255,255,.7)">Students Blocked: <strong style="color:#fff">All Students &amp; Demo Users</strong></div>
+        <div id="maint-active-bypass-info" style="color:rgba(255,255,255,.7)">Maintenance Bypass: <strong style="color:#4ade80" id="maint-active-bypass-name">—</strong></div>
+      </div>
+
+      <div id="maint-bypass-section" style="margin-bottom:16px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">Test Account Bypass</label>
+        <p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px">This student gets full access during maintenance. Required before enabling.</p>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="maint-bypass-search" type="text" placeholder="Search student by name or email…" oninput="adminSearchBypassStudent(this.value)"
+            style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:9px 12px;outline:none;box-sizing:border-box"/>
+        </div>
+        <div id="maint-bypass-results" style="margin-bottom:8px"></div>
+        <div id="maint-bypass-selected" style="padding:10px 12px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.1);border-radius:8px;font-size:12px;color:var(--muted)">No test account selected — select one before enabling maintenance.</div>
+      </div>
+
       <div style="margin-bottom:14px">
         <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">Student-facing Message (optional)</label>
-        <input id="maint-msg" type="text" placeholder="We're making improvements. Be right back." style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+        <input id="maint-msg" type="text" placeholder="We're updating the platform. Access will be restored shortly." style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <button id="maint-toggle-btn" onclick="adminToggleMaintenance()" style="width:auto;padding:9px 20px;font-size:13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-weight:700;cursor:pointer">Loading...</button>
@@ -156,31 +174,126 @@ function renderAdminSettings(){
   adminLoadMaintenanceStatus();
 }
 
+// In-memory state for the currently selected bypass student (admin UI only)
+window._maintSelectedBypass=null; // {authUserId, name, email} or null
+
 async function adminLoadMaintenanceStatus(){
   var statusRow=document.getElementById('maint-status-row');
   var btn=document.getElementById('maint-toggle-btn');
   var msgInput=document.getElementById('maint-msg');
+  var activeInfo=document.getElementById('maint-active-info');
+  var bypassSection=document.getElementById('maint-bypass-section');
   if(!statusRow||!btn) return;
   if(typeof _sb==='undefined'){statusRow.textContent='Supabase not connected.';return;}
   try{
     var r=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
-    var enabled=!!(r.data&&r.data.data&&r.data.data.enabled);
-    var msg=(r.data&&r.data.data&&r.data.data.message)||'';
+    var cfg=(r.data&&r.data.data)||{};
+    var enabled=!!cfg.enabled;
+    var msg=cfg.message||'';
+    var bypassAuthUid=cfg.bypass_auth_user_id||null;
+    var bypassName=cfg.bypass_student_name||null;
+    var bypassEmail=cfg.bypass_student_email||null;
     _maintenanceActive=enabled;
+    _maintBypassAuthUserId=bypassAuthUid;
+
+    // Populate UI
     if(msgInput&&!msgInput.value) msgInput.value=msg;
+
+    // Status badge
     statusRow.innerHTML=enabled
-      ?'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.4);border-radius:6px;padding:4px 10px;font-size:12px;color:#f97316;font-weight:700">🚧 MAINTENANCE IS ON — students are blocked</span>'
-      :'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:4px 10px;font-size:12px;color:#4ade80;font-weight:700">✓ App is LIVE — students have full access</span>';
+      ?'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.4);border-radius:6px;padding:4px 10px;font-size:12px;color:#f97316;font-weight:700">🚧 MAINTENANCE IS ON</span>'
+      :'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:4px 10px;font-size:12px;color:#4ade80;font-weight:700">✓ App is LIVE</span>';
+
+    // Active info panel
+    if(activeInfo) activeInfo.style.display=enabled?'block':'none';
+    var bypassNameEl=document.getElementById('maint-active-bypass-name');
+    if(bypassNameEl) bypassNameEl.textContent=bypassName?(bypassName+(bypassEmail?' ('+bypassEmail+')'):''):'None selected';
+
+    // Bypass section — show/hide search depending on state
+    if(bypassSection) bypassSection.style.display=enabled?'none':'block';
+
+    // If config has a bypass student, prefill _maintSelectedBypass
+    if(bypassAuthUid&&bypassName&&!window._maintSelectedBypass){
+      window._maintSelectedBypass={authUserId:bypassAuthUid,name:bypassName,email:bypassEmail||''};
+      _renderBypassSelected();
+    }
+
+    // Toggle button
     btn.textContent=enabled?'Disable Maintenance':'Enable Maintenance';
     btn.style.background=enabled?'rgba(34,197,94,.15)':'rgba(255,100,0,.2)';
     btn.style.borderColor=enabled?'rgba(34,197,94,.4)':'rgba(255,100,0,.5)';
     btn.style.color=enabled?'#4ade80':'#f97316';
+
+    // Admin top-bar badge
     var badge=document.getElementById('admin-maint-badge');
-    if(badge) badge.style.display=enabled?'inline-flex':'none';
+    if(badge){
+      badge.style.display=enabled?'inline-flex':'none';
+      badge.textContent=enabled?('🚧 MAINTENANCE ON'+(bypassName?' | Bypass: '+bypassName:'')):'';
+    }
   }catch(e){
     if(statusRow) statusRow.textContent='Error loading status: '+e.message;
   }
 }
+
+function _renderBypassSelected(){
+  var el=document.getElementById('maint-bypass-selected');
+  if(!el) return;
+  var bp=window._maintSelectedBypass;
+  if(!bp){
+    el.innerHTML='<span style="color:var(--muted)">No test account selected — select one before enabling maintenance.</span>';
+    return;
+  }
+  el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
+    +'<div><div style="color:#4ade80;font-weight:700;font-size:12px">✓ '+escapeHtml(bp.name)+'</div>'
+    +'<div style="color:var(--muted);font-size:11px">'+escapeHtml(bp.email)+'</div></div>'
+    +'<button onclick="adminClearBypassStudent()" style="padding:4px 10px;background:rgba(255,0,0,.1);border:1px solid rgba(255,0,0,.2);border-radius:6px;color:#f87171;font-size:11px;cursor:pointer">Remove</button>'
+    +'</div>';
+}
+
+window.adminSearchBypassStudent=async function(query){
+  var results=document.getElementById('maint-bypass-results');
+  if(!results) return;
+  if(!query||query.trim().length<2){results.innerHTML='';return;}
+  if(typeof _sb==='undefined'){results.innerHTML='<div style="font-size:12px;color:#f87171;padding:6px">Supabase not connected.</div>';return;}
+  try{
+    var q=query.trim();
+    var r=await _sb.from('students').select('id,name,email,auth_user_id')
+      .or('name.ilike.%'+q+'%,email.ilike.%'+q+'%').limit(6);
+    if(r.error||!r.data||!r.data.length){
+      results.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px 0">No students found.</div>';
+      return;
+    }
+    results.innerHTML=r.data.map(function(s){
+      var hasAuth=!!s.auth_user_id;
+      var uid=hasAuth?s.auth_user_id:'';
+      var name=escapeHtml(s.name||'');
+      var email=escapeHtml(s.email||'');
+      return '<div onclick="'+(hasAuth?'adminSelectBypassStudent(\''+uid+'\',\''+name+'\',\''+email+'\')':'alert(\'This student has no Supabase Auth account and cannot be used as a bypass account.\')')+'"'
+        +' style="cursor:'+(hasAuth?'pointer':'default')
+        +';padding:8px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:12px'
+        +(hasAuth?'':';opacity:.5')+'">'
+        +'<strong style="color:#fff">'+name+'</strong> <span style="color:var(--muted)">'+email+'</span>'
+        +(hasAuth?'':'<span style="color:#f87171;font-size:10px;margin-left:6px">(no auth account)</span>')
+        +'</div>';
+    }).join('');
+  }catch(e){
+    results.innerHTML='<div style="font-size:12px;color:#f87171;padding:6px">Error: '+e.message+'</div>';
+  }
+};
+
+window.adminSelectBypassStudent=function(authUserId,name,email){
+  window._maintSelectedBypass={authUserId:authUserId,name:name,email:email};
+  var results=document.getElementById('maint-bypass-results');
+  if(results) results.innerHTML='';
+  var searchInput=document.getElementById('maint-bypass-search');
+  if(searchInput) searchInput.value='';
+  _renderBypassSelected();
+};
+
+window.adminClearBypassStudent=function(){
+  window._maintSelectedBypass=null;
+  _renderBypassSelected();
+};
 
 async function adminToggleMaintenance(){
   if(typeof _sb==='undefined'){alert('Supabase not connected.');return;}
@@ -192,35 +305,50 @@ async function adminToggleMaintenance(){
     var currentEnabled=!!(r.data&&r.data.data&&r.data.data.enabled);
     var newEnabled=!currentEnabled;
     var msgVal=(msgInput&&msgInput.value.trim())||'';
+
+    // Require bypass student selected before enabling
+    if(newEnabled&&!window._maintSelectedBypass){
+      if(statusEl) statusEl.innerHTML='<span style="color:#f87171">Select a Test Account before enabling Maintenance Mode.</span>';
+      return;
+    }
+
+    var bp=window._maintSelectedBypass;
+    var bypassDesc=bp?bp.name+' ('+bp.email+')':'None';
     var action=newEnabled?'ENABLE':'DISABLE';
+
     showDemoConfirm({
       title:(newEnabled?'Enable':'Disable')+' Maintenance Mode',
       message:newEnabled
-        ?'Students will immediately see a full-screen maintenance notice. Admin access preserved.'+(msgVal?' Message: "'+msgVal+'"':'')
-        :'Students will regain full app access. App auto-recovers for anyone on the maintenance screen.',
+        ?'All student accounts and demo users will be blocked.\n\nTest Account:\n'+bypassDesc+'\n\nwill remain accessible for production testing.'
+        :'All students will regain full access automatically.',
       confirmText:action,
       type:newEnabled?'danger':'warn',
       onConfirm:async function(){
         var btn=document.getElementById('maint-toggle-btn');
         if(btn){btn.disabled=true;btn.textContent='Saving...';}
         try{
+          var newData={
+            enabled:newEnabled,
+            message:msgVal,
+            bypass_auth_user_id:newEnabled&&bp?bp.authUserId:null,
+            bypass_student_name:newEnabled&&bp?bp.name:null,
+            bypass_student_email:newEnabled&&bp?bp.email:null,
+            enabled_at:newEnabled?new Date().toISOString():null,
+            enabled_by:currentSession&&currentSession.authUserId||'admin',
+            updated_at:new Date().toISOString()
+          };
           await _sb.from('course_config').upsert(
-            {id:'maintenance_mode',data:{enabled:newEnabled,message:msgVal,updatedAt:new Date().toISOString()}},
+            {id:'maintenance_mode',data:newData},
             {onConflict:'id'}
           );
-          // Audit log
-          try{
-            await _sb.from('course_config').upsert(
-              {id:'maint_audit_'+Date.now(),data:{action:action,by:currentSession&&currentSession.authUserId||'admin',ts:new Date().toISOString()}},
-              {onConflict:'id'}
-            );
-          }catch(e){}
           _maintenanceActive=newEnabled;
+          _maintBypassAuthUserId=newEnabled&&bp?bp.authUserId:null;
+          if(!newEnabled) window._maintSelectedBypass=null;
           if(statusEl) statusEl.innerHTML='<span style="color:'+(newEnabled?'#f97316':'#4ade80')+'">'+(newEnabled?'Maintenance enabled.':'Maintenance disabled.')+'</span>';
           await adminLoadMaintenanceStatus();
         }catch(e){
           if(statusEl) statusEl.textContent='Error: '+e.message;
-          if(btn){btn.disabled=false;}
+          if(btn) btn.disabled=false;
           await adminLoadMaintenanceStatus();
         }
       }

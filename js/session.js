@@ -47,3 +47,4 @@ function $on(id,evt,fn){var el=document.getElementById(id);if(el)el.addEventList
 // STATES: BOOTING → admin | maintenance | student-dashboard | reconnecting | login
 var _bootStarted=false;
 var _maintPollInterval=null;
+var _maintBypassAuthUserId=null; // auth_user_id of the bypass student (server-read, for polling comparison)

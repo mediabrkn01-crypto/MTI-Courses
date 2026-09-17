@@ -31,17 +31,7 @@ async function bootApp(opts){
   var _dtok=parseDemoTokenFromUrl();
   if(_dtok){ bootDemo(_dtok); return; }
 
-  // 2. Check maintenance BEFORE auth (Supabase may not be ready — best-effort)
-  var maintEnabled=false, maintMsg='';
-  if(typeof _sb!=='undefined'){
-    try{
-      var mr=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
-      if(!mr.error&&mr.data&&mr.data.data){ maintEnabled=!!mr.data.data.enabled; maintMsg=mr.data.data.message||''; }
-      _bootLog('MAINT_CHECK',{enabled:maintEnabled});
-    }catch(e){ _bootLog('MAINT_ERR',{msg:e.message}); }
-  }
-
-  // 3. Resolve Supabase Auth JWT — authoritative source of truth
+  // 2. Resolve Supabase Auth JWT FIRST — needed for maintenance bypass check
   var sbSession=null, sbAuthErr=null;
   if(typeof _sb!=='undefined'){
     try{
@@ -52,10 +42,10 @@ async function bootApp(opts){
     }catch(e){ sbAuthErr=e; _bootLog('AUTH_NET_ERR',{msg:e.message}); }
   }
 
-  // 4. Local session (fast-path, valid for offline / network error cases)
+  // 3. Local session (fast-path, valid for offline / network error cases)
   var localSess=loadSession();
 
-  // 5. Admin path — bypasses maintenance, no DB verification needed
+  // 4. Admin path — always bypasses maintenance
   if(localSess&&localSess.role==='admin'){
     currentSession=localSess;
     waitForSb().then(function(ok){ if(ok) sbLoadAllStudents().catch(function(){}); });
@@ -64,12 +54,34 @@ async function bootApp(opts){
     return;
   }
 
-  // 6. Maintenance gate — blocks all non-admin users
+  // 5. Check maintenance config (now that we have auth state for bypass check)
+  var maintEnabled=false, maintMsg='', maintBypassAuthUid=null;
+  if(typeof _sb!=='undefined'){
+    try{
+      var mr=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
+      if(!mr.error&&mr.data&&mr.data.data){
+        maintEnabled=!!mr.data.data.enabled;
+        maintMsg=mr.data.data.message||'';
+        maintBypassAuthUid=mr.data.data.bypass_auth_user_id||null;
+      }
+      _bootLog('MAINT_CHECK',{enabled:maintEnabled,hasBypass:!!maintBypassAuthUid});
+    }catch(e){ _bootLog('MAINT_ERR',{msg:e.message}); }
+  }
+  // Store for polling comparisons
+  _maintBypassAuthUserId=maintBypassAuthUid;
+
+  // 6. Maintenance gate — bypass if this user's JWT uid matches the configured bypass account
   if(maintEnabled){
-    _maintenanceActive=true;
-    renderMaintenanceScreen(maintMsg);
-    startMaintenancePolling();
-    return;
+    var currentAuthUid=sbSession&&sbSession.user?sbSession.user.id:null;
+    var isBypassed=!!(maintBypassAuthUid&&currentAuthUid&&currentAuthUid===maintBypassAuthUid);
+    if(!isBypassed){
+      _maintenanceActive=true;
+      renderMaintenanceScreen(maintMsg);
+      startMaintenancePolling();
+      return;
+    }
+    _bootLog('MAINT_BYPASSED',{uid:currentAuthUid});
+    // Fall through to normal boot — bypass student gets full access
   }
 
   // 7. Student auth: JWT is authoritative; local session is a safe fallback on network error
@@ -162,15 +174,43 @@ function startMaintenancePolling(){
     if(typeof _sb==='undefined') return;
     try{
       var r=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
-      var isOn=!!(r.data&&r.data.data&&r.data.data.enabled);
-      var pollMsg=(r.data&&r.data.data&&r.data.data.message)||'';
-      var screenNow=app.getAttribute('data-screen');
+      var cfg=(r.data&&r.data.data)||{};
+      var isOn=!!cfg.enabled;
+      var pollMsg=cfg.message||'';
+      var bypassUid=cfg.bypass_auth_user_id||null;
+      var bypassName=cfg.bypass_student_name||'';
+      _maintBypassAuthUserId=bypassUid;
       _maintenanceActive=isOn;
+
+      // Update admin badge
       var badge=document.getElementById('admin-maint-badge');
-      if(badge) badge.style.display=isOn?'inline-flex':'none';
-      if(isOn&&screenNow!=='maintenance'&&(!currentSession||currentSession.role!=='admin')){
+      if(badge){
+        badge.style.display=isOn?'inline-flex':'none';
+        if(isOn&&bypassName) badge.textContent='🚧 MAINTENANCE ON | Bypass: '+bypassName;
+        else badge.textContent='🚧 MAINTENANCE ON';
+      }
+
+      if(currentSession&&currentSession.role==='admin') return; // admin unaffected
+
+      // Check bypass for current user using server-signed JWT
+      var authRes=await _sb.auth.getSession();
+      var sess=authRes.data&&authRes.data.session;
+      var currentUid=sess&&sess.user?sess.user.id:null;
+      var isBypassed=!!(bypassUid&&currentUid&&currentUid===bypassUid);
+
+      var screenNow=app.getAttribute('data-screen');
+      if(isOn&&!isBypassed&&screenNow!=='maintenance'){
+        // Maintenance just enabled — pause video, show maintenance
+        var vid=document.querySelector('video');
+        if(vid&&!vid.paused){try{vid.pause();}catch(e){}}
         renderMaintenanceScreen(pollMsg);
+      } else if(isOn&&isBypassed&&screenNow==='maintenance'){
+        // Bypass student recovered from maintenance screen
+        clearInterval(_maintPollInterval); _maintPollInterval=null;
+        _bootStarted=false; app.removeAttribute('data-screen');
+        bootApp({force:true});
       } else if(!isOn&&screenNow==='maintenance'){
+        // Maintenance disabled — restore app
         clearInterval(_maintPollInterval); _maintPollInterval=null;
         _bootStarted=false; app.removeAttribute('data-screen');
         bootApp({force:true});
@@ -186,14 +226,23 @@ window.addEventListener('pageshow',function(e){
     waitForSb(5000).then(function(ok){
       if(!ok) return;
       sbLoadVideos().catch(function(){});
-      _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle()
-        .then(function(mr){
-          var isOn=!!(mr.data&&mr.data.data&&mr.data.data.enabled);
-          if(isOn&&(!currentSession||currentSession.role!=='admin')){
-            renderMaintenanceScreen((mr.data&&mr.data.data&&mr.data.data.message)||'');
-            startMaintenancePolling();
-          }
-        }).catch(function(){});
+      if(currentSession&&currentSession.role==='admin') return;
+      Promise.all([
+        _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle(),
+        _sb.auth.getSession()
+      ]).then(function(results){
+        var mr=results[0]; var authRes=results[1];
+        var cfg=(mr.data&&mr.data.data)||{};
+        var isOn=!!cfg.enabled;
+        var bypassUid=cfg.bypass_auth_user_id||null;
+        var sess=authRes.data&&authRes.data.session;
+        var currentUid=sess&&sess.user?sess.user.id:null;
+        var isBypassed=!!(bypassUid&&currentUid&&currentUid===bypassUid);
+        if(isOn&&!isBypassed){
+          renderMaintenanceScreen(cfg.message||'');
+          startMaintenancePolling();
+        }
+      }).catch(function(){});
     });
   }
 });
