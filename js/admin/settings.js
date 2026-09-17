@@ -207,7 +207,7 @@ async function adminLoadMaintenanceStatus(){
     // Active info panel
     if(activeInfo) activeInfo.style.display=enabled?'block':'none';
     var bypassNameEl=document.getElementById('maint-active-bypass-name');
-    if(bypassNameEl) bypassNameEl.textContent=bypassName?(bypassName+(bypassEmail?' ('+bypassEmail+')'):''):'None selected';
+    if(bypassNameEl) bypassNameEl.textContent=bypassName?(bypassName+(bypassEmail?' ('+bypassEmail+')':'')):'None selected';
 
     // Bypass section — show/hide search depending on state
     if(bypassSection) bypassSection.style.display=enabled?'none':'block';
