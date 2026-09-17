@@ -1,0 +1,19 @@
+/* admin.css — extracted verbatim from the original single-file index.html.
+   Source lines: 140-143, 212-223
+   No rules were edited; only relocated. */
+/* TOP BAR */
+.top-bar{background:rgba(13,13,28,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 2px 12px rgba(0,0,0,.3);position:sticky;top:0;z-index:30;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.admin-top-bar{background:rgba(13,13,28,.92);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border-bottom:1px solid rgba(255,255,255,.08);box-shadow:0 2px 12px rgba(0,0,0,.3);position:sticky;top:0;z-index:30;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.stats-strip{background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06)}
+/* ADMIN TABLE */
+.admin-table{width:100%;border-collapse:collapse}
+.admin-table thead tr{background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.08)}
+.admin-table th{padding:12px 16px;text-align:left;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.admin-table th.center{text-align:center}.admin-table th.right{text-align:right}
+.admin-table tbody tr{border-bottom:1px solid rgba(255,255,255,.05);transition:all .18s cubic-bezier(.34,1.3,.64,1)}
+.admin-table tbody tr:hover{background:rgba(255,255,255,.04);transform:scale(1.01) translateX(3px)}
+.admin-table td{padding:14px 16px;font-size:14px;color:rgba(255,255,255,.82)}
+.admin-table td.center{text-align:center}.admin-table td.right{text-align:right}
+.settings-grid{columns:3 340px;column-gap:20px}
+.settings-grid>.lg{display:inline-block;width:100%;break-inside:avoid;-webkit-column-break-inside:avoid;margin:0 0 20px!important;box-sizing:border-box}
+@media(max-width:760px){.settings-grid{columns:1}}

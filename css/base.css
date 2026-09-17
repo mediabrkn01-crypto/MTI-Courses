@@ -1,0 +1,18 @@
+/* base.css — extracted verbatim from the original single-file index.html.
+   Source lines: 14, 27-40
+   No rules were edited; only relocated. */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:4px}
+/* BOOT */
+@keyframes bootPulse{0%,100%{box-shadow:0 0 40px rgba(255,45,120,.4),0 0 80px rgba(255,45,120,.15)}50%{box-shadow:0 0 80px rgba(255,45,120,.7),0 0 160px rgba(255,45,120,.3)}}
+.boot-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:28px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.boot-sub{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.12em;text-transform:uppercase;margin-bottom:48px}
+.boot-bar-wrap{width:260px;margin-bottom:12px}
+.boot-bar{height:3px;background:rgba(255,255,255,.06);border-radius:2px;overflow:hidden}
+/* SCREEN WARN */
+#screen-warn{display:none;position:fixed;inset:0;z-index:9999;background:rgba(6,6,15,.96);backdrop-filter:blur(20px);align-items:center;justify-content:center;flex-direction:column;gap:16px}
+#screen-warn.show{display:flex}

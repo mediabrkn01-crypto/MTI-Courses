@@ -1,0 +1,218 @@
+/* auth.js — extracted verbatim from the original single-file index.html.
+   Source lines: 1357-1358, 2267-2435, 2472-2508
+   NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
+function logout(){currentSession=null;clearSession();navigate('login');}
+
+window.doStudentLogin=async()=>{
+  const email=document.getElementById("login-email").value.trim().toLowerCase();
+  const pass=document.getElementById("login-pass").value;
+  const errEl=document.getElementById("login-err");
+  const btn=document.querySelector('#login-pass~button')||document.querySelector('button[onclick*="doStudentLogin"]');
+
+  if(!email||!pass){
+    errEl.textContent="Please enter your email and password.";
+    errEl.style.display="block";
+    return;
+  }
+
+  // Show loading state
+  errEl.style.display="none";
+  errEl.textContent="";
+  const loginBtn=document.getElementById("login-btn-main");
+  if(loginBtn){loginBtn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>Signing in...</span>';loginBtn.disabled=true;}
+
+  // ── Auth path 1: Supabase Auth (JWT-based, server-verified) ──────────────────
+  var byEmail=null;
+  var usedSupabaseAuth=false;
+  if(typeof _sb!=="undefined"){
+    try{
+      var authResult=await _sb.auth.signInWithPassword({email,password:pass});
+      if(!authResult.error&&authResult.data&&authResult.data.user){
+        usedSupabaseAuth=true;
+        // Load student profile by auth_user_id (not by password)
+        var profRes=await _sb.from('students')
+          .select('id,name,email,valid_until,access_list,created_at,completed_at,password_reset_required')
+          .eq('auth_user_id',authResult.data.user.id).limit(1);
+        if(!profRes.error&&profRes.data&&profRes.data.length){
+          var d=profRes.data[0];
+          byEmail={id:d.id,name:d.name,email:d.email,
+            validUntil:d.valid_until||null,accessList:d.access_list||[1],
+            createdAt:d.created_at||new Date().toISOString(),
+            completedAt:d.completed_at||null,
+            passwordResetRequired:!!d.password_reset_required};
+        }
+      }
+    }catch(e){console.warn("Supabase Auth login:",e);}
+  }
+
+  // ── Auth path 2: Legacy password (students not yet migrated) ─────────────────
+  // Removed once all students are migrated via scripts/migrate-students.js
+  if(!byEmail&&!usedSupabaseAuth&&typeof _sb!=="undefined"){
+    try{
+      var legRes=await _sb.from("students")
+        .select("id,name,email,password_hash,valid_until,access_list,created_at,completed_at,auth_user_id")
+        .eq("email",email).limit(1);
+      if(!legRes.error&&legRes.data&&legRes.data.length){
+        var ld=legRes.data[0];
+        // Legacy path: only if not yet migrated + password matches
+        if(!ld.auth_user_id&&ld.password_hash===pass){
+          byEmail={id:ld.id,name:ld.name,email:ld.email,
+            validUntil:ld.valid_until||null,accessList:ld.access_list||[1],
+            createdAt:ld.created_at||new Date().toISOString(),
+            completedAt:ld.completed_at||null};
+        }
+      }
+    }catch(e){console.warn("Legacy auth:",e);}
+  }
+
+  // ── Auth path 3: localStorage (offline/network error) ────────────────────────
+  if(!byEmail&&!usedSupabaseAuth){
+    var cachedStudents=loadStudents();
+    var found=Object.values(cachedStudents).find(function(s){
+      return s.email&&s.email.toLowerCase()===email&&s.password===pass;
+    })||null;
+    if(found)byEmail=found;
+  }
+
+  if(!byEmail){
+    if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
+    errEl.textContent="Incorrect email or password."; // Neutral — don't reveal if email exists
+    errEl.style.display="block";
+    return;
+  }
+
+  const{expired}=getValidity(byEmail);
+  if(expired){
+    if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
+    errEl.textContent="Your course access has expired. Please contact your admin.";
+    errEl.style.display="block";
+    return;
+  }
+
+  errEl.style.display="none";
+
+  // Force password reset for migrated students with compromised legacy passwords
+  if(byEmail.passwordResetRequired){
+    if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
+    window._pendingStudentId=byEmail.id;
+    showForcePasswordReset(email);
+    return;
+  }
+  // Success path — button disappears with splash, no need to re-enable
+
+  currentSession={role:"student",studentId:byEmail.id};
+  saveSession(currentSession);
+  // Show splash IMMEDIATELY so student sees progress — load data in background during animation
+  showBootSplash(byEmail, function(){
+    _videosBootLoaded=true;
+    navigate("dashboard");
+  });
+  // Fire data sync in background (doesn't block splash/dashboard)
+  waitForSb().then(function(ok){
+    if(!ok) return;
+    sbLoadProgress(byEmail.id).catch(function(){});
+    sbLoadVideos().catch(function(){});
+    // Note: EL settings no longer synced to localStorage — TTS is server-side
+  }).catch(function(){});
+
+};
+
+function showBootSplash(student, cb){
+  var steps=[
+    {txt:'Initialising Voice OS...',       pct:0},
+    {txt:'Loading accent engine...',        pct:25},
+    {txt:'Calibrating phoneme matrix...',   pct:55},
+    {txt:'Preparing your journey...',       pct:80},
+    {txt:'Welcome, '+(student.name||'Student').split(' ')[0]+'.', pct:100}
+  ];
+  var logo=getLogoSrc();
+  app.innerHTML=
+    '<style>'
+    +'@keyframes bf-in{from{opacity:0}to{opacity:1}}'
+    +'@keyframes bf-out{from{opacity:1}to{opacity:0}}'
+    +'@keyframes bf-fill{from{width:0%}to{width:var(--w)}}'
+    +'#boot-splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:99998;animation:bf-in .35s ease;gap:0}'
+    +'#boot-splash .bs-logo{display:flex;align-items:center;justify-content:center;margin-bottom:28px}'
+    +'#boot-splash .bs-logo img{max-height:72px;max-width:180px;object-fit:contain;mix-blend-mode:screen}'
+    +'#boot-splash .bs-logo .bs-wordmark{font-family:Montserrat,sans-serif;font-weight:900;font-size:28px;letter-spacing:.02em;color:#fff;line-height:1}'
+    +'#boot-splash .bs-wordmark span{color:var(--g1)}'
+    +'#boot-splash .bs-status{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.06em;color:var(--muted);text-align:center;min-height:16px;margin-bottom:10px;transition:opacity .2s}'
+    +'#boot-splash .bs-track{width:260px;height:3px;background:rgba(255,255,255,.1);border-radius:2px;overflow:hidden;margin-bottom:8px}'
+    +'#boot-splash .bs-fill{height:100%;background:var(--gradh);border-radius:2px;width:0%;transition:width .4s cubic-bezier(.4,0,.2,1)}'
+    +'#boot-splash .bs-pct{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--g1);text-align:center}'
+    +'</style>'
+    +'<div id="boot-splash">'
+      +'<div class="bs-logo">'
+        +(logo
+          ?'<img src="'+logo+'" onerror="this.style.display=\'none\';document.querySelector(\'.bs-wordmark\').style.display=\'block\'">'
+          :'')
+        +'<div class="bs-wordmark" style="'+(logo?'display:none':'')+'"><span>BROK</span>EN<br>ENGLISH</div>'
+      +'</div>'
+      +'<div class="bs-status" id="bs-status">Loading...</div>'
+      +'<div class="bs-track"><div class="bs-fill" id="bs-fill"></div></div>'
+      +'<div class="bs-pct" id="bs-pct">0%</div>'
+    +'</div>';
+
+  // Replace login history entry with dashboard NOW, before the animation.
+  // Any popstate fired during the ~2.5s splash (iOS swipe-back, Android back button)
+  // will see {screen:'dashboard'} and navigate correctly instead of re-triggering login.
+  try{ history.replaceState({screen:'dashboard',params:{}},'','#dashboard'); }catch(e){}
+
+  var i=0;
+  function step(){
+    if(i>=steps.length){
+      setTimeout(function(){
+        var el=document.getElementById('boot-splash');
+        if(el){ el.style.animation='bf-out .4s ease forwards'; setTimeout(cb,380); }
+        else cb();
+      },300);
+      return;
+    }
+    var s=steps[i];
+    var statusEl=document.getElementById('bs-status');
+    if(!statusEl){ cb(); return; } // Splash DOM replaced by popstate — fire cb immediately
+    statusEl.textContent=s.txt;
+    document.getElementById('bs-fill').style.width=s.pct+'%';
+    document.getElementById('bs-pct').textContent=s.pct+'%';
+    i++;
+    setTimeout(step, i===steps.length ? 500 : 480+Math.random()*200);
+  }
+  setTimeout(step, 300);
+}
+
+window.doAdminLogin=async()=>{
+  const email=(document.getElementById("adm-email")?.value||'').trim().toLowerCase();
+  const pass=document.getElementById("adm-pass")?.value||'';
+  if(!email||!pass)return;
+  var btn=document.querySelector('button.btn-primary');
+  var er=document.getElementById("adm-err");
+  if(btn){btn.disabled=true;btn.textContent='Signing in...';}
+  if(er)er.style.display='none';
+  function _fail(){if(er){er.textContent='Invalid admin credentials.';er.style.display='block';}if(btn){btn.disabled=false;btn.textContent='Sign In as Admin';}}
+
+  // ── Admin auth via Supabase Auth + admin_users table ───────────────────────
+  // Admin credentials are NEVER stored in course_config or localStorage.
+  // Use scripts/bootstrap-admin.js to create the admin Supabase Auth account.
+  if(typeof _sb==='undefined'){_fail();return;}
+  try{
+    var {data:authData,error:authErr}=await _sb.auth.signInWithPassword({email,password:pass});
+    if(authErr||!authData?.user){_fail();return;}
+
+    // Verify admin via is_admin() SECURITY DEFINER function (admin_users has deny-all RLS)
+    var {data:isAdmin,error:adminErr}=await _sb.rpc('is_admin');
+
+    if(adminErr||!isAdmin){
+      // Not in admin_users — sign out the Supabase session and reject
+      await _sb.auth.signOut().catch(function(){});
+      _fail();return;
+    }
+
+    // Authenticated admin
+    currentSession={role:"admin",authUserId:authData.user.id};
+    saveSession(currentSession);
+    navigate("admin");
+  }catch(e){
+    console.warn("Admin login error:",e);
+    _fail();
+  }
+};

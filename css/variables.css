@@ -1,0 +1,15 @@
+/* variables.css — extracted verbatim from the original single-file index.html.
+   Source lines: 15-26
+   No rules were edited; only relocated. */
+:root{
+  --bg:#06060F;--s1:#0D0D1C;--s3:#1A1A2E;
+  --g1:#ED1F51;--g2:#F03A2A;--g3:#F05825;
+  --grad:linear-gradient(135deg,#ED1F51,#F03A2A,#F05825);
+  --gradh:linear-gradient(90deg,#ED1F51,#F03A2A,#F05825);
+  --glass:rgba(255,255,255,0.06);--glass-border:rgba(255,255,255,0.12);
+  --border:rgba(255,255,255,0.07);--border-glow:rgba(255,45,120,0.3);
+  --text:#F4F2FF;--muted:#6B6B90;--muted2:#9898B8;
+  --r:16px;--r2:22px;--sb:250px;
+  --brand:#ED1F51;--brand-2:#F05825;
+  --brand-grad:linear-gradient(135deg,#ED1F51,#F03A2A,#F05825);
+}

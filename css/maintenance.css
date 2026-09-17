@@ -1,0 +1,7 @@
+/* maintenance.css — maintenance / reconnecting screen styles.
+
+   The original single-file build had NO maintenance rules in its <style> block:
+   the only maintenance style (`@keyframes maintPulse`) is emitted inline inside
+   renderMaintenanceScreen() in js/boot.js (original line 6486).
+   That inline <style> was left exactly where it was so behaviour is unchanged.
+   This file is the documented home for any future maintenance-screen CSS. */

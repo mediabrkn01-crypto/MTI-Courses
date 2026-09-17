@@ -1,0 +1,98 @@
+/* responsive.css — extracted verbatim from the original single-file index.html.
+   Source lines: 306-398, 556-557
+   No rules were edited; only relocated. */
+/* MOBILE */
+@media(max-width:767px){#mob-menu-btn{display:flex!important}}
+
+/* ══ MOBILE RESPONSIVE ══ */
+@media(max-width:767px){
+  /* Sidebar off — main takes full width */
+  #main-content{margin-left:0!important}
+  #sidebar{width:min(84vw,320px)!important;min-width:0!important}
+  #mob-menu-btn{display:flex!important}
+  #mob-nav{display:block!important}
+  /* mob-nav shown on mobile only */
+  /* Bottom nav padding so content doesn't hide behind it */
+  #main-content>div:last-child{padding-bottom:80px!important}
+  /* Hide right mission list panel on mobile — not enough space */
+  .mp-right-panel{display:none!important}
+  /* Lesson body — allow left side to scroll full width */
+  #mp-right{display:none!important}
+  /* Lesson topbar — wrap on very small screens */
+  .mv-topbar-acts{flex-wrap:wrap;gap:6px}
+  /* Lesson content full width */
+  #mp-right{display:none!important}
+  /* Lesson info padding smaller on mobile */
+  #main-content [style*="padding:24px 28px"]{padding:16px 14px!important}
+  /* Video max height on mobile */
+  #player-wrapper{height:auto!important;max-height:none!important;aspect-ratio:16/9}
+  #player-wrapper video{object-fit:contain!important}
+  /* Fallback for older iOS/Android that lack aspect-ratio support */
+  @supports not (aspect-ratio:16/9){
+    #player-wrapper{height:0!important;padding-bottom:56.25%!important;position:relative!important}
+  }
+  .dash-stats-grid{grid-template-columns:repeat(2,1fr)!important}
+  /* Module banner text truncation */
+  .module-banner-title{font-size:12px!important}
+  /* Lesson meta row stacks on mobile */
+  .lesson-meta-row{flex-direction:column!important}
+  /* Profile name */
+  .sb-name{font-size:13px!important}
+  /* My courses section header */
+  .section-hdr-row{flex-direction:column!important;gap:8px!important}
+  /* Admin class cards */
+  .class-grid{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Dashboard layout stacks */
+  .dashboard-layout{flex-direction:column}
+  .lesson-panel-wrap{width:100%!important;border-left:none!important;border-top:1px solid rgba(255,255,255,.06)!important;padding:12px!important}
+  .courses-col{padding:12px!important}
+
+  /* Stats grid → 2 cols */
+  .stats-grid{grid-template-columns:repeat(2,1fr)!important;gap:8px!important}
+  .ach-grid{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Reduce padding on content areas */
+  #v-dash,#v-fix{padding:16px 12px 60px!important}
+
+  /* Admin table scrollable */
+  .admin-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
+@media(max-width:820px){
+  /* Admin compact */
+  #main-content>div[style*="padding:24px"], .adm-pad{padding:14px!important}
+  .admin-table-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+  .admin-table th{padding:10px 10px;font-size:10px}
+  .admin-table td{padding:10px 10px;font-size:13px}
+  .admin-table tbody tr:hover{transform:none}
+}
+@media(max-width:820px){
+  .wvp-root{height:100vh!important;height:100dvh!important;overflow:hidden!important}
+  .wvp-split{flex-direction:column!important;overflow:hidden!important}
+  .wvp-main{flex:none!important;overflow:visible!important}
+  .wvp-side{width:100%!important;flex:1!important;min-height:0;border-left:none!important;border-top:1px solid rgba(255,255,255,.08)!important;overflow-y:auto!important;-webkit-overflow-scrolling:touch}
+  /* Lesson page: natural page scroll on mobile */
+  .lesson-root{height:auto!important;min-height:100vh;overflow:visible!important}
+  .lesson-root>div{overflow:visible!important}
+  .lesson-body-split{flex-direction:column!important;overflow:visible!important}
+  .lesson-left-col{overflow:visible!important}
+}
+
+@media(max-width:480px){
+  /* Single col stats on very small */
+  .stats-grid{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Top bar tighter */
+  .top-bar{padding:10px 12px!important}
+  .admin-top-bar{padding:10px 12px!important;gap:8px!important}
+
+  /* Lesson panel meta row stacks */
+  .lesson-meta-row{flex-direction:column!important}
+
+  /* Journey strip dots smaller */
+  .jd-dot{width:22px!important;height:22px!important;font-size:8px!important}
+}
+
+
+@media(max-width:720px){.demo-tbl-desktop{display:none!important}.demo-tbl-cards{display:flex!important}}
+@media(max-width:480px){body.demo-active{padding-top:56px}body.demo-active .top-bar,body.demo-active .admin-top-bar{top:56px}#demo-topbar{height:56px}#demo-timer{padding:5px 13px;gap:9px}#demo-timer #demo-timer-clock{font-size:19px}#demo-toast-wrap{top:64px;left:12px;right:12px;align-items:stretch}.demo-toast{max-width:none}}
