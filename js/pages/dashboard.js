@@ -157,21 +157,21 @@ function renderProfile(){
           <p style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:#fff">Change Password</p>
           <button onclick="togglePassForm()" id="pass-toggle-btn" style="font-size:12px;color:var(--g3);background:none;border:none;cursor:pointer;font-weight:600;font-family:'JetBrains Mono',monospace">Change</button>
         </div>
-        <div id="pass-form" style="display:none" style="display:none;flex-direction:column;gap:12px">
+        <div id="pass-form" style="display:none;flex-direction:column;gap:12px">
           <div>
             <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">New Password</label>
-            <div style="position:relative"><input id="new-pass" type="password" placeholder="Enter new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
+            <div style="position:relative"><input id="new-pass" type="password" autocomplete="new-password" placeholder="Enter new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
           </div>
           <div>
             <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">Confirm Password</label>
-            <div style="position:relative"><input id="confirm-pass" type="password" placeholder="Confirm new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('confirm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
+            <div style="position:relative"><input id="confirm-pass" type="password" autocomplete="new-password" placeholder="Confirm new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('confirm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
           </div>
-          <p id="pass-err" style="display:none;font-size:12px;color:#fca5a5"></p>
-          <p id="pass-ok" style="display:none;font-size:12px;color:#4ade80">Password updated!</p>
-          <div class="flex gap-3">
-            <button onclick="savePassword()" class="btn-primary flex-1" style="padding:11px;font-size:14px">Save</button>
+          <div style="display:flex;gap:10px">
+            <button id="pass-save-btn" onclick="savePassword()" class="btn-primary flex-1" style="padding:11px;font-size:14px">Save</button>
             <button onclick="togglePassForm()" class="btn-ghost flex-1" style="padding:11px;font-size:14px">Cancel</button>
           </div>
+          <p id="pass-err" style="display:none;font-size:12px;color:#fca5a5;margin:0"></p>
+          <p id="pass-ok" style="display:none;font-size:12px;color:#4ade80;margin:0">✓ Password updated successfully.</p>
         </div>
         <div id="pass-placeholder" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:12px 16px;color:rgba(255,255,255,0.3);font-size:14px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.08)">••••••••••</div>
       </div>
@@ -193,21 +193,41 @@ function renderProfile(){
     btn.textContent=hidden?"Cancel":"Change";
     document.getElementById("pass-err").style.display="none";
     document.getElementById("pass-ok").style.display="none";
+    if(!hidden){
+      // Closing form — reset state
+      var np=document.getElementById("new-pass"); if(np) np.value="";
+      var cp=document.getElementById("confirm-pass"); if(cp) cp.value="";
+      var sb=document.getElementById("pass-save-btn"); if(sb){sb.disabled=false;sb.textContent="Save";}
+    }
   };
-  window.savePassword=()=>{
+  window.savePassword=async()=>{
     const np=document.getElementById("new-pass").value;
     const cp=document.getElementById("confirm-pass").value;
     const err=document.getElementById("pass-err");
     const ok=document.getElementById("pass-ok");
+    const btn=document.getElementById("pass-save-btn");
     err.style.display="none";ok.style.display="none";
     if(!np||np.length<6){err.textContent="Password must be at least 6 characters.";err.style.display="block";return;}
     if(np!==cp){err.textContent="Passwords do not match.";err.style.display="block";return;}
-    const students=loadStudents();
-    students[student.id].password=np;
-    saveStudents(students);
-    ok.style.display="block";
-    document.getElementById("new-pass").value="";
-    document.getElementById("confirm-pass").value="";
+    if(btn){btn.disabled=true;btn.textContent="Saving...";}
+    try{
+      if(typeof _sb==="undefined") throw new Error("not_ready");
+      const{error}=await _sb.auth.updateUser({password:np});
+      if(error) throw error;
+      // Clear password_reset_required now that student has set a real password
+      const authRes=await _sb.auth.getSession();
+      const authUid=authRes.data&&authRes.data.session&&authRes.data.session.user?authRes.data.session.user.id:null;
+      if(authUid){
+        await _sb.from("students").update({password_reset_required:false}).eq("auth_user_id",authUid).catch(function(){});
+      }
+      ok.style.display="block";
+      document.getElementById("new-pass").value="";
+      document.getElementById("confirm-pass").value="";
+    }catch(e){
+      err.textContent="Failed to update password: "+(e.message||"unknown error")+". Try again.";
+      err.style.display="block";
+    }
+    if(btn){btn.disabled=false;btn.textContent="Save";}
   };
 }
 

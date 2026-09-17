@@ -123,8 +123,8 @@ window.showForcePasswordReset=function(email){
     '<div style="background:#1a1a2e;border:1px solid rgba(255,113,0,.4);border-radius:20px;padding:32px 28px;width:100%;max-width:420px">'+
     '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Create a New Password</h3>'+
     '<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6">For your security, please create a new password. Your previous password was stored insecurely.</p>'+
-    '<input id="fpr-pass" type="password" placeholder="New password (min 8 characters)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:10px"/>'+
-    '<input id="fpr-pass2" type="password" placeholder="Confirm new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:14px"/>'+
+    '<input id="fpr-pass" type="password" autocomplete="new-password" placeholder="New password (min 6 characters)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:10px"/>'+
+    '<input id="fpr-pass2" type="password" autocomplete="new-password" placeholder="Confirm new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:14px"/>'+
     '<button id="fpr-btn" onclick="doForcePasswordReset()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Set New Password</button>'+
     '<div id="fpr-err" style="display:none;margin-top:12px;font-size:13px;color:#f87171;text-align:center"></div>'+
     '<button onclick="doForcePasswordReset(true)" style="display:block;width:100%;margin-top:12px;background:none;border:none;color:rgba(255,255,255,.35);font-size:12px;cursor:pointer;text-align:center">Skip for now (you will be asked again next login)</button>'+
@@ -151,7 +151,7 @@ window.doForcePasswordReset=async function(skip){
 
   var p1=(document.getElementById('fpr-pass')?.value||'');
   var p2=(document.getElementById('fpr-pass2')?.value||'');
-  if(!p1||p1.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
+  if(!p1||p1.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
   if(p1!==p2){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
@@ -201,8 +201,8 @@ window.showPasswordResetFromEmail=function(){
     '<div style="background:#1a1a2e;border:1px solid rgba(255,113,0,.4);border-radius:20px;padding:32px 28px;width:100%;max-width:420px">'+
     '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:20px;color:#fff;margin-bottom:8px">Set New Password</h3>'+
     '<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6">Choose a strong password to secure your account. You\'ll be signed in automatically after.</p>'+
-    '<input id="er-pass" type="password" placeholder="New password (min 8 characters)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:10px"/>'+
-    '<input id="er-pass2" type="password" placeholder="Confirm new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:14px"/>'+
+    '<input id="er-pass" type="password" autocomplete="new-password" placeholder="New password (min 6 characters)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:10px"/>'+
+    '<input id="er-pass2" type="password" autocomplete="new-password" placeholder="Confirm new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:14px"/>'+
     '<button id="er-btn" onclick="doEmailResetPassword()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Set Password & Sign In</button>'+
     '<div id="er-err" style="display:none;margin-top:12px;font-size:13px;color:#f87171;text-align:center"></div>'+
     '</div></div>';
@@ -215,38 +215,36 @@ window.doEmailResetPassword=async function(){
   var btn=document.getElementById('er-btn');
   var p1=(document.getElementById('er-pass')?.value||'');
   var p2=(document.getElementById('er-pass2')?.value||'');
-  if(!p1||p1.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
+  if(!p1||p1.length<6){errEl.textContent='Password must be at least 6 characters.';errEl.style.display='block';return;}
   if(p1!==p2){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
     if(typeof _sb==='undefined') throw new Error('not_ready');
     var {error}=await _sb.auth.updateUser({password:p1});
     if(error) throw error;
-    document.getElementById('email-reset-overlay')?.remove();
-    // Get auth session to find student profile
+    // Clear password_reset_required for this Auth user
     var authRes=await _sb.auth.getSession();
     var authUid=authRes.data&&authRes.data.session&&authRes.data.session.user?authRes.data.session.user.id:null;
     if(authUid){
-      // Clear password_reset_required flag
       await _sb.from('students').update({password_reset_required:false}).eq('auth_user_id',authUid).catch(function(){});
-      // Load student profile and set session
-      var pr=await _sb.from('students').select('id,name,email,valid_until,access_list,created_at,completed_at').eq('auth_user_id',authUid).limit(1);
-      if(!pr.error&&pr.data&&pr.data.length){
-        var d=pr.data[0];
-        var stuObj={id:d.id,name:d.name,email:d.email,validUntil:d.valid_until||null,
-          accessList:d.access_list||[1],createdAt:d.created_at||new Date().toISOString(),completedAt:d.completed_at||null};
-        var existing=loadStudents(); existing[d.id]=stuObj; saveStudents(existing);
-        currentSession={role:'student',studentId:d.id};
-        saveSession(currentSession);
-        navigate('dashboard');
-        return;
-      }
     }
-    // Fallback: go to login
-    navigate('login');
+    // Sign out so student verifies new password on login (preferred UX per requirement)
+    await _sb.auth.signOut().catch(function(){});
+    clearSession();
+    // Show success then redirect to login
+    document.getElementById('email-reset-overlay')?.remove();
+    var successDiv=document.createElement('div');
+    successDiv.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    successDiv.innerHTML='<div style="background:#1a1a2e;border:1px solid rgba(34,197,94,.4);border-radius:20px;padding:32px 28px;width:100%;max-width:380px;text-align:center">'
+      +'<div style="font-size:40px;margin-bottom:16px">✓</div>'
+      +'<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#4ade80;margin-bottom:10px">Password Updated</h3>'
+      +'<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6">Your new password is set. Sign in below to continue.</p>'
+      +'<button onclick="this.closest(\'div\').parentElement.remove();navigate(\'login\')" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Sign In</button>'
+      +'</div>';
+    document.body.appendChild(successDiv);
   }catch(e){
     errEl.textContent='Failed to set password: '+e.message;
     errEl.style.display='block';
-    if(btn){btn.disabled=false;btn.textContent='Set Password & Sign In';}
+    if(btn){btn.disabled=false;btn.textContent='Set New Password';}
   }
 };
