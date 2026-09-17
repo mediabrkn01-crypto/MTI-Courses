@@ -156,13 +156,14 @@ if('serviceWorker' in navigator){
   touchIcon.href = getLogoSrc();
 })();
 
-// ── CLEAR be_os COLLISION KEYS ──────────────────────────────────────────────
+// ── CLEAR known obsolete legacy keys only ────────────────────────────────────
+// IMPORTANT: Never blanket-delete non-brokeneng_ keys — Supabase Auth stores
+// its session under sb-<project>-auth-token which would be wiped, causing
+// getSession() → null → UNAUTHENTICATED on every page refresh.
+// The old be_os mass-delete IIFE has been removed. Only explicit known keys.
 (function(){
-  // Remove ALL be_os keys that conflict (non-bep_ prefixed)
-  var keysToRemove=[];
-  for(var ki=0;ki<localStorage.length;ki++){
-    var kk=localStorage.key(ki);
-    if(kk&&!kk.startsWith('brokeneng_'))keysToRemove.push(kk);
-  }
-  keysToRemove.forEach(function(k){localStorage.removeItem(k);});
+  var LEGACY=['beos_session','beos_students','beos_progress','beos_videos','beos_config',
+              'be_session','be_students','be_progress','be_videos','be_config',
+              'be_os_session','course_session','course_students'];
+  LEGACY.forEach(function(k){try{localStorage.removeItem(k);}catch(e){}});
 })();
