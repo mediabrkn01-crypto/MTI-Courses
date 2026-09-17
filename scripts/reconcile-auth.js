@@ -73,9 +73,13 @@ async function main() {
     authById[u.id] = u;
   }
 
+  // Build set of auth UUIDs already in use by linked student records
+  const usedAuthIds = new Set(students.filter(s => s.auth_user_id).map(s => s.auth_user_id));
+
   // 3. Analyze each student
   let linkedOk = 0, missingAuth = 0, missingLink = 0, brokenLink = 0,
-      noEmail = 0, expired = 0, resetPending = 0, repaired = 0, repairFailed = 0;
+      noEmail = 0, expired = 0, resetPending = 0, repaired = 0, repairFailed = 0,
+      duplicateProfile = 0;
 
   const issues = [];
 
@@ -102,7 +106,16 @@ async function main() {
     }
 
     if (!s.auth_user_id) {
-      // Auth user exists but profile not linked
+      // Auth user exists but profile not linked.
+      // Check if that UUID is already claimed by another student record (duplicate profile).
+      if (usedAuthIds.has(authUser.id)) {
+        // Duplicate record: another student already owns this Auth account.
+        // Cannot link — unique constraint would fire.
+        duplicateProfile++;
+        issues.push({ type: "DUPLICATE_PROFILE", id: s.id, name: s.name, email, authUserId: authUser.id });
+        continue;
+      }
+
       missingLink++;
       issues.push({ type: "MISSING_LINK", id: s.id, name: s.name, email, authUserId: authUser.id });
 
@@ -117,6 +130,7 @@ async function main() {
         } else {
           console.log(`  ✓ Linked [${s.name}] → ${authUser.id}`);
           repaired++;
+          usedAuthIds.add(authUser.id); // mark as used so later duplicates are caught
         }
       }
       continue;
@@ -149,6 +163,7 @@ async function main() {
   console.log(`✅ Correctly linked:           ${linkedOk}`);
   console.log(`⚠  Missing Auth account:       ${missingAuth}  (need migration script)`);
   console.log(`🔗 Profile unlinked (fixable): ${missingLink}  (Auth exists, auth_user_id null)`);
+  console.log(`👥 Duplicate profile:          ${duplicateProfile}  (same email as linked student — Auth UUID already claimed)`);
   console.log(`❌ Broken link:                ${brokenLink}  (auth_user_id points to wrong user)`);
   console.log(`📛 Non-email username:         ${noEmail}   (can't use Supabase Auth)`);
   console.log(`🔑 Password reset pending:     ${resetPending}`);
@@ -177,6 +192,10 @@ async function main() {
         console.log(`   → That user's email:   ${issue.storedUserEmail}`);
         console.log(`   → Email lookup gives:  ${issue.emailAuthId}`);
         console.log(`   → Manual review required — do NOT auto-repair broken links`);
+      } else if (issue.type === "DUPLICATE_PROFILE") {
+        console.log(`[DUPLICATE_PROFILE] ${issue.name} <${issue.email}> (id:${issue.id})`);
+        console.log(`   → Auth UUID ${issue.authUserId} already claimed by another student record`);
+        console.log(`   → This is a stale duplicate — review and delete if no unique progress`);
       } else if (issue.type === "NO_EMAIL") {
         console.log(`[NO_EMAIL]      ${issue.name} (email field: "${issue.email}") (id:${issue.id})`);
         console.log(`   → Cannot use Supabase Auth; legacy password-hash login only`);
