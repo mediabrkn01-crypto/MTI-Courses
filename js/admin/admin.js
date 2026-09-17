@@ -8,22 +8,25 @@
 window.adminSetStudentPassword=async function(studentId, newPassword){
   try{
     if(typeof _sb==='undefined') return {success:false,error:'Supabase not ready'};
-    var sessRes=await _sb.auth.getSession();
-    var token=sessRes.data&&sessRes.data.session?sessRes.data.session.access_token:null;
-    if(!token){
-      return {success:false,error:'Admin session expired. Please log out and log back in with your admin email to use this feature.'};
-    }
-    var SUPABASE_URL='https://rbhxufnfzsmkzenqavmf.supabase.co';
-    var res=await fetch(SUPABASE_URL+'/functions/v1/admin-set-student-password',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({studentId,newPassword})
+    var {data,error}=await _sb.functions.invoke('admin-set-student-password',{
+      body:{studentId,newPassword}
     });
-    var data=await res.json();
-    if(!res.ok) return {success:false,error:data.error||'HTTP '+res.status};
-    return {success:true,authUserId:data.authUserId,warning:data.warning};
+    if(error){
+      var status=error.context&&error.context.status;
+      var msg;
+      if(!status) msg='Unable to reach password service. Check your connection.';
+      else if(status===401) msg='Admin session expired. Please sign out and sign back in.';
+      else if(status===403) msg='Admin permission denied.';
+      else if(status===404) msg='Password service not deployed. Contact support.';
+      else if(status===429) msg='Too many requests. Try again shortly.';
+      else msg='Unable to update password (HTTP '+status+'). Check Edge Function logs.';
+      // Try to surface server error detail if available
+      var detail=error.message&&error.message!=='FunctionsHttpError'?error.message:null;
+      return {success:false,error:detail||msg};
+    }
+    return {success:true,authUserId:data&&data.authUserId,warning:data&&data.warning};
   }catch(e){
-    return {success:false,error:e.message};
+    return {success:false,error:'Unable to reach password service: '+e.message};
   }
 };
 
