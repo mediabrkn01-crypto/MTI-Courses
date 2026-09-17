@@ -70,7 +70,10 @@ window.doStudentLogin=async()=>{
   }
 
   // ── Auth path 3: localStorage (offline/network error) ────────────────────────
-  if(!byEmail&&!usedSupabaseAuth){
+  // Skip for migrated students (auth_user_id set) — they MUST use Supabase Auth.
+  // Without this guard, localStorage s.password match gives access with no JWT session,
+  // causing updateUser() → "Auth session missing!" in Profile → Change Password.
+  if(!byEmail&&!usedSupabaseAuth&&!_legStudentHasAuthId){
     var cachedStudents=loadStudents();
     var found=Object.values(cachedStudents).find(function(s){
       return s.email&&s.email.toLowerCase()===email&&s.password===pass;
