@@ -189,3 +189,64 @@ window.showAdminForgotPassword=async function(){
   }).catch(function(){});
   alert('If that email has an admin account, a reset link has been sent.');
 };
+
+// ── PASSWORD RESET FROM EMAIL LINK ────────────────────────────────────────────
+// Called by onAuthStateChange when event === 'PASSWORD_RECOVERY'.
+// Student clicked the email link, Supabase established a recovery session.
+// Show a form to set a new password (replaces whatever screen is showing).
+window.showPasswordResetFromEmail=function(){
+  // Remove any existing overlay
+  document.getElementById('email-reset-overlay')?.remove();
+  var html='<div id="email-reset-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px">'+
+    '<div style="background:#1a1a2e;border:1px solid rgba(255,113,0,.4);border-radius:20px;padding:32px 28px;width:100%;max-width:420px">'+
+    '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:20px;color:#fff;margin-bottom:8px">Set New Password</h3>'+
+    '<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6">Choose a strong password to secure your account. You\'ll be signed in automatically after.</p>'+
+    '<input id="er-pass" type="password" placeholder="New password (min 8 characters)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:10px"/>'+
+    '<input id="er-pass2" type="password" placeholder="Confirm new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:14px"/>'+
+    '<button id="er-btn" onclick="doEmailResetPassword()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Set Password & Sign In</button>'+
+    '<div id="er-err" style="display:none;margin-top:12px;font-size:13px;color:#f87171;text-align:center"></div>'+
+    '</div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);
+  setTimeout(function(){var el=document.getElementById('er-pass');if(el)el.focus();},100);
+};
+
+window.doEmailResetPassword=async function(){
+  var errEl=document.getElementById('er-err');
+  var btn=document.getElementById('er-btn');
+  var p1=(document.getElementById('er-pass')?.value||'');
+  var p2=(document.getElementById('er-pass2')?.value||'');
+  if(!p1||p1.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
+  if(p1!==p2){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    if(typeof _sb==='undefined') throw new Error('not_ready');
+    var {error}=await _sb.auth.updateUser({password:p1});
+    if(error) throw error;
+    document.getElementById('email-reset-overlay')?.remove();
+    // Get auth session to find student profile
+    var authRes=await _sb.auth.getSession();
+    var authUid=authRes.data&&authRes.data.session&&authRes.data.session.user?authRes.data.session.user.id:null;
+    if(authUid){
+      // Clear password_reset_required flag
+      await _sb.from('students').update({password_reset_required:false}).eq('auth_user_id',authUid).catch(function(){});
+      // Load student profile and set session
+      var pr=await _sb.from('students').select('id,name,email,valid_until,access_list,created_at,completed_at').eq('auth_user_id',authUid).limit(1);
+      if(!pr.error&&pr.data&&pr.data.length){
+        var d=pr.data[0];
+        var stuObj={id:d.id,name:d.name,email:d.email,validUntil:d.valid_until||null,
+          accessList:d.access_list||[1],createdAt:d.created_at||new Date().toISOString(),completedAt:d.completed_at||null};
+        var existing=loadStudents(); existing[d.id]=stuObj; saveStudents(existing);
+        currentSession={role:'student',studentId:d.id};
+        saveSession(currentSession);
+        navigate('dashboard');
+        return;
+      }
+    }
+    // Fallback: go to login
+    navigate('login');
+  }catch(e){
+    errEl.textContent='Failed to set password: '+e.message;
+    errEl.style.display='block';
+    if(btn){btn.disabled=false;btn.textContent='Set Password & Sign In';}
+  }
+};

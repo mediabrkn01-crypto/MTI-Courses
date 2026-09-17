@@ -255,5 +255,20 @@ window.addEventListener('online',function(){
   }
 });
 
+// Handle Supabase Auth password recovery email link.
+// Fires when student clicks the reset-password link in their email.
+// Must be registered before bootApp() so it catches the INITIAL_SESSION→PASSWORD_RECOVERY sequence.
+if(typeof _sb!=='undefined'){
+  _sb.auth.onAuthStateChange(function(event,session){
+    if(event==='PASSWORD_RECOVERY'){
+      // Stop any in-progress boot navigation and show set-new-password form.
+      // showPasswordResetFromEmail is defined in js/pages/login.js.
+      if(typeof window.showPasswordResetFromEmail==='function'){
+        window.showPasswordResetFromEmail();
+      }
+    }
+  });
+}
+
 // Start boot
 bootApp();
