@@ -227,8 +227,12 @@ function renderAdmin(tab){
     if(valSel==='custom'){validUntil=document.getElementById('s-custom-date').value||null;}
     else if(valSel){const d=new Date();d.setDate(d.getDate()+Number(valSel));validUntil=d.toISOString().slice(0,10);}
     else{validUntil=null;}
-    students[id]={...(students[id]||{}),id,name,email,password:pass,accessList:students[id]?.accessList||[1],validUntil,createdAt:students[id]?.createdAt||new Date().toISOString()};
-    saveStudents(students);closeModal();navigate('admin',{tab:'students'});
+    var stu={...(students[id]||{}),id,name,email,password:pass,accessList:students[id]?.accessList||[1],validUntil,createdAt:students[id]?.createdAt||new Date().toISOString()};
+    students[id]=stu;
+    saveStudents(students);
+    // Sync profile to Supabase (without password — migration script handles Auth accounts)
+    if(typeof sbSaveStudent==='function') sbSaveStudent({id,name,email,validUntil,accessList:stu.accessList,createdAt:stu.createdAt});
+    closeModal();navigate('admin',{tab:'students'});
   };
   window.bulkUpdateBar=function(){
     var chks=[].slice.call(document.querySelectorAll('.bulk-chk:checked'));

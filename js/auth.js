@@ -47,6 +47,7 @@ window.doStudentLogin=async()=>{
 
   // ── Auth path 2: Legacy password (students not yet migrated) ─────────────────
   // Removed once all students are migrated via scripts/migrate-students.js
+  var _legStudentHasAuthId=false; // student exists in DB but has auth_user_id set (needs Forgot Password)
   if(!byEmail&&!usedSupabaseAuth&&typeof _sb!=="undefined"){
     try{
       var legRes=await _sb.from("students")
@@ -54,6 +55,9 @@ window.doStudentLogin=async()=>{
         .eq("email",email).limit(1);
       if(!legRes.error&&legRes.data&&legRes.data.length){
         var ld=legRes.data[0];
+        // Track: student exists in DB with auth_user_id but signInWithPassword failed
+        // (likely migration created Auth account with random password due to short legacy password)
+        if(ld.auth_user_id) _legStudentHasAuthId=true;
         // Legacy path: only if not yet migrated + password matches
         if(!ld.auth_user_id&&ld.password_hash===pass){
           byEmail={id:ld.id,name:ld.name,email:ld.email,
@@ -76,7 +80,13 @@ window.doStudentLogin=async()=>{
 
   if(!byEmail){
     if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
-    errEl.textContent="Incorrect email or password."; // Neutral — don't reveal if email exists
+    if(_legStudentHasAuthId){
+      // Student record exists and has auth_user_id but signInWithPassword failed.
+      // Migration likely created Auth account with a random password (old password was < 6 chars).
+      errEl.textContent="Your account was upgraded and requires a password reset. Click 'Forgot Password?' below to get a reset link by email.";
+    } else {
+      errEl.textContent="Incorrect email or password.";
+    }
     errEl.style.display="block";
     return;
   }

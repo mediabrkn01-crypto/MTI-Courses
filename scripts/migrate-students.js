@@ -87,9 +87,18 @@ async function main() {
 
     try {
       // Check if Supabase Auth user already exists for this email
+      // listUsers() is paginated — fetch all pages to avoid missing users
       let authUserId = null;
-      const { data: existingList } = await admin.auth.admin.listUsers();
-      const existing = existingList?.users?.find(u => u.email === student.email);
+      let allAuthUsers = [];
+      let page = 1;
+      while (true) {
+        const { data: pageData } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+        if (!pageData?.users?.length) break;
+        allAuthUsers.push(...pageData.users);
+        if (pageData.users.length < 1000) break;
+        page++;
+      }
+      const existing = allAuthUsers.find(u => u.email === student.email);
 
       if (existing) {
         authUserId = existing.id;

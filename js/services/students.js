@@ -42,8 +42,7 @@ async function sbLoadAllStudents(){
 
 async function sbSaveStudent(student){
   try{
-    // SECURITY: never write password_hash from browser — passwords managed server-side via Supabase Auth
-    const{error}=await _sb.from('students').upsert({
+    var row={
       id: student.id,
       name: student.name,
       email: student.email,
@@ -51,7 +50,11 @@ async function sbSaveStudent(student){
       access_list: student.accessList||[1],
       completed_at: student.completedAt||null,
       created_at: student.createdAt||new Date().toISOString()
-    }, {onConflict:'id'});
+    };
+    // Write password_hash only for new students with explicit initial password.
+    // Removed once all students migrated to Supabase Auth via scripts/migrate-students.js.
+    if(student.password_hash) row.password_hash=student.password_hash;
+    const{error}=await _sb.from('students').upsert(row, {onConflict:'id'});
     if(error) console.warn('Supabase student save error:', error.message);
     else console.log('Student synced to Supabase:', student.name);
   }catch(e){console.warn('Supabase error:', e);}

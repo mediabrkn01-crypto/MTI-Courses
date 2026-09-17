@@ -122,20 +122,35 @@ window.showForcePasswordReset=function(email){
   var html='<div id="fpr-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">'+
     '<div style="background:#1a1a2e;border:1px solid rgba(255,113,0,.4);border-radius:20px;padding:32px 28px;width:100%;max-width:420px">'+
     '<h3 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff;margin-bottom:8px">Create a New Password</h3>'+
-    '<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6">For your security, please create a new password. Your previous password was stored insecurely and must be changed before you can continue.</p>'+
+    '<p style="font-size:13px;color:rgba(255,255,255,.6);margin-bottom:20px;line-height:1.6">For your security, please create a new password. Your previous password was stored insecurely.</p>'+
     '<input id="fpr-pass" type="password" placeholder="New password (min 8 characters)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:10px"/>'+
     '<input id="fpr-pass2" type="password" placeholder="Confirm new password" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:14px;padding:12px 14px;outline:none;box-sizing:border-box;margin-bottom:14px"/>'+
     '<button id="fpr-btn" onclick="doForcePasswordReset()" style="width:100%;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;font-family:Montserrat,sans-serif">Set New Password</button>'+
     '<div id="fpr-err" style="display:none;margin-top:12px;font-size:13px;color:#f87171;text-align:center"></div>'+
+    '<button onclick="doForcePasswordReset(true)" style="display:block;width:100%;margin-top:12px;background:none;border:none;color:rgba(255,255,255,.35);font-size:12px;cursor:pointer;text-align:center">Skip for now (you will be asked again next login)</button>'+
     '</div></div>';
   document.body.insertAdjacentHTML('beforeend',html);
   setTimeout(function(){var el=document.getElementById('fpr-pass');if(el)el.focus();},100);
 };
-window.doForcePasswordReset=async function(){
-  var p1=(document.getElementById('fpr-pass')?.value||'');
-  var p2=(document.getElementById('fpr-pass2')?.value||'');
+window.doForcePasswordReset=async function(skip){
   var errEl=document.getElementById('fpr-err');
   var btn=document.getElementById('fpr-btn');
+
+  if(skip){
+    // Student chose to skip — complete login without changing password.
+    // They will be prompted again on next login.
+    document.getElementById('fpr-overlay')?.remove();
+    if(window._pendingStudentId){
+      currentSession={role:"student",studentId:window._pendingStudentId};
+      delete window._pendingStudentId;
+      saveSession(currentSession);
+      navigate("dashboard");
+    }
+    return;
+  }
+
+  var p1=(document.getElementById('fpr-pass')?.value||'');
+  var p2=(document.getElementById('fpr-pass2')?.value||'');
   if(!p1||p1.length<8){errEl.textContent='Password must be at least 8 characters.';errEl.style.display='block';return;}
   if(p1!==p2){errEl.textContent='Passwords do not match.';errEl.style.display='block';return;}
   if(btn){btn.disabled=true;btn.textContent='Saving...';}
