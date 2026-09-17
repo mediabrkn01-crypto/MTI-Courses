@@ -892,6 +892,7 @@ var _progressCache={}; // in-memory progress {studentId: Set} — survives Safar
 var _quizPassedCache={}; // in-memory quiz passed {studentId: Set}
 var _quizAttemptedCache={}; // in-memory quiz attempted {studentId: Set}
 var _videosBootLoaded=false; // prevents double-load on first navigate
+var _maintenanceActive=false; // reflects current maintenance state for admin badge
 async function sbLoadVideos(){
   try{
     const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
@@ -2561,6 +2562,7 @@ function adminTopBar(tab){
         <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.07em">VOICE OS</div>
       </div>
       <span class="pill pill-red" style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace">Admin</span>
+      <span id="admin-maint-badge" style="display:${_maintenanceActive?'inline-flex':'none'};align-items:center;gap:5px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.4);border-radius:6px;padding:3px 9px;font-size:10px;font-family:JetBrains Mono,monospace;color:#f97316;font-weight:700">🚧 MAINTENANCE ON</span>
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       ${tabs.map(t=>`<button onclick="navigate('admin',{tab:'${t.id}'})"
@@ -3881,6 +3883,21 @@ function renderAdminSettings(){
     <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Global course configuration.</p>
     <div class="settings-grid">
 
+    <!-- MAINTENANCE MODE SECTION -->
+    <div class="lg" id="maint-section" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,100,0,.3);background:rgba(255,100,0,.05)">
+      <p style="font-weight:700;font-size:15px;color:#f97316;margin-bottom:4px">🚧 Maintenance Mode</p>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">When enabled, students see a full-screen update notice. Admin access preserved. Students already in app see it within 15 seconds.</p>
+      <div id="maint-status-row" style="margin-bottom:14px;font-size:12px;color:var(--muted)">Loading status...</div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">Student-facing Message (optional)</label>
+        <input id="maint-msg" type="text" placeholder="We're making improvements. Be right back." style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button id="maint-toggle-btn" onclick="adminToggleMaintenance()" style="width:auto;padding:9px 20px;font-size:13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-weight:700;cursor:pointer">Loading...</button>
+        <span id="maint-action-status" style="font-size:12px;color:var(--muted)"></span>
+      </div>
+    </div>
+
     <!-- ELEVENLABS VOICE SECTION -->
     <div class="lg" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,45,120,.25);background:rgba(255,45,120,.05)">
       <p style="font-weight:700;font-size:15px;color:var(--g1);margin-bottom:4px">🎙 ElevenLabs Voice Engine</p>
@@ -3982,6 +3999,81 @@ function renderAdminSettings(){
     r.readAsText(file);
   };
   refreshLiveSessionsList();
+  adminLoadMaintenanceStatus();
+}
+
+async function adminLoadMaintenanceStatus(){
+  var statusRow=document.getElementById('maint-status-row');
+  var btn=document.getElementById('maint-toggle-btn');
+  var msgInput=document.getElementById('maint-msg');
+  if(!statusRow||!btn) return;
+  if(typeof _sb==='undefined'){statusRow.textContent='Supabase not connected.';return;}
+  try{
+    var r=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
+    var enabled=!!(r.data&&r.data.data&&r.data.data.enabled);
+    var msg=(r.data&&r.data.data&&r.data.data.message)||'';
+    _maintenanceActive=enabled;
+    if(msgInput&&!msgInput.value) msgInput.value=msg;
+    statusRow.innerHTML=enabled
+      ?'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.4);border-radius:6px;padding:4px 10px;font-size:12px;color:#f97316;font-weight:700">🚧 MAINTENANCE IS ON — students are blocked</span>'
+      :'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:4px 10px;font-size:12px;color:#4ade80;font-weight:700">✓ App is LIVE — students have full access</span>';
+    btn.textContent=enabled?'Disable Maintenance':'Enable Maintenance';
+    btn.style.background=enabled?'rgba(34,197,94,.15)':'rgba(255,100,0,.2)';
+    btn.style.borderColor=enabled?'rgba(34,197,94,.4)':'rgba(255,100,0,.5)';
+    btn.style.color=enabled?'#4ade80':'#f97316';
+    var badge=document.getElementById('admin-maint-badge');
+    if(badge) badge.style.display=enabled?'inline-flex':'none';
+  }catch(e){
+    if(statusRow) statusRow.textContent='Error loading status: '+e.message;
+  }
+}
+
+async function adminToggleMaintenance(){
+  if(typeof _sb==='undefined'){alert('Supabase not connected.');return;}
+  var statusEl=document.getElementById('maint-action-status');
+  var msgInput=document.getElementById('maint-msg');
+  if(statusEl) statusEl.textContent='';
+  try{
+    var r=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
+    var currentEnabled=!!(r.data&&r.data.data&&r.data.data.enabled);
+    var newEnabled=!currentEnabled;
+    var msgVal=(msgInput&&msgInput.value.trim())||'';
+    var action=newEnabled?'ENABLE':'DISABLE';
+    showDemoConfirm({
+      title:(newEnabled?'Enable':'Disable')+' Maintenance Mode',
+      message:newEnabled
+        ?'Students will immediately see a full-screen maintenance notice. Admin access preserved.'+(msgVal?' Message: "'+msgVal+'"':'')
+        :'Students will regain full app access. App auto-recovers for anyone on the maintenance screen.',
+      confirmText:action,
+      type:newEnabled?'danger':'warn',
+      onConfirm:async function(){
+        var btn=document.getElementById('maint-toggle-btn');
+        if(btn){btn.disabled=true;btn.textContent='Saving...';}
+        try{
+          await _sb.from('course_config').upsert(
+            {id:'maintenance_mode',data:{enabled:newEnabled,message:msgVal,updatedAt:new Date().toISOString()}},
+            {onConflict:'id'}
+          );
+          // Audit log
+          try{
+            await _sb.from('course_config').upsert(
+              {id:'maint_audit_'+Date.now(),data:{action:action,by:currentSession&&currentSession.authUserId||'admin',ts:new Date().toISOString()}},
+              {onConflict:'id'}
+            );
+          }catch(e){}
+          _maintenanceActive=newEnabled;
+          if(statusEl) statusEl.innerHTML='<span style="color:'+(newEnabled?'#f97316':'#4ade80')+'">'+(newEnabled?'Maintenance enabled.':'Maintenance disabled.')+'</span>';
+          await adminLoadMaintenanceStatus();
+        }catch(e){
+          if(statusEl) statusEl.textContent='Error: '+e.message;
+          if(btn){btn.disabled=false;}
+          await adminLoadMaintenanceStatus();
+        }
+      }
+    });
+  }catch(e){
+    if(statusEl) statusEl.textContent='Error: '+e.message;
+  }
 }
 
 function adminAddLiveSession(){
@@ -6261,53 +6353,208 @@ function showDemoConfirm(opts){
   setTimeout(function(){ var ok=ov.querySelector('[data-act=ok]'); if(ok) ok.focus(); }, 50);
 }
 
-// Restore saved session (48h validity) — skip login if still valid
-(function(){
-  // ── DEMO INTERCEPT: a ?demo=TOKEN link bypasses the normal login/session boot ──
-  var _dtok = parseDemoTokenFromUrl();
+// ─── DETERMINISTIC BOOT STATE MACHINE ────────────────────────────────────────
+// Single entry point. Guard prevents double-boot (BFCache, visibilitychange).
+// STATES: BOOTING → admin | maintenance | student-dashboard | reconnecting | login
+var _bootStarted=false;
+var _maintPollInterval=null;
+
+function _bootLog(ev,data){
+  try{
+    var entry={ev:ev,ts:new Date().toISOString()};
+    if(data) Object.assign(entry,data);
+    console.log('[BOOT]',JSON.stringify(entry));
+    try{var log=JSON.parse(sessionStorage.getItem('_bootLog')||'[]');log.push(entry);if(log.length>30)log=log.slice(-30);sessionStorage.setItem('_bootLog',JSON.stringify(log));}catch(e){}
+  }catch(e){}
+}
+
+async function bootApp(opts){
+  opts=opts||{};
+  if(_bootStarted&&!opts.force) return;
+  _bootStarted=true;
+  _bootLog('BOOT_START');
+
+  // 1. Demo intercept
+  var _dtok=parseDemoTokenFromUrl();
   if(_dtok){ bootDemo(_dtok); return; }
 
-  var sess=loadSession();
-  if(sess&&sess.role==="student"){
-    currentSession=sess;
-    showAppLoader();
-    // Boot: load all data from Supabase regardless of localStorage state
-    // (fixes new device / Safari cleared storage)
-    if(typeof _sb!=="undefined"){
-      Promise.all([
-        sbLoadProgress(sess.studentId).catch(function(){}),
-        sbLoadVideos().catch(function(){}),
-        sbLoadELSettings().catch(function(){})
-      ]).finally(function(){
-        _videosBootLoaded=true;
-        // Verify session is still valid (student exists in Supabase or localStorage)
-        var students=loadStudents();
-        if(students[sess.studentId]||_progressCache[sess.studentId]){
-          navigate("dashboard");
-        } else {
-          // Try Supabase lookup as last resort
-          _sb.from('students').select('id').eq('id',sess.studentId).limit(1)
-            .then(function(r){
-              if(!r.error&&r.data&&r.data.length>0){ navigate("dashboard"); }
-              else { clearSession(); navigate("login"); }
-            }).catch(function(){ navigate("dashboard"); }); // network error → trust session
-        }
-      });
-    } else {
-      var students=loadStudents();
-      if(students[sess.studentId]){ navigate("dashboard"); }
-      else { clearSession(); navigate("login"); }
-    }
-    return;
-    clearSession();
-  }else if(sess&&sess.role==="admin"){
-    currentSession=sess;
-    waitForSb().then(function(ok){if(ok)sbLoadAllStudents().catch(function(){});});
-    navigate("admin");
+  // 2. Check maintenance BEFORE auth (Supabase may not be ready — best-effort)
+  var maintEnabled=false, maintMsg='';
+  if(typeof _sb!=='undefined'){
+    try{
+      var mr=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
+      if(!mr.error&&mr.data&&mr.data.data){ maintEnabled=!!mr.data.data.enabled; maintMsg=mr.data.data.message||''; }
+      _bootLog('MAINT_CHECK',{enabled:maintEnabled});
+    }catch(e){ _bootLog('MAINT_ERR',{msg:e.message}); }
+  }
+
+  // 3. Resolve Supabase Auth JWT — authoritative source of truth
+  var sbSession=null, sbAuthErr=null;
+  if(typeof _sb!=='undefined'){
+    try{
+      var authRes=await _sb.auth.getSession();
+      if(!authRes.error) sbSession=authRes.data.session;
+      else sbAuthErr=authRes.error;
+      _bootLog('AUTH_RESOLVE',{hasJwt:!!sbSession});
+    }catch(e){ sbAuthErr=e; _bootLog('AUTH_NET_ERR',{msg:e.message}); }
+  }
+
+  // 4. Local session (fast-path, valid for offline / network error cases)
+  var localSess=loadSession();
+
+  // 5. Admin path — bypasses maintenance, no DB verification needed
+  if(localSess&&localSess.role==='admin'){
+    currentSession=localSess;
+    waitForSb().then(function(ok){ if(ok) sbLoadAllStudents().catch(function(){}); });
+    navigate('admin');
+    startMaintenancePolling();
     return;
   }
-  navigate("login");
-})();
+
+  // 6. Maintenance gate — blocks all non-admin users
+  if(maintEnabled){
+    _maintenanceActive=true;
+    renderMaintenanceScreen(maintMsg);
+    startMaintenancePolling();
+    return;
+  }
+
+  // 7. Student auth: JWT is authoritative; local session is a safe fallback on network error
+  var hasAuth=!!(sbSession||localSess);
+
+  if(hasAuth){
+    _bootLog('AUTH_OK');
+
+    // JWT valid but no local session → re-derive student ID from Supabase profile
+    if(sbSession&&!localSess){
+      try{
+        var pr=await _sb.from('students')
+          .select('id,name,email,valid_until,access_list,created_at,completed_at')
+          .eq('auth_user_id',sbSession.user.id).limit(1);
+        if(!pr.error&&pr.data&&pr.data.length){
+          var d=pr.data[0];
+          var stuObj={id:d.id,name:d.name,email:d.email,validUntil:d.valid_until||null,
+            accessList:d.access_list||[1],createdAt:d.created_at||new Date().toISOString(),completedAt:d.completed_at||null};
+          var existing=loadStudents(); existing[d.id]=stuObj; saveStudents(existing);
+          localSess={role:'student',studentId:d.id}; saveSession(localSess);
+          _bootLog('SESSION_REBUILT');
+        }
+      }catch(e){ _bootLog('REBUILD_ERR',{msg:e.message}); }
+    }
+
+    currentSession=localSess||{role:'student',studentId:null};
+    showAppLoader();
+
+    // Background data — NEVER block navigation on these
+    if(typeof _sb!=='undefined'&&currentSession.studentId){
+      Promise.all([
+        sbLoadProgress(currentSession.studentId).catch(function(e){ _bootLog('PROG_ERR',{msg:e.message}); }),
+        sbLoadVideos().catch(function(e){ _bootLog('VID_ERR',{msg:e.message}); }),
+        sbLoadELSettings().catch(function(e){ _bootLog('EL_ERR',{msg:e.message}); })
+      ]).then(function(){ _videosBootLoaded=true; _bootLog('DATA_OK'); });
+    } else {
+      _videosBootLoaded=true;
+    }
+
+    navigate('dashboard');
+    startMaintenancePolling();
+    return;
+  }
+
+  // 8. Network error with no local session — could be network failure, not genuine logout
+  if(sbAuthErr&&!localSess){
+    _bootLog('NET_ERR_NO_SESSION');
+    renderReconnectingScreen();
+    return;
+  }
+
+  // 9. Definitively unauthenticated
+  _bootLog('UNAUTHENTICATED');
+  navigate('login');
+  startMaintenancePolling();
+}
+
+function renderMaintenanceScreen(msg){
+  app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Montserrat,sans-serif">'
+    +'<div style="text-align:center;max-width:380px;width:100%">'
+    +'<div style="width:72px;height:72px;border-radius:20px;background:rgba(255,165,0,.12);border:1px solid rgba(255,165,0,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 24px;font-size:32px">🔧</div>'
+    +'<h1 style="font-family:Montserrat,sans-serif;font-size:22px;font-weight:800;color:#fff;margin-bottom:12px;line-height:1.3">System Update<br>in Progress</h1>'
+    +'<p style="font-size:14px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:32px">'+(msg||"We're making improvements to give you a better experience. We'll be back shortly.")+'</p>'
+    +'<div style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:rgba(255,165,0,.7);font-family:JetBrains Mono,monospace">'
+    +'<div style="width:8px;height:8px;border-radius:50%;background:rgba(255,165,0,.7);animation:maintPulse 1.5s ease infinite"></div>Checking status...</div>'
+    +'</div></div>'
+    +'<style>@keyframes maintPulse{0%,100%{opacity:1}50%{opacity:.3}}</style>';
+  app.setAttribute('data-screen','maintenance');
+}
+
+function renderReconnectingScreen(){
+  app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Montserrat,sans-serif">'
+    +'<div style="text-align:center;max-width:340px;width:100%">'
+    +'<div style="width:60px;height:60px;border-radius:16px;background:rgba(59,130,246,.12);border:1px solid rgba(59,130,246,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px">📶</div>'
+    +'<h2 style="font-family:Montserrat,sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:10px">Connecting...</h2>'
+    +'<p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.7;margin-bottom:24px">Having trouble reaching the server. Check your connection and try again.</p>'
+    +'<button onclick="window._retryBoot()" style="background:var(--grad);border:none;border-radius:10px;color:#fff;font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;padding:12px 28px;cursor:pointer;box-shadow:0 4px 14px rgba(255,45,120,.3)">Retry</button>'
+    +'</div></div>';
+  app.setAttribute('data-screen','reconnecting');
+  window._retryBoot=function(){
+    _bootStarted=false;
+    app.removeAttribute('data-screen');
+    bootApp({force:true});
+  };
+}
+
+function startMaintenancePolling(){
+  if(_maintPollInterval) return;
+  _maintPollInterval=setInterval(async function(){
+    if(typeof _sb==='undefined') return;
+    try{
+      var r=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
+      var isOn=!!(r.data&&r.data.data&&r.data.data.enabled);
+      var pollMsg=(r.data&&r.data.data&&r.data.data.message)||'';
+      var screenNow=app.getAttribute('data-screen');
+      _maintenanceActive=isOn;
+      var badge=document.getElementById('admin-maint-badge');
+      if(badge) badge.style.display=isOn?'inline-flex':'none';
+      if(isOn&&screenNow!=='maintenance'&&(!currentSession||currentSession.role!=='admin')){
+        renderMaintenanceScreen(pollMsg);
+      } else if(!isOn&&screenNow==='maintenance'){
+        clearInterval(_maintPollInterval); _maintPollInterval=null;
+        _bootStarted=false; app.removeAttribute('data-screen');
+        bootApp({force:true});
+      }
+    }catch(e){} // network error — stay on current screen
+  },15000);
+}
+
+// BFCache: page restored from history — re-sync data without triggering full boot
+window.addEventListener('pageshow',function(e){
+  if(!e.persisted) return;
+  if(typeof _sb!=='undefined'&&currentSession){
+    waitForSb(5000).then(function(ok){
+      if(!ok) return;
+      sbLoadVideos().catch(function(){});
+      _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle()
+        .then(function(mr){
+          var isOn=!!(mr.data&&mr.data.data&&mr.data.data.enabled);
+          if(isOn&&(!currentSession||currentSession.role!=='admin')){
+            renderMaintenanceScreen((mr.data&&mr.data.data&&mr.data.data.message)||'');
+            startMaintenancePolling();
+          }
+        }).catch(function(){});
+    });
+  }
+});
+
+// Reconnect: if on reconnecting screen and network comes back, auto-retry
+window.addEventListener('online',function(){
+  if(app.getAttribute('data-screen')==='reconnecting'){
+    _bootStarted=false; app.removeAttribute('data-screen');
+    bootApp({force:true});
+  }
+});
+
+// Start boot
+bootApp();
 
 window.navigateToPhase=function(phaseIndex){
   navigate('courses');
