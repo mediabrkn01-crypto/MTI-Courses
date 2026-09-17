@@ -40,6 +40,14 @@ window.doStudentLogin=async()=>{
             createdAt:d.created_at||new Date().toISOString(),
             completedAt:d.completed_at||null,
             passwordResetRequired:!!d.password_reset_required};
+        } else if(!profRes.error&&usedSupabaseAuth){
+          // Auth succeeded but no student profile found for this JWT — broken link
+          if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
+          errEl.textContent="We couldn't load your course account. Please contact your admin. (PROFILE_LINK_ERROR)";
+          errEl.style.display="block";
+          // Sign out the dangling session so they don't get stuck
+          try{await _sb.auth.signOut();}catch(e){}
+          return;
         }
       }
     }catch(e){console.warn("Supabase Auth login:",e);}
@@ -104,14 +112,9 @@ window.doStudentLogin=async()=>{
 
   errEl.style.display="none";
 
-  // Force password reset for migrated students with compromised legacy passwords
-  if(byEmail.passwordResetRequired){
-    if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
-    window._pendingStudentId=byEmail.id;
-    showForcePasswordReset(email);
-    return;
-  }
   // Success path — button disappears with splash, no need to re-enable
+  // Note: password_reset_required flag no longer blocks login — Admin uses
+  // "Set Password" in Manage Student to push new passwords via Supabase Auth.
 
   currentSession={role:"student",studentId:byEmail.id};
   saveSession(currentSession);

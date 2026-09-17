@@ -1,6 +1,32 @@
 /* admin.js — extracted verbatim from the original single-file index.html.
    Source lines: 2582-2860
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
+
+// ── Admin Edge Function helpers ───────────────────────────────────────────────
+// Calls the admin-set-student-password Edge Function.
+// Requires admin to be logged in via Supabase Auth (doAdminLogin → JWT in session).
+window.adminSetStudentPassword=async function(studentId, newPassword){
+  try{
+    if(typeof _sb==='undefined') return {success:false,error:'Supabase not ready'};
+    var sessRes=await _sb.auth.getSession();
+    var token=sessRes.data&&sessRes.data.session?sessRes.data.session.access_token:null;
+    if(!token){
+      return {success:false,error:'Admin session expired. Please log out and log back in with your admin email to use this feature.'};
+    }
+    var SUPABASE_URL='https://rbhxufnfzsmkzenqavmf.supabase.co';
+    var res=await fetch(SUPABASE_URL+'/functions/v1/admin-set-student-password',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({studentId,newPassword})
+    });
+    var data=await res.json();
+    if(!res.ok) return {success:false,error:data.error||'HTTP '+res.status};
+    return {success:true,authUserId:data.authUserId,warning:data.warning};
+  }catch(e){
+    return {success:false,error:e.message};
+  }
+};
+
 // ── STUDENTS TAB ──────────────────────────────────────────────────────────────
 function renderAdmin(tab){
   if(!window._admStudentsSynced){
@@ -200,7 +226,10 @@ function renderAdmin(tab){
     document.getElementById('s-id').value=s.id;
     document.getElementById('s-name').value=s.name;
     document.getElementById('s-email').value=s.email;
-    document.getElementById('s-pass').value=s.password;
+    // Do NOT prefill password — Supabase Auth is the authority; use "Set Password" in Manage Student
+    document.getElementById('s-pass').value='';
+    var passInput=document.getElementById('s-pass');
+    if(passInput){passInput.placeholder='Leave blank to keep existing password';}
     if(s.validUntil){
       document.getElementById('s-validity').value='custom';
       document.getElementById('s-custom-date').value=s.validUntil.slice(0,10);
@@ -213,25 +242,43 @@ function renderAdmin(tab){
     document.getElementById('student-modal').style.display='flex';
   };
   window.closeModal=()=>{document.getElementById('student-modal').style.display='none';};
-  window.saveStudent=()=>{
+  window.saveStudent=async()=>{
     const students=loadStudents();
-    const id=document.getElementById('s-id').value||genId();
+    const existingId=document.getElementById('s-id').value;
+    const isNew=!existingId;
+    const id=existingId||genId();
     const name=document.getElementById('s-name').value.trim();
     const email=document.getElementById('s-email').value.trim().toLowerCase();
     const pass=document.getElementById('s-pass').value.trim();
-    if(!name||!email||!pass)return;
+    var errEl=document.getElementById('modal-err');
+    if(!name||!email){errEl.textContent='Name and email are required.';errEl.style.display='block';return;}
+    if(isNew&&!pass){errEl.textContent='Password required for new students.';errEl.style.display='block';return;}
     const dup=Object.values(students).find(s=>s.email.toLowerCase()===email&&s.id!==id);
-    if(dup){document.getElementById('modal-err').style.display='block';return;}
+    if(dup){errEl.textContent='Email already in use.';errEl.style.display='block';return;}
     let validUntil=students[id]?.validUntil||null;
     const valSel=document.getElementById('s-validity').value;
     if(valSel==='custom'){validUntil=document.getElementById('s-custom-date').value||null;}
     else if(valSel){const d=new Date();d.setDate(d.getDate()+Number(valSel));validUntil=d.toISOString().slice(0,10);}
     else{validUntil=null;}
-    var stu={...(students[id]||{}),id,name,email,password:pass,accessList:students[id]?.accessList||[1],validUntil,createdAt:students[id]?.createdAt||new Date().toISOString()};
+    // NEVER store password in localStorage — Supabase Auth is the only password authority
+    var stu={...(students[id]||{}),id,name,email,accessList:students[id]?.accessList||[1],validUntil,createdAt:students[id]?.createdAt||new Date().toISOString()};
+    delete stu.password; // remove legacy field if present
     students[id]=stu;
     saveStudents(students);
-    // Sync profile to Supabase (without password — migration script handles Auth accounts)
+    // Sync profile to Supabase
     if(typeof sbSaveStudent==='function') sbSaveStudent({id,name,email,validUntil,accessList:stu.accessList,createdAt:stu.createdAt});
+    // New student: create Supabase Auth user + set password via Edge Function
+    if(isNew&&pass){
+      var saveBtn=document.querySelector('#student-modal button.btn-primary');
+      if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Creating...';}
+      var pwResult=await adminSetStudentPassword(id,pass);
+      if(!pwResult.success){
+        errEl.textContent='Profile saved but Auth setup failed: '+(pwResult.error||'unknown')+'. Use "Set Password" in Manage Student.';
+        errEl.style.display='block';
+        if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Save';}
+        // Still close — profile exists, password can be set from Manage
+      }
+    }
     closeModal();navigate('admin',{tab:'students'});
   };
   window.bulkUpdateBar=function(){

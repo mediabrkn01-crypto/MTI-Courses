@@ -97,7 +97,7 @@ function _pdfShowPreview(){
   div.style.cssText='position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);padding:16px';
   var inner='<div class="lg" style="width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column;padding:26px">'
     +'<h2 style="font-size:18px;font-weight:800;color:#fff;margin:0 0 4px;font-family:Montserrat,sans-serif">Import Students from PDF</h2>'
-    +'<p style="font-size:12px;color:var(--muted);margin:0 0 16px">'+rows.filter(function(r){return r.include;}).length+' new students found — default password <b style="color:#fff">123</b> (they can change it later). Untick any you don\'t want.</p>'
+    +'<p style="font-size:12px;color:var(--muted);margin:0 0 16px">'+rows.filter(function(r){return r.include;}).length+' new students found. After import, use <b style="color:#fff">Manage → Set Password</b> for each student to enable login. Untick any you don\'t want.</p>'
     +'<div style="flex:1;overflow-y:auto;border:1px solid rgba(255,255,255,.08);border-radius:12px;margin-bottom:16px">'
     +rows.map(function(r,i){
       var num=rows.slice(0,i+1).filter(function(x){return x.include;}).length;
@@ -144,7 +144,8 @@ window._pdfConfirmImport=function(){
     if(!r.name||!r.email)return;
     var id=genId();
     var _d=new Date();_d.setDate(_d.getDate()+90);
-    var st={id:id,name:r.name,email:r.email,password:'123',accessList:[1],validUntil:_d.toISOString().slice(0,10),createdAt:new Date().toISOString()};
+    // No password stored locally — Admin must use "Set Password" in Manage Student
+    var st={id:id,name:r.name,email:r.email,accessList:[1],validUntil:_d.toISOString().slice(0,10),createdAt:new Date().toISOString()};
     students[id]=st;
     if(typeof sbSaveStudent==='function') sbSaveStudent(st);
     n++;
@@ -154,7 +155,7 @@ window._pdfConfirmImport=function(){
   navigate('admin',{tab:'students'});
 };
 
-function renderAdminStudent(id){
+async function renderAdminStudent(id){
   const students=loadStudents();
   const s=students[id];
   if(!s){navigate('admin');return;}
@@ -162,6 +163,15 @@ function renderAdminStudent(id){
   const locked=new Set(getLockedVideos(id));
   const quizLocked=new Set(getLockedQuizzes(id));
   const{validUntil,expired}=getValidity(s);
+
+  // Fetch auth link status from Supabase
+  var authLinked=false;
+  if(typeof _sb!=='undefined'&&s.email){
+    try{
+      var sr=await _sb.from('students').select('auth_user_id').eq('id',id).maybeSingle();
+      authLinked=!!(sr.data&&sr.data.auth_user_id);
+    }catch(e){}
+  }
 
   app.innerHTML=adminTopBar('students')+`
   <div style="padding:24px;position:relative;z-index:1">
@@ -195,6 +205,27 @@ function renderAdminStudent(id){
           ${glassBtn('Set Date',`setCustomValidity('${id}')`,'brand')}
           ${glassBtn('Remove Expiry',`clearValidity('${id}')`,'ghost')}
         </div>
+      </div>
+    </div>
+
+    <div class="lg" style="padding:20px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4)">Authentication</p>
+        <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;${authLinked?'background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#4ade80':'background:rgba(255,113,0,.12);border:1px solid rgba(255,113,0,.35);color:#fb923c'}">
+          ${authLinked?'✓ Auth Linked':'⚠ Not Linked'}
+        </span>
+      </div>
+      <p style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:14px;line-height:1.6">
+        Set a new login password for this student. After saving, student can sign in with their email + this password on any device.<br>
+        <span style="color:rgba(255,255,255,.3);font-size:11px">If "Not Linked", a Supabase Auth account will be created automatically.</span>
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px;max-width:360px">
+        <input id="sp-pass" type="password" autocomplete="new-password" placeholder="New password (min 6 characters)" class="glass-input" style="font-size:14px"/>
+        <input id="sp-pass2" type="password" autocomplete="new-password" placeholder="Confirm new password" class="glass-input" style="font-size:14px"/>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button id="sp-btn" onclick="adminSaveStudentPassword('${id}')" style="background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px 20px;cursor:pointer;font-family:Montserrat,sans-serif">Set Password</button>
+        </div>
+        <div id="sp-msg" style="display:none;font-size:13px;margin-top:4px"></div>
       </div>
     </div>
 
@@ -240,6 +271,26 @@ function renderAdminStudent(id){
     </div>
   </div>`;
 
+  window.adminSaveStudentPassword=async function(sid){
+    var pass=document.getElementById('sp-pass')?.value||'';
+    var pass2=document.getElementById('sp-pass2')?.value||'';
+    var msg=document.getElementById('sp-msg');
+    var btn=document.getElementById('sp-btn');
+    if(!pass||pass.length<6){if(msg){msg.textContent='Password must be at least 6 characters.';msg.style.color='#f87171';msg.style.display='block';}return;}
+    if(pass!==pass2){if(msg){msg.textContent='Passwords do not match.';msg.style.color='#f87171';msg.style.display='block';}return;}
+    if(btn){btn.disabled=true;btn.textContent='Saving...';}
+    if(msg)msg.style.display='none';
+    var result=await window.adminSetStudentPassword(sid,pass);
+    if(result.success){
+      if(msg){msg.textContent='✓ Login password updated. Student can now sign in on any device.';msg.style.color='#4ade80';msg.style.display='block';}
+      if(document.getElementById('sp-pass'))document.getElementById('sp-pass').value='';
+      if(document.getElementById('sp-pass2'))document.getElementById('sp-pass2').value='';
+      if(result.warning&&msg)msg.textContent+=' (Note: '+result.warning+')';
+    }else{
+      if(msg){msg.textContent='Failed: '+(result.error||'unknown error');msg.style.color='#f87171';msg.style.display='block';}
+    }
+    if(btn){btn.disabled=false;btn.textContent='Set Password';}
+  };
   window.extendValidity=(sid,days)=>{const st=loadStudents();const base=st[sid].validUntil?new Date(st[sid].validUntil):new Date();if(base<new Date())base.setTime(new Date().getTime());base.setDate(base.getDate()+Number(days));st[sid].validUntil=base.toISOString().slice(0,10);saveStudents(st);renderAdminStudent(sid);};
   window.setCustomValidity=(sid)=>{const val=document.getElementById('ext-date').value;if(!val)return;const st=loadStudents();st[sid].validUntil=val;saveStudents(st);renderAdminStudent(sid);};
   window.clearValidity=(sid)=>{const st=loadStudents();st[sid].validUntil=null;saveStudents(st);renderAdminStudent(sid);};
