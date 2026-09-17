@@ -189,7 +189,7 @@ window.doForcePasswordReset=async function(skip){
     if(error)throw error;
     // Clear reset flag in students table
     if(window._pendingStudentId){
-      await _sb.from('students').update({password_reset_required:false}).eq('id',window._pendingStudentId).catch(function(){});
+      try{await _sb.from('students').update({password_reset_required:false}).eq('id',window._pendingStudentId);}catch(e){}
     }
     document.getElementById('fpr-overlay')?.remove();
     // Now complete login
@@ -255,7 +255,7 @@ window.doEmailResetPassword=async function(){
     var authRes=await _sb.auth.getSession();
     var authUid=authRes.data&&authRes.data.session&&authRes.data.session.user?authRes.data.session.user.id:null;
     if(authUid){
-      await _sb.from('students').update({password_reset_required:false}).eq('auth_user_id',authUid).catch(function(){});
+      try{await _sb.from('students').update({password_reset_required:false}).eq('auth_user_id',authUid);}catch(e){}
     }
     // Sign out so student verifies new password on login (preferred UX per requirement)
     await _sb.auth.signOut().catch(function(){});

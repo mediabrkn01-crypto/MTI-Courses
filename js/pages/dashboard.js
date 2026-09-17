@@ -218,7 +218,7 @@ function renderProfile(){
       const authRes=await _sb.auth.getSession();
       const authUid=authRes.data&&authRes.data.session&&authRes.data.session.user?authRes.data.session.user.id:null;
       if(authUid){
-        await _sb.from("students").update({password_reset_required:false}).eq("auth_user_id",authUid).catch(function(){});
+        try{await _sb.from("students").update({password_reset_required:false}).eq("auth_user_id",authUid);}catch(e){}
       }
       ok.style.display="block";
       document.getElementById("new-pass").value="";
