@@ -31,6 +31,30 @@ async function bootApp(opts){
   var _dtok=parseDemoTokenFromUrl();
   if(_dtok){ bootDemo(_dtok); return; }
 
+  // 1b. Password recovery link intercept.
+  // When student clicks a Supabase reset email, URL has type=recovery.
+  // Do NOT run normal boot — let onAuthStateChange PASSWORD_RECOVERY handle it.
+  var _urlP=new URLSearchParams(window.location.search);
+  if(!opts.skipRecovery&&(_urlP.get('type')==='recovery'||(_urlP.get('reset')==='1'&&_urlP.get('token_hash')))){
+    _bootLog('RECOVERY_URL');
+    app.innerHTML='<div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;font-family:Montserrat,sans-serif">'
+      +'<div style="text-align:center;max-width:340px;width:100%">'
+      +'<div style="width:60px;height:60px;border-radius:16px;background:rgba(255,45,120,.12);border:1px solid rgba(255,45,120,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px">🔑</div>'
+      +'<h2 style="font-family:Montserrat,sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:10px">Preparing Password Reset...</h2>'
+      +'<p style="font-size:13px;color:rgba(255,255,255,.5);line-height:1.7">Verifying your reset link. Please wait.</p>'
+      +'</div></div>';
+    // Fallback: if PASSWORD_RECOVERY event never fires (expired/invalid link), go to login after 8s
+    setTimeout(function(){
+      if(!document.getElementById('email-reset-overlay')){
+        _bootLog('RECOVERY_TIMEOUT');
+        _bootStarted=false;
+        app.innerHTML='';
+        bootApp({force:true,skipRecovery:true});
+      }
+    },8000);
+    return; // onAuthStateChange PASSWORD_RECOVERY fires and shows showPasswordResetFromEmail()
+  }
+
   // 2. Resolve Supabase Auth JWT FIRST — needed for maintenance bypass check
   var sbSession=null, sbAuthErr=null;
   if(typeof _sb!=='undefined'){

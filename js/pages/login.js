@@ -95,26 +95,55 @@ window.showStudentForgotPassword=function(){
   document.body.insertAdjacentHTML('beforeend',html);
   setTimeout(function(){var el=document.getElementById('fp-input');if(el)el.focus();},100);
 };
+var _fpLastSent=0; // epoch ms of last reset email sent — cooldown guard
 window.doStudentForgotLookup=async function(){
   var q=(document.getElementById('fp-input')?.value||'').trim().toLowerCase();
   var res=document.getElementById('fp-result');
   var btn=document.getElementById('fp-send-btn');
   if(!q||!res)return;
+
+  // 60s cooldown — prevent rate-limit hammer and duplicate requests
+  var now=Date.now();
+  var cooldownMs=60000;
+  if(now-_fpLastSent<cooldownMs){
+    var remaining=Math.ceil((cooldownMs-(now-_fpLastSent))/1000);
+    res.innerHTML='<div style="background:rgba(255,165,0,.1);border:1px solid rgba(255,165,0,.3);border-radius:10px;padding:12px;color:#facc15;font-weight:600">Please wait '+remaining+'s before requesting another reset email.</div>';
+    return;
+  }
+
   if(btn){btn.disabled=true;btn.textContent='Sending...';}
 
   try{
     if(typeof _sb==='undefined') throw new Error('not_ready');
-    // Supabase sends reset link server-side; we never see or email the password
     var {error}=await _sb.auth.resetPasswordForEmail(q,{
       redirectTo: 'https://academy.brokenenglish.in/?reset=1'
     });
-    // Always show the same message (prevents email enumeration)
-    res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;color:#4ade80;font-weight:700">If an account exists for this email, a reset link has been sent.</div>';
-    if(error) console.warn('Reset email note:',error.message); // log but don't show user
+
+    if(error){
+      var isRateLimit=error.message&&(error.message.toLowerCase().includes('rate')||error.message.toLowerCase().includes('too many')||error.status===429);
+      if(isRateLimit){
+        res.innerHTML='<div style="background:rgba(255,165,0,.1);border:1px solid rgba(255,165,0,.3);border-radius:10px;padding:12px;color:#facc15;font-weight:600">Too many reset requests. Please wait a few minutes before trying again. Check your inbox — an email may already be on the way.</div>';
+      } else {
+        // Non-rate-limit error — still show neutral message (prevent email enumeration)
+        res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;color:#4ade80;font-weight:700">If an account exists for this email, a reset link has been sent.</div>';
+        console.warn('Reset email note:',error.message);
+      }
+    } else {
+      _fpLastSent=Date.now(); // start cooldown only on success
+      res.innerHTML='<div style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:10px;padding:12px;color:#4ade80;font-weight:700">If an account exists for this email, a reset link has been sent. Check your inbox (and spam).</div>';
+      // Disable button with countdown
+      var countdown=60;
+      if(btn){btn.textContent='Resend ('+countdown+'s)';}
+      var _fpTimer=setInterval(function(){
+        countdown--;
+        if(countdown<=0){clearInterval(_fpTimer);if(btn){btn.disabled=false;btn.textContent='Send Reset Link';}}
+        else{if(btn) btn.textContent='Resend ('+countdown+'s)';}
+      },1000);
+    }
   }catch(e){
-    res.innerHTML='<div style="color:rgba(255,45,120,.8)">Could not send reset email. Try again or contact admin.</div>';
+    res.innerHTML='<div style="color:rgba(255,45,120,.8)">Could not send reset email. Check your connection and try again.</div>';
+    if(btn){btn.disabled=false;btn.textContent='Send Reset Link';}
   }
-  if(btn){btn.disabled=false;btn.textContent='Send Reset Link';}
 };
 
 // ── FORCE PASSWORD RESET (migrated students) ──────────────────────────────────
