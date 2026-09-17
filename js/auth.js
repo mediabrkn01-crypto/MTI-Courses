@@ -116,6 +116,11 @@ window.doStudentLogin=async()=>{
   // Note: password_reset_required flag no longer blocks login — Admin uses
   // "Set Password" in Manage Student to push new passwords via Supabase Auth.
 
+  // Persist student profile to brokeneng_students so renderDashboard() can find it on any
+  // device/platform — critical for first-time iOS logins where the cache is empty.
+  // Write directly to avoid saveStudents() triggering sbSaveStudent() Supabase round-trip.
+  try{var _sc=loadStudents();_sc[byEmail.id]=byEmail;localStorage.setItem("brokeneng_students",JSON.stringify(_sc));}catch(_e){}
+
   currentSession={role:"student",studentId:byEmail.id};
   saveSession(currentSession);
   // Show splash IMMEDIATELY so student sees progress — load data in background during animation
