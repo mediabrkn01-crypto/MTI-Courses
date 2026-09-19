@@ -4,6 +4,7 @@
 function renderLesson(lessonId){
   document.body.style.overflow=window.innerWidth<=820?'':'hidden'; // internal scroll on desktop, natural scroll on mobile
   // Remove stale player from DOM immediately when switching lessons
+  if(window._lessonVideoCleanup){try{window._lessonVideoCleanup();}catch(e){} window._lessonVideoCleanup=null;}
   var existingPlayer=document.getElementById('player-wrapper');
   if(existingPlayer){
     var existingIframe=existingPlayer.querySelector('iframe');
@@ -67,7 +68,12 @@ function renderLesson(lessonId){
   } else if(bunnyUrl){
     videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
   } else {
-    videoHtml='<video id="video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline><source id="video-source" src="'+videoSrc+'"/></video>'
+    videoHtml='<video id="video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline preload="metadata"><source id="video-source" src="'+videoSrc+'"/></video>'
+      +'<div id="video-loading-overlay" style="position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:60">'
+        +'<div id="vlo-spin" style="width:32px;height:32px;border:3px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.7);border-radius:50%;animation:spin .7s linear infinite"></div>'
+        +'<div id="vlo-text" style="font-family:JetBrains Mono,monospace;font-size:12px;color:rgba(255,255,255,.6)">Preparing your class…</div>'
+        +'<button id="vlo-retry" onclick="window._retryVideoLoad&&window._retryVideoLoad()" style="display:none;padding:8px 20px;border-radius:8px;border:none;background:var(--grad);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:Montserrat,sans-serif">Retry</button>'
+      +'</div>'
       +'<div style="position:absolute;top:8px;left:8px;right:8px;display:flex;align-items:center;justify-content:space-between;pointer-events:none">'
       +'<div id="quality-buttons" style="pointer-events:auto;display:flex;gap:4px;border-radius:20px;background:rgba(0,0,0,.5);padding:3px 6px;backdrop-filter:blur(8px)"></div>'
       +'<button id="fullscreen-btn" style="pointer-events:auto;border-radius:20px;background:rgba(0,0,0,.5);padding:3px 10px;font-size:11px;color:rgba(255,255,255,.7);border:none;cursor:pointer">⛶</button>'
@@ -364,7 +370,7 @@ function setupPlayer(lesson,student){try{
           if(data&&data.fatal){
             if(data.type===Hls.ErrorTypes.NETWORK_ERROR){hlsInstance.startLoad();}
             else if(data.type===Hls.ErrorTypes.MEDIA_ERROR){hlsInstance.recoverMediaError();}
-            else{try{hlsInstance.destroy();}catch(e){} source.src=src; video.load();}
+            else{try{hlsInstance.destroy();}catch(e){} hlsInstance=null; attemptRetry('hls_fatal');}
           }
         });
       } else {
@@ -379,9 +385,72 @@ function setupPlayer(lesson,student){try{
     }
   }
 
-  if(!source.src||source.src===window.location.href){
-    loadVideoSrc(realSrc);
+  // ── DETERMINISTIC LOADING / ERROR STATE (fixes iOS infinite-spinner) ──
+  // Previously this only ran loadVideoSrc() when source.src was empty, but the
+  // browser had already resolved the templated <source src="..."> attribute to
+  // an absolute URL before this code ran, so the HLS/hls.js engine attach step
+  // never fired and a stalled/errored video had no recovery or visible feedback.
+  var overlay=document.getElementById('video-loading-overlay');
+  var overlayText=document.getElementById('vlo-text');
+  var overlaySpin=document.getElementById('vlo-spin');
+  var overlayRetry=document.getElementById('vlo-retry');
+  var retryCount=0;
+  var retryTimer=null;
+  var stillPreparingTimer=null;
+  var VIDEO_DIAG={lesson:lesson.id,platform:navigator.platform||'unknown'};
+  function vlog(evt,extra){try{console.log('[VIDEO]',evt,Object.assign({},VIDEO_DIAG,extra||{}));}catch(e){}}
+  function showOverlay(text,showRetry){
+    if(!overlay)return;
+    overlay.style.display='flex';
+    if(overlayText)overlayText.textContent=text;
+    if(overlaySpin)overlaySpin.style.display=showRetry?'none':'';
+    if(overlayRetry)overlayRetry.style.display=showRetry?'':'none';
   }
+  function hideOverlay(){
+    if(!overlay)return;
+    overlay.style.display='none';
+    if(stillPreparingTimer){clearTimeout(stillPreparingTimer);stillPreparingTimer=null;}
+  }
+  function armStillPreparing(){
+    if(stillPreparingTimer)clearTimeout(stillPreparingTimer);
+    stillPreparingTimer=setTimeout(function(){showOverlay('Still preparing your class…',false);},6000);
+  }
+  function attemptRetry(reason){
+    vlog('VIDEO_ERROR',{reason:reason,retryCount:retryCount});
+    if(retryCount>=3){
+      showOverlay("We couldn't load this class right now.",true);
+      vlog('VIDEO_FATAL_ERROR',{reason:reason});
+      return;
+    }
+    var delay=[1000,2000,4000][retryCount]||4000;
+    retryCount++;
+    showOverlay('Reconnecting…',false);
+    vlog('VIDEO_RETRY',{delay:delay,attempt:retryCount});
+    if(retryTimer)clearTimeout(retryTimer);
+    retryTimer=setTimeout(function(){loadVideoSrc(realSrc);},delay);
+  }
+  window._retryVideoLoad=function(){
+    retryCount=0;
+    showOverlay('Preparing your class…',false);
+    loadVideoSrc(realSrc);
+  };
+  window._lessonVideoCleanup=function(){
+    if(hlsInstance){try{hlsInstance.destroy();}catch(e){} hlsInstance=null;}
+    if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
+    if(stillPreparingTimer){clearTimeout(stillPreparingTimer);stillPreparingTimer=null;}
+  };
+  video.addEventListener('waiting',function(){armStillPreparing();});
+  video.addEventListener('stalled',function(){armStillPreparing();});
+  video.addEventListener('canplay',function(){retryCount=0;hideOverlay();vlog('VIDEO_CAN_PLAY');});
+  video.addEventListener('loadeddata',function(){hideOverlay();});
+  video.addEventListener('playing',function(){retryCount=0;hideOverlay();vlog('VIDEO_PLAYING');});
+  video.addEventListener('error',function(){attemptRetry('media_error');});
+
+  vlog('VIDEO_OPEN');
+  showOverlay('Preparing your class…',false);
+  armStillPreparing();
+  loadVideoSrc(realSrc);
+
   // Always reset to start — prevents browser resuming previous student's position
   video.addEventListener('loadedmetadata', function(){ video.currentTime=0; }, {once:true});
 
