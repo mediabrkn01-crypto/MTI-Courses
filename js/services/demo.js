@@ -34,13 +34,16 @@ function _demoDeviceId(){
     return v;
   }catch(e){ return 'nodev'; }
 }
-async function _demoApi(payload){
+async function _demoApi(payload, authToken){
   var res = await fetch(DEMO_ENDPOINT, {
     method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY},
+    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+(authToken||SUPABASE_KEY)},
     body: JSON.stringify(payload)
   });
-  return await res.json();
+  var out;
+  try{ out = await res.json(); }catch(e){ out = {}; }
+  out._httpStatus = res.status;
+  return out;
 }
 
 function parseDemoTokenFromUrl(){

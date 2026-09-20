@@ -14,6 +14,25 @@ function _demoStatusPill(status){
 }
 function _demoLinkUrl(token){ return location.origin + location.pathname + '?demo=' + token; }
 
+// Admin actions authenticate with the real Supabase Auth session (same JWT the
+// rest of the admin panel uses) — the legacy course_config.admin_cred email/
+// password check was removed when admin auth migrated to Supabase Auth.
+async function _demoAdminToken(){
+  try{
+    if(typeof _sb==='undefined') return null;
+    var r = await _sb.auth.getSession();
+    return (r && r.data && r.data.session && r.data.session.access_token) || null;
+  }catch(e){ return null; }
+}
+function _demoAuthErrMsg(resp){
+  if(!resp) return 'Unable to reach Demo Access service. Please retry.';
+  var st = resp._httpStatus;
+  if(st===401 || resp.error==='unauthorized') return 'Admin session expired. Please sign in again.';
+  if(st===403 || resp.error==='forbidden') return 'Your account does not have permission to manage Demo Access.';
+  if(st>=500) return 'Unable to generate Demo Link. Please try again.';
+  return 'Unable to reach Demo Access service. Please retry.';
+}
+
 function renderDemoAdmin(){
   app.innerHTML = adminTopBar('demo') + `
   <div style="padding:24px;position:relative;z-index:1">
@@ -65,13 +84,17 @@ function renderDemoAdmin(){
 window.demoAdminRefresh = async function(){
   var wrap = document.getElementById('demo-links-wrap');
   try{
-    var cred = getAdminCredentials();
-    var resp = await _demoApi({ action:'list', admin:{email:cred.email, password:cred.password} });
-    if(resp && resp.error==='unauthorized'){ if(wrap) wrap.innerHTML='<p style="color:var(--g1);font-size:13px">Admin authorization failed. Sign out and sign in again to refresh credentials.</p>'; return; }
+    var token = await _demoAdminToken();
+    if(!token){ if(wrap) wrap.innerHTML='<p style="color:var(--g1);font-size:13px">Admin session expired. Please sign in again.</p>'; return; }
+    var resp = await _demoApi({ action:'list' }, token);
+    if(resp && resp.error){
+      if(wrap) wrap.innerHTML='<p style="color:var(--g1);font-size:13px">Unable to load Demo Links: '+_demoAuthErrMsg(resp)+' <button onclick="demoAdminRefresh()" class="btn-ghost" style="width:auto;padding:4px 10px;font-size:12px;margin-left:6px">Retry</button></p>';
+      return;
+    }
     _demoAdminRows = (resp && resp.links) || [];
     _demoAdminServerOffset = resp && resp.server_now ? (Date.parse(resp.server_now) - Date.now()) : 0;
     _demoAdminRenderTable();
-  }catch(e){ if(wrap) wrap.innerHTML='<p style="color:var(--g1);font-size:13px">Could not reach the demo server.</p>'; }
+  }catch(e){ if(wrap) wrap.innerHTML='<p style="color:var(--g1);font-size:13px">Unable to reach Demo Access service. <button onclick="demoAdminRefresh()" class="btn-ghost" style="width:auto;padding:4px 10px;font-size:12px;margin-left:6px">Retry</button></p>'; }
 };
 
 function _demoAdminRemaining(row){
@@ -152,19 +175,18 @@ window.demoAdminCreate = async function(){
   if(!(durMin>=1 && durMin<=80)){ demoToast('Demo duration must be between 1 and 80 minutes','error'); return; }
   if(btn){ btn.disabled=true; btn.textContent='Generating…'; }
   try{
-    var cred = getAdminCredentials();
+    var token = await _demoAdminToken();
+    if(!token){ demoToast('Admin session expired. Please sign in again.','error'); return; }
     var resp = await _demoApi({
       action:'create',
-      admin:{email:cred.email, password:cred.password},
       student_name: (document.getElementById('demo-name').value||'').trim(),
       student_phone:(document.getElementById('demo-phone').value||'').trim(),
       student_email:(document.getElementById('demo-email').value||'').trim(),
       counsellor_whatsapp: counsellorNum,
       duration_minutes: durMin
-    });
+    }, token);
     if(!resp || resp.error){
-      var m = resp && resp.error==='unauthorized' ? 'Admin authorization failed. Sign out and back in.' : 'Could not generate link.';
-      demoToast(m,'error'); return;
+      demoToast(_demoAuthErrMsg(resp),'error'); return;
     }
     var url = _demoLinkUrl(resp.token);
     var box = document.getElementById('demo-gen-result');
@@ -209,9 +231,10 @@ window.demoAdminRevoke = function(id){
     confirmText:'Revoke Access', cancelText:'Cancel', type:'warn',
     onConfirm: async function(){
       try{
-        var cred = getAdminCredentials();
-        var resp = await _demoApi({ action:'revoke', id:id, admin:{email:cred.email, password:cred.password} });
-        if(resp && resp.error){ demoToast(resp.error==='unauthorized'?'Admin authorization failed':'Revoke failed','error'); return; }
+        var token = await _demoAdminToken();
+        if(!token){ demoToast('Admin session expired. Please sign in again.','error'); return; }
+        var resp = await _demoApi({ action:'revoke', id:id }, token);
+        if(resp && resp.error){ demoToast(_demoAuthErrMsg(resp),'error'); return; }
         demoToast('Demo link revoked'); demoAdminRefresh();
       }catch(e){ demoToast('Revoke failed','error'); }
     }
@@ -224,9 +247,10 @@ window.demoAdminDelete = function(id){
     confirmText:'Delete', cancelText:'Cancel', type:'danger',
     onConfirm: async function(){
       try{
-        var cred = getAdminCredentials();
-        var resp = await _demoApi({ action:'delete', id:id, admin:{email:cred.email, password:cred.password} });
-        if(resp && resp.error){ demoToast(resp.error==='unauthorized'?'Admin authorization failed':'Delete failed','error'); return; }
+        var token = await _demoAdminToken();
+        if(!token){ demoToast('Admin session expired. Please sign in again.','error'); return; }
+        var resp = await _demoApi({ action:'delete', id:id }, token);
+        if(resp && resp.error){ demoToast(_demoAuthErrMsg(resp),'error'); return; }
         demoToast('Demo link deleted'); demoAdminRefresh();
       }catch(e){ demoToast('Delete failed','error'); }
     }

@@ -13,7 +13,8 @@
 // Security:
 //   * Service-role key lives ONLY in this function's env (never in frontend).
 //   * anon/authenticated cannot touch demo_access_links (RLS deny-all).
-//   * Admin actions verify email+password against course_config.admin_cred.
+//   * Admin actions verify the caller's Supabase Auth JWT (Authorization header)
+//     against admin_users — same mechanism as admin-set-student-password.
 //   * Raw token is returned exactly once (on create) and never stored/logged.
 // Deploy with:  supabase functions deploy demo-access --no-verify-jwt
 // ============================================================================
@@ -70,23 +71,35 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-// ── admin verification (server-side, against course_config.admin_cred) ───────
-async function verifyAdmin(req: Request, body: any): Promise<boolean> {
+// ── admin verification (server-side, against Supabase Auth + admin_users) ────
+// Mirrors admin-set-student-password: resolve the caller's JWT via /auth/v1/user,
+// then check admin_users (service-role bypasses RLS). Distinguishes "not signed
+// in" (401) from "signed in but not an admin" (403) so the frontend can show an
+// accurate message instead of always telling the admin to sign out/in.
+type AdminCheckStatus = "ok" | "unauthenticated" | "forbidden";
+interface AdminCheck { status: AdminCheckStatus; email: string | null; }
+async function verifyAdmin(req: Request): Promise<AdminCheck> {
+  const fail = (status: AdminCheckStatus): AdminCheck => ({ status, email: null });
   if (ADMIN_SHARED_SECRET) {
     const hdr = req.headers.get("x-demo-admin-secret") || "";
-    if (!safeEqual(hdr, ADMIN_SHARED_SECRET)) return false;
+    if (!safeEqual(hdr, ADMIN_SHARED_SECRET)) return fail("unauthenticated");
   }
-  const email = (body?.admin?.email || "").trim().toLowerCase();
-  const password = body?.admin?.password || "";
-  if (!email || !password) return false;
+  const authHeader = req.headers.get("Authorization") || "";
+  if (!authHeader.startsWith("Bearer ")) return fail("unauthenticated");
+  const callerToken = authHeader.slice(7);
+
+  const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    headers: { Authorization: `Bearer ${callerToken}`, apikey: SERVICE_ROLE },
+  });
+  if (!userRes.ok) return fail("unauthenticated");
+  const callerUser = await userRes.json();
+  const callerId: string = callerUser?.id;
+  if (!callerId) return fail("unauthenticated");
 
   const { data, error } = await admin
-    .from("course_config").select("data").eq("id", "admin_cred").single();
-  if (error || !data?.data?.email) return false;
-
-  const okEmail = safeEqual(email, String(data.data.email).trim().toLowerCase());
-  const okPass  = safeEqual(password, String(data.data.password ?? ""));
-  return okEmail && okPass;
+    .from("admin_users").select("auth_user_id").eq("auth_user_id", callerId).limit(1);
+  if (error || !data || data.length === 0) return fail("forbidden");
+  return { status: "ok", email: callerUser?.email || null };
 }
 
 // Public status shape returned to the browser (no token_hash, no PII on public paths)
@@ -144,9 +157,12 @@ Deno.serve(async (req) => {
     }
 
     // ── everything below requires admin ─────────────────────────────────────
+    let adminEmail: string | null = null;
     if (["create", "revoke", "list", "delete"].includes(action)) {
-      const ok = await verifyAdmin(req, body);
-      if (!ok) return json({ error: "unauthorized" }, 401);
+      const check = await verifyAdmin(req);
+      if (check.status === "unauthenticated") return json({ error: "unauthorized" }, 401);
+      if (check.status === "forbidden") return json({ error: "forbidden" }, 403);
+      adminEmail = check.email;
     }
 
     // ── CREATE (admin) ──────────────────────────────────────────────────────
@@ -165,7 +181,7 @@ Deno.serve(async (req) => {
         student_name: body?.student_name || null,
         student_phone: body?.student_phone || null,
         student_email: body?.student_email || null,
-        created_by: (body?.admin?.email || "").trim().toLowerCase() || null,
+        created_by: adminEmail,
       }).select().single();
       if (error) return json({ error: "server_error", detail: error.message }, 500);
 
