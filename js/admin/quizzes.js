@@ -93,52 +93,59 @@ function renderAdminQuiz(){
   // Load all dynamic quizzes fresh then render
   sbLoadAllDynamicQuizzes().catch(function(){}).finally(function(){
 
+    var nDyn=0,nHard=0,nNone=0,nQ=0;
     var rows=ALL_LESSONS.map(function(lesson){
       var hasDynamic=!!_dynamicQuizCache[lesson.order];
       var hasHard=!!QUIZ_BANK[lesson.order];
       var count=hasDynamic?_dynamicQuizCache[lesson.order].length:hasHard?QUIZ_BANK[lesson.order].length:0;
+      if(hasDynamic)nDyn++;else if(hasHard)nHard++;else nNone++;
+      nQ+=count;
       var badge=hasDynamic
-        ?'<span style="background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3);border-radius:20px;font-size:10px;font-weight:700;padding:3px 10px">Dynamic ('+count+'Q)</span>'
+        ?'<span class="adm-badge ok">Uploaded</span>'
         :hasHard
-          ?'<span style="background:rgba(255,200,80,.1);color:rgba(255,200,80,.8);border:1px solid rgba(255,200,80,.2);border-radius:20px;font-size:10px;font-weight:700;padding:3px 10px">Hardcoded ('+count+'Q)</span>'
-          :'<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.3);border-radius:20px;font-size:10px;padding:3px 10px">No Quiz</span>';
+          ?'<span class="adm-badge warn">Built-in</span>'
+          :'<span class="adm-badge muted">No quiz</span>';
       var title=getLessonTitle(lesson)||lesson.title||'Day '+lesson.order;
+      var uploadInput='<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/>';
       var actions=hasDynamic
-        ?'<button onclick="adminQuizPreview('+lesson.order+')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">Preview</button>'
-         +'<button onclick="adminQuizDelete('+lesson.order+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);border-radius:8px;color:#f87171;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">Delete</button>'
-         +'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">Replace<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>'
+        ?'<button onclick="adminQuizPreview('+lesson.order+')" class="adm-btn">'+ADM_ICON.eye+'Preview</button>'
+         +'<label class="adm-btn">'+ADM_ICON.upload+'Replace'+uploadInput+'</label>'
+         +'<button onclick="adminQuizDelete('+lesson.order+')" class="adm-btn adm-btn-danger adm-icon-btn" aria-label="Delete quiz" title="Delete quiz">'+ADM_ICON.trash+'</button>'
         :hasHard
-          ?'<button onclick="adminQuizEditHardcoded('+lesson.order+')" style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer;margin-right:6px">✏️ Edit</button>'
-           +'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">⚡ Upload Quiz<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>'
-          :'<label style="background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;padding:5px 10px;cursor:pointer">⚡ Upload Quiz<input type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="adminQuizUploadDirect(this,'+lesson.order+')"/></label>';
+          ?'<button onclick="adminQuizEditHardcoded('+lesson.order+')" class="adm-btn">'+ADM_ICON.edit+'Edit</button>'
+           +'<label class="adm-btn adm-btn-primary">'+ADM_ICON.upload+'Upload'+uploadInput+'</label>'
+          :'<label class="adm-btn adm-btn-primary">'+ADM_ICON.upload+'Upload'+uploadInput+'</label>';
       return '<tr id="quiz-row-'+lesson.order+'">'
-        +'<td style="font-weight:600;color:#fff">Day '+lesson.order+'</td>'
-        +'<td style="font-size:13px;color:rgba(255,255,255,.7)">'+title+'</td>'
-        +'<td>'+badge+'</td>'
-        +'<td id="quiz-status-'+lesson.order+'" style="font-size:11px;color:rgba(255,255,255,.4)"></td>'
-        +'<td class="right" style="white-space:nowrap">'+actions+'</td>'
+        +'<td><span class="adm-day">'+lesson.order+'</span></td>'
+        +'<td><p class="adm-name">'+escapeHtml(title)+'</p></td>'
+        +'<td><span class="adm-num">'+(count||'—')+'</span></td>'
+        +'<td>'+badge+'<div id="quiz-status-'+lesson.order+'" class="adm-meta" style="white-space:normal"></div></td>'
+        +'<td class="right"><div style="display:inline-flex;gap:6px;align-items:center">'+actions+'</div></td>'
         +'</tr>';
     }).join('');
 
     app.innerHTML=adminTopBar('quiz')+`
-    <div style="padding:24px;position:relative;z-index:1">
-      <div style="margin-bottom:20px">
-        <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;font-family:'Montserrat',sans-serif">⚡ Quizzes</h1>
-        <p style="font-size:13px;color:var(--muted)">Upload PDF, DOCX, or TXT — Claude AI extracts questions automatically. Dynamic quizzes override hardcoded ones.</p>
-      </div>
+    <div class="adm-page">
+      ${admHead('Quizzes','Upload a PDF, DOCX or TXT and Claude extracts the questions. An uploaded quiz replaces the built-in one for that day.')}
+      ${admStats([
+        ['Uploaded quizzes', nDyn, 'ok', '/'+ALL_LESSONS.length],
+        ['Built-in only', nHard, nHard?'warn':''],
+        ['No quiz', nNone, nNone?'bad':''],
+        ['Total questions', nQ]
+      ])}
       <div id="quiz-global-status" style="display:none;margin-bottom:16px;padding:12px 16px;border-radius:10px;font-size:13px"></div>
-      <div class="lg admin-table-wrap" style="overflow:hidden;border-radius:20px">
-        <table class="admin-table" style="min-width:600px">
+      <div class="adm-card admin-table-wrap"><div style="overflow-x:auto">
+        <table class="admin-table" style="min-width:680px">
           <thead><tr>
-            <th style="width:60px">Day</th>
+            <th style="width:56px">Day</th>
             <th>Lesson</th>
-            <th>Status</th>
-            <th>Info</th>
+            <th style="width:100px">Questions</th>
+            <th style="width:200px">Status</th>
             <th class="right">Actions</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>
-      </div>
+      </div></div>
     </div>`;
 
     // wire preview modal if needed

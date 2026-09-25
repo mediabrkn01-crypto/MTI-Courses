@@ -31,10 +31,21 @@ function renderAdminClasses(){
   const students=Object.values(loadStudents());
   const videos=loadVideos();
 
+  const coreSet=ALL_LESSONS.filter(l=>(videos[l.order]||{}).src).length;
+  const quizReady=ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
+  const wvSet=WV_DATA.filter((f,i)=>(videos[101+i]||{}).src).length;
+  const runtime=ALL_LESSONS.reduce((m,l)=>m+(parseInt((videos[l.order]||{}).duration,10)||0),0);
+  const thumbCell=(thumb,fallback)=>'<div class="adm-cthumb">'+(thumb?'<img src="'+escapeAttr(thumb)+'" alt="" loading="lazy" onerror="this.remove()"/>':fallback)+'</div>';
+
   app.innerHTML=adminTopBar('classes')+`
-  <div style="padding:24px;position:relative;z-index:1">
-    <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;font-family:'Montserrat',sans-serif">Classes & Videos</h1>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Set video URLs, titles and durations for each class.</p>
+  <div class="adm-page">
+    ${admHead('Classes & Videos','Set video URLs, titles and durations for each class.')}
+    ${admStats([
+      ['Class videos', coreSet, coreSet<ALL_LESSONS.length?'warn':'ok', '/'+ALL_LESSONS.length],
+      ['Quizzes ready', quizReady, '', '/'+ALL_LESSONS.length],
+      ['Workshop videos', wvSet, wvSet<WV_DATA.length?'warn':'ok', '/'+WV_DATA.length],
+      ['Total runtime', runtime>=60?Math.floor(runtime/60)+'h '+(runtime%60):runtime, '', runtime>=60?'m':' min']
+    ])}
 
     <!-- Lesson Panel Edit Modal -->
     <div id="video-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:flex-start;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);padding:16px;overflow-y:auto">
@@ -146,64 +157,61 @@ function renderAdminClasses(){
     </div>
 
     ${SECTIONS.map(section=>`
-      <div style="margin-bottom:24px">
-        <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:12px">${section.title}</p>
-        <div class="lg" style="overflow:hidden;border-radius:18px">
-          <div style="overflow-x:auto">
-          <table class="admin-table" style="min-width:560px">
+      <div class="adm-section">
+        ${admSectionLabel(section.title, section.lessons.length+' classes')}
+        <div class="adm-card admin-table-wrap"><div style="overflow-x:auto">
+          <table class="admin-table" style="min-width:720px">
             <thead><tr>
-              <th style="width:40px">#</th><th>Title / Duration</th>
-              <th class="center">Video</th><th class="center">Students</th>
-              <th class="center">Quiz</th><th class="right">Action</th>
+              <th style="width:56px">Day</th><th>Class</th>
+              <th style="width:120px">Video</th><th style="width:190px">Students with access</th>
+              <th style="width:110px">Quiz</th><th class="right" style="width:90px"></th>
             </tr></thead>
             <tbody>
               ${section.lessons.map(l=>{
                 const v=videos[l.order]||{};
                 const count=students.filter(s=>(s.accessList||[]).includes(l.order)).length;
+                const pct=students.length?Math.round(count/students.length*100):0;
                 return`<tr>
-                  <td style="color:rgba(255,255,255,0.35);font-size:12px;font-family:monospace">${l.order}</td>
-                  <td>
-                    <p style="font-weight:600;color:#fff;font-size:13px">${v.title||l.title}</p>
-                    <p style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">${v.duration||'Duration not set'}</p>
-                  </td>
-                  <td class="center">${v.src?'<span class="pill pill-green">Set</span>':'<span class="pill pill-grey">Not set</span>'}</td>
-                  <td class="center"><span class="pill ${count>0?'pill-green':'pill-grey'}">${count}/${students.length}</span></td>
-                  <td class="center">${hasRealQuiz(l)?'<span class="pill pill-red">Ready</span>':'<span class="pill pill-grey">—</span>'}</td>
-                  <td class="right">${glassBtn('Edit',`openVideoModal(${l.order})`)}</td>
+                  <td><span class="adm-day">${l.order}</span></td>
+                  <td><div style="display:flex;align-items:center;gap:12px;min-width:0">
+                    ${thumbCell(v.thumb, ADM_ICON.image)}
+                    <div style="min-width:0"><p class="adm-name">${escapeHtml(v.title||l.title)}</p>
+                    <p class="adm-meta">${v.duration?escapeHtml(v.duration):'<span style="color:#fbbf24">Duration not set</span>'}</p></div>
+                  </div></td>
+                  <td>${v.src?'<span class="adm-badge ok">Uploaded</span>':'<span class="adm-badge warn">Missing</span>'}</td>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="adm-meter${count&&count===students.length?' ok':''}"><span style="width:${pct}%"></span></div><span class="adm-num">${count}/${students.length}</span></div></td>
+                  <td>${hasRealQuiz(l)?'<span class="adm-badge ok">Ready</span>':'<span class="adm-badge muted">None</span>'}</td>
+                  <td class="right"><button class="adm-btn" onclick="openVideoModal(${l.order})">${ADM_ICON.edit}Edit</button></td>
                 </tr>`;
               }).join('')}
             </tbody>
           </table>
-          </div>
-        </div>
+        </div></div>
       </div>`).join('')}
+
+    <div class="adm-section">
+      ${admSectionLabel('Pronunciation Workshop', WV_DATA.length+' classes')}
+      <div class="adm-card admin-table-wrap"><div style="overflow-x:auto">
+        <table class="admin-table" style="min-width:560px">
+          <thead><tr><th style="width:56px">#</th><th>Workshop</th><th style="width:120px">Video</th><th class="right" style="width:90px"></th></tr></thead>
+          <tbody>
+            ${WV_DATA.map((f,i)=>{
+              const v=videos[101+i]||{};
+              return`<tr>
+                <td><span class="adm-day" style="font-size:10px">W${i+1}</span></td>
+                <td><div style="display:flex;align-items:center;gap:12px;min-width:0">
+                  ${thumbCell(v.thumb,'<span style="font-size:18px">'+f.icon+'</span>')}
+                  <div style="min-width:0"><p class="adm-name">${escapeHtml(f.title)}</p><p class="adm-meta">${escapeHtml(f.cat)} · ${escapeHtml(f.dur)}</p></div>
+                </div></td>
+                <td>${v.src?'<span class="adm-badge ok">Uploaded</span>':'<span class="adm-badge warn">Missing</span>'}</td>
+                <td class="right"><button class="adm-btn" onclick="openVideoModal(${101+i})">${ADM_ICON.edit}Edit</button></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div></div>
+    </div>
   </div>`;
-
-
-  // Also add Word Vault edit section
-  (function(){
-    var wvContainer=document.createElement('div');
-    wvContainer.style.cssText='margin-bottom:24px';
-    wvContainer.innerHTML='<p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:12px">PRONUNCIATION WORKSHOP</p>'
-      +'<div class="lg" style="overflow:hidden"><div style="overflow-x:auto">'
-      +'<table class="admin-table" style="min-width:560px">'
-      +'<thead><tr><th>#</th><th>Title</th><th class="center">Video</th><th class="right">Action</th></tr></thead>'
-      +'<tbody>'
-      +WV_DATA.map(function(f,i){
-        var wvOrder=100+i+1;
-        var v=loadVideos()[wvOrder]||{};
-        return '<tr>'
-          +'<td style="color:rgba(255,255,255,.35);font-size:12px;font-family:monospace">WV'+(i+1)+'</td>'
-          +'<td><p style="font-weight:600;color:#fff;font-size:13px">'+f.icon+' '+f.title+'</p>'
-          +'<p style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">'+f.cat+' · '+f.dur+'</p></td>'
-          +'<td class="center">'+(v.src?'<span class="pill pill-green">Set</span>':'<span class="pill pill-grey">Not set</span>')+'</td>'
-          +'<td class="right">'+glassBtn('Edit','openVideoModal('+(100+i+1)+')')+'</td>'
-          +'</tr>';
-      }).join('')
-      +'</tbody></table></div></div>';
-    var mainDiv=document.querySelector('#main-content>div:last-child')||document.querySelector('[style*="padding:24px"]');
-    if(mainDiv) mainDiv.appendChild(wvContainer);
-  })();
 
   window.openVideoModal=(order)=>{
     const v=loadVideos()[order]||{};

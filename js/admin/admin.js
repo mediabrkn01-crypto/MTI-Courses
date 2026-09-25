@@ -61,34 +61,39 @@ function renderAdmin(tab){
     _seen[key]=true; return true;
   });
 
-  app.innerHTML=adminTopBar('students')+`
-  <div style="padding:24px;position:relative;z-index:1">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap">
-      <div>
-        <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;font-family:'Montserrat',sans-serif">Students</h1>
-        <p style="font-size:13px;color:var(--muted)">${list.length} enrolled</p>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button onclick="document.getElementById('pdf-import-input').click()" style="display:flex;align-items:center;gap:8px;padding:11px 20px;border-radius:12px;background:rgba(255,255,255,.07);color:#fff;font-size:14px;font-weight:700;border:1px solid rgba(255,255,255,.15);cursor:pointer;transition:all .18s;font-family:'Montserrat',sans-serif" onmouseover="this.style.background='rgba(255,255,255,.12)'" onmouseout="this.style.background='rgba(255,255,255,.07)'">
-        <svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>
-        Import PDF
-      </button>
-      <input id="pdf-import-input" type="file" accept="application/pdf" style="display:none" onchange="handleStudentPDF(event)"/>
-      <button onclick="openAddStudent()" style="display:flex;align-items:center;gap:8px;padding:11px 20px;border-radius:12px;background:var(--grad);color:#fff;font-size:14px;font-weight:700;border:1px solid rgba(255,255,255,.2);box-shadow:0 4px 20px rgba(255,45,120,.35),inset 0 1px 0 rgba(255,255,255,.2);cursor:pointer;transition:all .18s;font-family:'Montserrat',sans-serif">
-        <svg style="width:16px;height:16px" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-        Add Student
-      </button>
-      </div>
-    </div>
+  function _stuState(s){
+    var v=getValidity(s);
+    if(v.expired) return 'expired';
+    if(v.validUntil && Math.ceil((v.validUntil-today)/86400000)<=14) return 'expiring';
+    return 'active';
+  }
+  var _stuCounts={all:list.length,active:0,expiring:0,expired:0};
+  list.forEach(function(s){_stuCounts[_stuState(s)]++;});
+  window._stuState=_stuState;
+  window._stuStatus=window._stuStatus||'all';
 
-    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-      <input id="stu-search" placeholder="Search by name or email..." oninput="applyStuFilters()" style="flex:1;min-width:200px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none"/>
-      <select id="stu-sort" onchange="applyStuFilters()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none;cursor:pointer">
-        <option value="newest">Newest First</option>
-        <option value="oldest">Oldest First</option>
-        <option value="az">A → Z</option>
-        <option value="za">Z → A</option>
-      </select>
+  app.innerHTML=adminTopBar('students')+`
+  <div class="adm-page">
+    ${admHead('Students',_stuCounts.all+' enrolled',
+      '<button onclick="document.getElementById(\'pdf-import-input\').click()" class="adm-btn adm-btn-lg">'+ADM_ICON.upload+'Import PDF</button>'
+      +'<input id="pdf-import-input" type="file" accept="application/pdf" style="display:none" onchange="handleStudentPDF(event)"/>'
+      +'<button onclick="openAddStudent()" class="adm-btn adm-btn-lg adm-btn-primary">'+ADM_ICON.plus+'Add Student</button>')}
+
+    ${admStats([
+      ['Total students',_stuCounts.all],
+      ['Active',_stuCounts.active+_stuCounts.expiring,'ok'],
+      ['Expiring in 14 days',_stuCounts.expiring,_stuCounts.expiring?'warn':''],
+      ['Expired',_stuCounts.expired,_stuCounts.expired?'bad':'']
+    ])}
+
+    <div class="adm-toolbar">
+      ${admSearch('stu-search','Search by name or email…','applyStuFilters()')}
+      <div class="adm-chips" id="stu-chips">
+        ${[['all','All'],['active','Active'],['expiring','Expiring'],['expired','Expired']].map(function(c){
+          return '<button class="adm-chip'+(window._stuStatus===c[0]?' on':'')+'" data-k="'+c[0]+'" onclick="window._stuStatus=\''+c[0]+'\';[].forEach.call(document.querySelectorAll(\'#stu-chips .adm-chip\'),function(b){b.classList.toggle(\'on\',b===this)},this);applyStuFilters()">'+c[1]+'<span class="n">'+(c[0]==='active'?_stuCounts.active+_stuCounts.expiring:_stuCounts[c[0]])+'</span></button>';
+        }).join('')}
+      </div>
+      ${admSortSelect('stu-sort','applyStuFilters()')}
     </div>
 
     <div id="student-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);padding:16px;overflow-y:auto">
@@ -139,19 +144,19 @@ function renderAdmin(tab){
     </div>
 
     ${list.length===0
-      ?`<div class="lg" style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:15px;font-weight:500">No students yet</p><p style="color:var(--muted);font-size:13px;margin-top:4px;opacity:.6">Add your first student to get started.</p></div>`
-      :`<div class="lg admin-table-wrap" style="overflow:hidden;border-radius:20px">
-          <div id="bulk-bar" style="display:none;align-items:center;gap:14px;padding:12px 18px;background:rgba(255,45,120,.08);border-bottom:1px solid rgba(255,45,120,.2)">
-            <span id="bulk-count" style="font-size:13px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace">0 selected</span>
-            <button onclick="bulkDeleteStudents()" style="padding:8px 18px;border-radius:10px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#f87171;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(248,113,113,.28)'" onmouseout="this.style.background='rgba(248,113,113,.15)'">Delete Selected</button>
-            <button onclick="bulkClearSelection()" style="padding:8px 14px;border-radius:10px;background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">Clear</button>
+      ?`<div class="adm-card adm-empty"><p style="font-size:15px;color:#fff;font-weight:600;margin:0 0 4px">No students yet</p>Add your first student to get started.</div>`
+      :`<div class="adm-card admin-table-wrap">
+          <div id="bulk-bar" style="display:none;align-items:center;gap:10px;padding:10px 16px;background:rgba(237,31,81,.08);border-bottom:1px solid rgba(237,31,81,.2)">
+            <span id="bulk-count" style="font-size:13px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace;margin-right:auto">0 selected</span>
+            <button onclick="bulkClearSelection()" class="adm-btn">Clear</button>
+            <button onclick="bulkDeleteStudents()" class="adm-btn adm-btn-danger">${ADM_ICON.trash}Delete selected</button>
           </div>
-          <table class="admin-table" style="min-width:580px">
+          <table class="admin-table" style="min-width:640px">
             <thead><tr>
               <th style="width:38px"><input type="checkbox" id="bulk-all" onchange="bulkToggleAll(this.checked)" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></th>
               <th>Student</th><th>Validity</th>
-              <th class="center">Access</th>
-              <th class="right">Actions</th>
+              <th style="width:170px">Classes unlocked</th>
+              <th class="right" style="width:120px">Actions</th>
             </tr></thead>
             <tbody id="stu-tbody"></tbody>
           </table>
@@ -164,7 +169,9 @@ function renderAdmin(tab){
     var q=(document.getElementById('stu-search')||{}).value||'';
     var sort=(document.getElementById('stu-sort')||{}).value||'newest';
     q=q.trim().toLowerCase();
+    var st=window._stuStatus||'all';
     var filtered=window._stuList.filter(function(s){
+      if(st!=='all'){var k=window._stuState(s);if(st==='active'?k==='expired':k!==st)return false;}
       return !q||(s.name||'').toLowerCase().includes(q)||(s.email||'').toLowerCase().includes(q);
     });
     if(sort==='az') filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
@@ -173,23 +180,21 @@ function renderAdmin(tab){
     else filtered.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
     var tbody=document.getElementById('stu-tbody');
     if(!tbody)return;
+    if(!filtered.length){tbody.innerHTML='<tr><td colspan="5" class="adm-empty">No students match this filter.</td></tr>';if(window.bulkUpdateBar)bulkUpdateBar();return;}
     tbody.innerHTML=filtered.map(function(s){
-      var v=getValidity(s); var expired=v.expired;
       var locked=getLockedVideos(s.id);
-      var statusDot=expired
-        ?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:6px;flex-shrink:0;vertical-align:middle"></span>'
-        :'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:6px;flex-shrink:0;vertical-align:middle"></span>';
+      var n=(s.accessList||[]).length, tot=ALL_LESSONS.length;
       return '<tr onclick="navigate(\'admin-student\',{id:\''+s.id+'\'})" style="cursor:pointer">'+
         '<td onclick="event.stopPropagation()"><input type="checkbox" class="bulk-chk" data-sid="'+s.id+'" onchange="bulkUpdateBar()" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></td>'+
-        '<td><div style="display:flex;align-items:center;gap:12px">'+stuTableAvatar(s)+
-          '<div style="min-width:0"><p style="font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.name+'</p>'+
-          '<p style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.email+'</p></div></div></td>'+
-        '<td><div style="display:flex;align-items:center">'+statusDot+validityBadge(s)+'</div>'+
-          (locked.length>0?'<span class="pill pill-yellow" style="margin-top:4px;display:inline-flex">'+locked.length+' locked</span>':'')+'</td>'+
-        '<td class="center"><span class="pill pill-orange">'+(s.accessList||[]).length+'/'+ALL_LESSONS.length+'</span></td>'+
+        '<td><div style="display:flex;align-items:center;gap:12px;min-width:0">'+stuTableAvatar(s)+
+          '<div style="min-width:0"><p class="adm-name">'+escapeHtml(s.name)+'</p><p class="adm-meta">'+escapeHtml(s.email)+'</p></div></div></td>'+
+        '<td>'+admValidityCell(s)+
+          (locked.length>0?' <span class="adm-badge warn nodot" style="margin-top:4px">'+locked.length+' video'+(locked.length>1?'s':'')+' locked</span>':'')+'</td>'+
+        '<td><div style="display:flex;align-items:center;gap:10px"><div class="adm-meter'+(n>=tot?' ok':'')+'"><span style="width:'+Math.round(n/tot*100)+'%"></span></div><span class="adm-num">'+n+'/'+tot+'</span></div></td>'+
         '<td class="right" style="white-space:nowrap" onclick="event.stopPropagation()">'+stuOverflowBtn(s.id)+'</td>'+
       '</tr>';
     }).join('');
+    if(window.bulkUpdateBar) bulkUpdateBar();
   };
   applyStuFilters();
 

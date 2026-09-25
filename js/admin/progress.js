@@ -87,76 +87,108 @@ function renderAdminProgress(){
       return lastL;
     }
 
+    const quizTotal = ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
+    // Compute once per student — rows and stats both read from this.
+    var stats = {};
+    list.forEach(function(st){
+      var progress = getStudentProgress(st.id);
+      var completed = progress.size;
+      stats[st.id] = {
+        completed: completed,
+        pct: TOTAL_LESSONS ? Math.min(100,Math.round(completed/TOTAL_LESSONS*100)) : 0,
+        passed: getStudentQuizPassed(st.id).size,
+        last: getLastLesson(st.id, progress)
+      };
+    });
+    function stage(st){ var p=stats[st.id].pct; return p===0?'none':p>=100?'done':'going'; }
+    var counts={all:list.length,none:0,going:0,done:0}, pctSum=0, quizSum=0;
+    list.forEach(function(st){ counts[stage(st)]++; pctSum+=stats[st.id].pct; quizSum+=stats[st.id].passed; });
+    var avgPct = list.length ? Math.round(pctSum/list.length) : 0;
+
     function progressRow(st){
-      const progress = getStudentProgress(st.id);
-      const completed = progress.size;
-      const pct = TOTAL_LESSONS ? Math.min(100,Math.round(completed/TOTAL_LESSONS*100)) : 0;
-      const passed = getStudentQuizPassed(st.id);
-      const quizTotal = ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
-      const lastLesson = getLastLesson(st.id, progress);
-      const barColor = pct===100?'#4ade80':pct>50?'#a78bfa':'var(--g3)';
+      const s = stats[st.id];
+      const quizPct = quizTotal ? Math.round(s.passed/quizTotal*100) : 0;
       return `<tr onclick="navigate('admin-progress-student',{id:'${st.id}'})" style="cursor:pointer">
+        <td><div style="display:flex;align-items:center;gap:12px;min-width:0">${stuTableAvatar(st)}
+          <div style="min-width:0"><p class="adm-name">${escapeHtml(st.name)}</p><p class="adm-meta">${escapeHtml(st.email)}</p></div></div></td>
         <td>
-          <p style="font-weight:600;color:#fff;margin:0">${st.name}</p>
-          <p style="font-size:11px;color:rgba(255,255,255,.4);margin:2px 0 0">${st.email}</p>
-        </td>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;min-width:80px">
-              <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px;transition:width .4s"></div>
-            </div>
-            <span style="font-size:12px;font-weight:700;color:${barColor};min-width:34px;text-align:right">${pct}%</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="adm-meter${s.pct>=100?' ok':''}"><span style="width:${s.pct}%"></span></div>
+            <span class="adm-num" style="min-width:36px;text-align:right;color:${s.pct?'#fff':'var(--muted)'}">${s.pct}%</span>
           </div>
-          <p style="font-size:11px;color:rgba(255,255,255,.35);margin:3px 0 0">${completed}/${TOTAL_LESSONS} lessons</p>
+          <p class="adm-meta">${s.completed} of ${TOTAL_LESSONS} lessons</p>
         </td>
-        <td class="center"><span class="pill pill-orange">${passed.size}/${quizTotal}</span></td>
-        <td style="font-size:12px;color:rgba(255,255,255,.5)">${lastLesson ? `<span style="color:#fff;font-weight:600">Day ${lastLesson.order}</span><br><span style="font-size:11px">${getLessonTitle(lastLesson)||''}</span>` : '<span style="color:rgba(255,255,255,.25)">—</span>'}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="adm-meter${s.passed&&s.passed>=quizTotal?' ok':''}" style="max-width:90px"><span style="width:${quizPct}%"></span></div>
+            <span class="adm-num">${s.passed}/${quizTotal}</span>
+          </div>
+        </td>
+        <td>${s.last
+          ? `<div style="display:flex;align-items:center;gap:10px;min-width:0"><span class="adm-day">${s.last.order}</span><p class="adm-meta" style="margin:0;color:rgba(255,255,255,.7)">${escapeHtml(getLessonTitle(s.last)||'')}</p></div>`
+          : '<span class="adm-badge muted">Not started</span>'}</td>
+        <td class="right adm-muted" style="width:40px">${ADM_ICON.chevron}</td>
       </tr>`;
     }
 
     var sortedList = list.slice();
+    window._progStage = window._progStage || 'all';
 
     function applyFilters(){
       var q = (document.getElementById('prog-search')||{}).value||'';
       var sort = (document.getElementById('prog-sort')||{}).value||'newest';
+      var stg = window._progStage;
       q = q.trim().toLowerCase();
-      var filtered = q ? sortedList.filter(function(st){
-        return (st.name||'').toLowerCase().includes(q)||(st.email||'').toLowerCase().includes(q);
-      }) : sortedList.slice();
+      var filtered = sortedList.filter(function(st){
+        if(stg!=='all' && stage(st)!==stg) return false;
+        return !q||(st.name||'').toLowerCase().includes(q)||(st.email||'').toLowerCase().includes(q);
+      });
       if(sort==='az') filtered.sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
       else if(sort==='za') filtered.sort(function(a,b){return (b.name||'').localeCompare(a.name||'');});
+      else if(sort==='progress') filtered.sort(function(a,b){return stats[b.id].pct-stats[a.id].pct;});
       else if(sort==='oldest') filtered.sort(function(a,b){return (a.createdAt||'').localeCompare(b.createdAt||'');});
       else filtered.sort(function(a,b){return (b.createdAt||'').localeCompare(a.createdAt||'');});
       var tbody = document.getElementById('prog-tbody');
-      if(tbody) tbody.innerHTML = filtered.map(progressRow).join('');
+      if(tbody) tbody.innerHTML = filtered.length ? filtered.map(progressRow).join('') : '<tr><td colspan="5" class="adm-empty">No students match this filter.</td></tr>';
     }
 
     app.innerHTML = adminTopBar('progress') + `
-    <div style="padding:24px;position:relative;z-index:1">
-      <div style="margin-bottom:16px">
-        <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;font-family:'Montserrat',sans-serif">Student Progress</h1>
-        <p style="font-size:13px;color:var(--muted)">${list.length} students · ${TOTAL_LESSONS} total lessons</p>
-      </div>
-      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
-        <input id="prog-search" placeholder="Search by name or email..." oninput="applyFilters()" style="flex:1;min-width:200px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none"/>
-        <select id="prog-sort" onchange="applyFilters()" style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:10px;color:#fff;font-size:13px;padding:10px 14px;outline:none;cursor:pointer">
-          <option value="newest">Newest First</option>
-          <option value="oldest">Oldest First</option>
-          <option value="az">A → Z</option>
-          <option value="za">Z → A</option>
+    <div class="adm-page">
+      ${admHead('Student Progress', list.length+' students · '+TOTAL_LESSONS+' lessons · '+quizTotal+' quizzes')}
+      ${admStats([
+        ['Average progress', avgPct, '', '%'],
+        ['Not started', counts.none, counts.none?'warn':''],
+        ['In progress', counts.going, 'info'],
+        ['Completed course', counts.done, 'ok'],
+        ['Quizzes passed', quizSum]
+      ])}
+      <div class="adm-toolbar">
+        ${admSearch('prog-search','Search by name or email…','applyFilters()')}
+        <div class="adm-chips" id="prog-chips">
+          ${[['all','All'],['none','Not started'],['going','In progress'],['done','Completed']].map(function(c){
+            return '<button class="adm-chip'+(window._progStage===c[0]?' on':'')+'" onclick="window._progStage=\''+c[0]+'\';[].forEach.call(document.querySelectorAll(\'#prog-chips .adm-chip\'),function(b){b.classList.toggle(\'on\',b===this)},this);applyFilters()">'+c[1]+'<span class="n">'+counts[c[0]]+'</span></button>';
+          }).join('')}
+        </div>
+        <select id="prog-sort" onchange="applyFilters()" class="adm-select">
+          <option value="newest">Newest first</option>
+          <option value="progress">Most progress</option>
+          <option value="oldest">Oldest first</option>
+          <option value="az">Name A → Z</option>
+          <option value="za">Name Z → A</option>
         </select>
       </div>
       ${list.length===0
-        ? `<div class="lg" style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:15px">No students yet</p></div>`
-        : `<div class="lg admin-table-wrap" style="overflow:hidden;border-radius:20px">
-            <table class="admin-table" style="min-width:620px">
+        ? `<div class="adm-card adm-empty">No students yet</div>`
+        : `<div class="adm-card admin-table-wrap">
+            <table class="admin-table" style="min-width:720px">
               <thead><tr>
                 <th>Student</th>
-                <th>Overall Progress</th>
-                <th class="center">Quizzes Passed</th>
-                <th>Currently On</th>
+                <th style="width:26%">Overall progress</th>
+                <th style="width:160px">Quizzes passed</th>
+                <th>Currently on</th>
+                <th></th>
               </tr></thead>
-              <tbody id="prog-tbody">${sortedList.map(progressRow).join('')}</tbody>
+              <tbody id="prog-tbody"></tbody>
             </table>
           </div>`}
     </div>`;
@@ -180,7 +212,6 @@ function renderAdminProgressStudent(id){
   const completed = progress.size;
   const pct = total ? Math.round(completed/total*100) : 0;
   const quizTotal = ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
-  const barColor = pct===100?'#4ade80':pct>50?'#a78bfa':'var(--g3)';
 
   function lessonRow(l){
     const done = progress.has(l.id);
@@ -219,43 +250,29 @@ function renderAdminProgressStudent(id){
   }
 
   app.innerHTML = adminTopBar('progress') + `
-  <div style="padding:24px;position:relative;z-index:1;max-width:800px">
-    <button onclick="navigate('admin',{tab:'progress'})" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;margin-bottom:20px;transition:color .18s" onmouseover="this.style.color='var(--g3)'" onmouseout="this.style.color='var(--muted)'">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  <div class="adm-page" style="max-width:960px">
+    <button onclick="navigate('admin',{tab:'progress'})" class="adm-btn" style="margin-bottom:20px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
       Back to Progress
     </button>
 
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:24px">
-      ${avatarSmallHtml(st)}
-      <div>
-        <h1 style="font-size:20px;font-weight:800;color:#fff;margin:0;font-family:'Montserrat',sans-serif">${st.name}</h1>
-        <p style="font-size:12px;color:var(--muted);margin:3px 0 0">${st.email}</p>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:20px">
+      ${stuTableAvatar(st)}
+      <div style="min-width:0">
+        <h1 class="adm-title" style="font-size:20px">${escapeHtml(st.name)}</h1>
+        <p class="adm-meta">${escapeHtml(st.email)}</p>
       </div>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:24px">
-      ${[
-        ['📚','Lessons Done',completed+'/'+total],
-        ['📊','Progress',pct+'%'],
-        ['📝','Quizzes Passed',passed.size+'/'+quizTotal],
-      ].map(([icon,label,val])=>`
-        <div class="lg" style="padding:16px;text-align:center">
-          <div style="font-size:20px;margin-bottom:4px">${icon}</div>
-          <div style="font-size:20px;font-weight:800;color:#fff;font-family:'Montserrat',sans-serif">${val}</div>
-          <div style="font-size:11px;color:var(--muted);margin-top:2px">${label}</div>
-        </div>`).join('')}
-    </div>
+    ${admStats([
+      ['Progress', pct, pct>=100?'ok':'', '%'],
+      ['Lessons done', completed, '', '/'+total],
+      ['Quizzes passed', passed.size, '', '/'+quizTotal]
+    ])}
 
-    <div style="margin-bottom:20px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px">
-        <span>Overall Progress</span><span style="color:${barColor};font-weight:700">${pct}%</span>
-      </div>
-      <div style="height:8px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:99px"></div>
-      </div>
-    </div>
+    <div class="adm-meter${pct>=100?' ok':''}" style="height:8px;margin-bottom:20px"><span style="width:${pct}%"></span></div>
 
-    <div class="lg admin-table-wrap" style="overflow:hidden;border-radius:20px">
+    <div class="adm-card admin-table-wrap">
       <table class="admin-table" style="min-width:400px">
         <thead><tr>
           <th style="width:48px"></th>

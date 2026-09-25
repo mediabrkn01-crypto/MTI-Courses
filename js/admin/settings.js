@@ -31,119 +31,98 @@ async function sbLoadAdminCred(){ /* removed — admin_cred row should be delete
 function renderAdminSettings(){
   // SECURITY: API key never stored in browser — only voice preference
   var elVoice=localStorage.getItem('brokeneng_el_voice')||'21m00Tcm4TlvDq8ikWAM';
+  var SI={
+    wrench:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18v3h3l6.3-6.3a4 4 0 005.4-5.4l-2.5 2.5-2.4-.6-.6-2.4 2.5-2.5z"/></svg>',
+    mic:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0014 0M12 17v5"/></svg>',
+    sync:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-15.5 6.2M3 12A9 9 0 0118.5 5.8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>',
+    live:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3"/></svg>',
+    clock:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    shield:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
+    db:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>'
+  };
+  function setCard(opts,body){
+    return '<div class="adm-card adm-card-pad"'+(opts.id?' id="'+opts.id+'"':'')+'>'
+      +'<div class="adm-set-head"><div class="adm-set-ico '+opts.tone+'">'+SI[opts.icon]+'</div>'
+      +'<div style="min-width:0"><h2 class="adm-card-title">'+opts.title+'</h2>'+(opts.desc?'<p class="adm-sub" style="margin-top:3px;font-size:12px">'+opts.desc+'</p>':'')+'</div></div>'
+      +body+'</div>';
+  }
+  var okCheck='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>';
+
   app.innerHTML=adminTopBar('settings')+`
-  <div style="padding:24px;max-width:1280px;position:relative;z-index:1">
-    <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:4px;font-family:'Montserrat',sans-serif">Settings</h1>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Global course configuration.</p>
+  <div class="adm-page">
+    ${admHead('Settings','Global course configuration.')}
     <div class="settings-grid">
 
-    <!-- MAINTENANCE MODE SECTION -->
-    <div class="lg" id="maint-section" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,100,0,.3);background:rgba(255,100,0,.05)">
-      <p style="font-weight:700;font-size:15px;color:#f97316;margin-bottom:4px">🚧 System Maintenance</p>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Global maintenance blocks ALL students and demo users. One selected test account bypasses it for production verification. Admin always has access.</p>
-
+    ${setCard({id:'maint-section',icon:'wrench',tone:'orange',title:'System maintenance',desc:'Blocks all students and demo users. One selected test account can still get in to verify production. Admin always has access.'},`
       <div id="maint-status-row" style="margin-bottom:14px;font-size:12px;color:var(--muted)">Loading status...</div>
-      <div id="maint-active-info" style="display:none;margin-bottom:14px;padding:12px 14px;background:rgba(255,100,0,.08);border:1px solid rgba(255,100,0,.2);border-radius:8px;font-size:12px;line-height:1.8">
-        <div style="color:#f97316;font-weight:700;margin-bottom:4px">🔴 Maintenance is ACTIVE</div>
-        <div style="color:rgba(255,255,255,.7)">Students Blocked: <strong style="color:#fff">All Students &amp; Demo Users</strong></div>
-        <div id="maint-active-bypass-info" style="color:rgba(255,255,255,.7)">Maintenance Bypass: <strong style="color:#4ade80" id="maint-active-bypass-name">—</strong></div>
+      <div id="maint-active-info" style="display:none;margin-bottom:14px" class="adm-callout warn">
+        <div>
+          <div>Students blocked: <strong style="color:#fff">All students &amp; demo users</strong></div>
+          <div id="maint-active-bypass-info">Bypass account: <strong style="color:#4ade80" id="maint-active-bypass-name">—</strong></div>
+        </div>
       </div>
 
-      <div id="maint-bypass-section" style="margin-bottom:16px;padding:14px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">Test Account Bypass</label>
-        <p style="font-size:12px;color:rgba(255,255,255,.5);margin-bottom:10px">This student gets full access during maintenance. Required before enabling.</p>
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input id="maint-bypass-search" type="text" placeholder="Search student by name or email…" oninput="adminSearchBypassStudent(this.value)"
-            style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:9px 12px;outline:none;box-sizing:border-box"/>
-        </div>
+      <div id="maint-bypass-section" style="margin-bottom:16px;padding:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:12px">
+        <label class="adm-label">Test account bypass</label>
+        <p class="adm-hint" style="margin:0 0 10px">This student keeps full access during maintenance. Required before enabling.</p>
+        <input id="maint-bypass-search" type="text" class="adm-input" placeholder="Search student by name or email…" oninput="adminSearchBypassStudent(this.value)" style="margin-bottom:8px"/>
         <div id="maint-bypass-results" style="margin-bottom:8px"></div>
-        <div id="maint-bypass-selected" style="padding:10px 12px;background:rgba(255,255,255,.04);border:1px dashed rgba(255,255,255,.1);border-radius:8px;font-size:12px;color:var(--muted)">No test account selected — select one before enabling maintenance.</div>
+        <div id="maint-bypass-selected" style="padding:10px 12px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);border-radius:10px;font-size:12px;color:var(--muted)">No test account selected — select one before enabling maintenance.</div>
       </div>
 
       <div style="margin-bottom:14px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">Student-facing Message (optional)</label>
-        <input id="maint-msg" type="text" placeholder="We're updating the platform. Access will be restored shortly." style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+        <label class="adm-label">Message shown to students <span style="text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
+        <input id="maint-msg" type="text" class="adm-input" placeholder="We're updating the platform. Access will be restored shortly."/>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <button id="maint-toggle-btn" onclick="adminToggleMaintenance()" style="width:auto;padding:9px 20px;font-size:13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:8px;color:#fff;font-weight:700;cursor:pointer">Loading...</button>
+        <button id="maint-toggle-btn" onclick="adminToggleMaintenance()" style="width:auto;padding:9px 20px;font-size:13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;color:#fff;font-weight:700;cursor:pointer">Loading...</button>
         <span id="maint-action-status" style="font-size:12px;color:var(--muted)"></span>
-      </div>
-    </div>
+      </div>`)}
 
-    <!-- ELEVENLABS VOICE SECTION -->
-    <div class="lg" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,45,120,.25);background:rgba(255,45,120,.05)">
-      <p style="font-weight:700;font-size:15px;color:var(--g1);margin-bottom:4px">🎙 ElevenLabs Voice Engine</p>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Set once here — all students get your custom voice model automatically.</p>
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;margin-bottom:12px">
-        <svg width="16" height="16" fill="none" stroke="#4ade80" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-        <span style="font-size:12px;color:#4ade80;font-weight:600">API key configured server-side — rotate it via ElevenLabs dashboard + <code style="background:rgba(0,0,0,.3);padding:1px 5px;border-radius:4px">supabase secrets set ELEVENLABS_API_KEY=...</code></span>
-      </div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:block;margin-bottom:6px;font-family:JetBrains Mono,monospace">Voice ID</label>
-        <input id="el-voice-id" type="text" value="${elVoice}" placeholder="21m00Tcm4TlvDq8ikWAM"
-          style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box;font-family:JetBrains Mono,monospace"/>
-        <div style="font-size:10px;color:var(--muted);margin-top:4px">Default: Rachel (21m00Tcm4TlvDq8ikWAM). Find voice IDs at elevenlabs.io/voice-library</div>
-      </div>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <button onclick="adminSaveELSettings()" class="btn-primary" style="width:auto;padding:9px 20px;font-size:13px">Save Voice Preference</button>
-        <button onclick="adminTestEL()" style="padding:9px 16px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;cursor:pointer;font-weight:600">🔊 Test Voice</button>
+    ${setCard({icon:'sync',tone:'blue',title:'Supabase sync',desc:'Check the connection, or push/pull the video list between this browser and Supabase.'},`
+      <div id="sync-status" style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Click Check to verify connection...</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="checkSupabaseSync()" class="adm-btn adm-btn-primary">Check connection</button>
+        <button onclick="forcePushVideos()" class="adm-btn">${ADM_ICON.upload}Push videos</button>
+        <button onclick="forcePullVideos()" class="adm-btn"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Pull videos</button>
+      </div>`)}
+
+    ${setCard({icon:'shield',tone:'green',title:'Admin credentials',desc:'Admin sign-in is managed by Supabase Auth.'},`
+      <div class="adm-callout ok" style="margin-bottom:12px">${okCheck}<span>Credentials are managed server-side — no passwords are stored in the browser.</span></div>
+      <p class="adm-hint" style="margin:0">To change the admin password, use <strong style="color:#fff">Forgot password</strong> on the admin login screen, or update it in Supabase → Authentication → Users.</p>`)}
+
+    ${setCard({icon:'mic',tone:'pink',title:'ElevenLabs voice engine',desc:'Set once here — every student hears this voice model.'},`
+      <div class="adm-callout ok" style="margin-bottom:14px">${okCheck}<span>API key is stored server-side. Rotate it in the ElevenLabs dashboard, then run <code>supabase secrets set ELEVENLABS_API_KEY=...</code></span></div>
+      <label class="adm-label">Voice ID</label>
+      <input id="el-voice-id" type="text" class="adm-input" value="${escapeAttr(elVoice)}" placeholder="21m00Tcm4TlvDq8ikWAM" style="font-family:'JetBrains Mono',monospace"/>
+      <p class="adm-hint">Default: Rachel (21m00Tcm4TlvDq8ikWAM). Find voice IDs at elevenlabs.io/voice-library</p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px">
+        <button onclick="adminSaveELSettings()" class="adm-btn adm-btn-primary">Save voice</button>
+        <button onclick="adminTestEL()" class="adm-btn">Test voice</button>
         <span id="el-status" style="font-size:12px;color:var(--muted)"></span>
-      </div>
-    </div>
+      </div>`)}
 
-      <!-- SUPABASE SYNC SECTION -->
-      <div class="lg" style="padding:20px;margin-bottom:20px;border:1px solid rgba(255,165,0,.25);background:rgba(255,165,0,.05)">
-        <p style="font-weight:700;font-size:15px;color:var(--g3);margin-bottom:8px">🔄 Supabase Sync</p>
-        <div id="sync-status" style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Click Check to verify connection...</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button onclick="checkSupabaseSync()" class="btn-primary" style="width:auto;padding:8px 16px;font-size:12px">Check Supabase</button>
-          <button onclick="forcePushVideos()" style="padding:8px 16px;background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);border-radius:8px;color:#4ade80;font-size:12px;cursor:pointer;font-weight:600">⬆ Push Videos to Supabase</button>
-          <button onclick="forcePullVideos()" style="padding:8px 16px;background:rgba(59,130,246,.15);border:1px solid rgba(59,130,246,.3);border-radius:8px;color:#60a5fa;font-size:12px;cursor:pointer;font-weight:600">⬇ Pull from Supabase</button>
-        </div>
-      </div>
-
-    <!-- LIVE SESSIONS SECTION -->
-    <div class="lg" style="padding:20px;margin-bottom:20px;border:1px solid rgba(99,179,237,.25);background:rgba(99,179,237,.05)">
-      <p style="font-weight:700;font-size:15px;color:#63b3ed;margin-bottom:4px">📡 Live With Sreekanth</p>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:16px">Manage live session dates. Students who complete all 30 classes can register.</p>
+    ${setCard({icon:'live',tone:'blue',title:'Live With Sreekanth',desc:'Manage live session dates. Students who complete all 30 classes can register.'},`
       <div id="live-sessions-list" style="margin-bottom:14px"></div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-        <input id="ls-title" type="text" placeholder="Session title (e.g. Live Class — Week 1)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
-        <input id="ls-date" type="text" placeholder="Date & time (e.g. Saturday, August 10 — 7:00 PM IST)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
-        <input id="ls-link" type="text" placeholder="Zoom / Google Meet link (e.g. https://zoom.us/j/...)" style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:12px;padding:10px 14px;outline:none;box-sizing:border-box"/>
+        <input id="ls-title" type="text" class="adm-input" placeholder="Session title (e.g. Live Class — Week 1)"/>
+        <input id="ls-date" type="text" class="adm-input" placeholder="Date & time (e.g. Saturday, August 10 — 7:00 PM IST)"/>
+        <input id="ls-link" type="text" class="adm-input" placeholder="Zoom / Google Meet link"/>
       </div>
-      <button onclick="adminAddLiveSession()" class="btn-primary" style="width:auto;padding:9px 20px;font-size:13px">Add Session</button>
-    </div>
+      <button onclick="adminAddLiveSession()" class="adm-btn adm-btn-primary">${ADM_ICON.plus}Add session</button>`)}
 
-    ${[
-      {
-        title:'Daily Drip Limit',
-        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:12px">Students can unlock up to <strong style="color:#FF7100">${DAILY_DRIP} new classes per day</strong>. Change the <code style="background:rgba(255,255,255,0.1);padding:1px 5px;border-radius:4px;font-size:12px">DAILY_DRIP</code> constant in the source code to adjust.</p>
-        <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:12px 16px;font-family:monospace;font-size:12px;color:rgba(255,255,255,0.7)">const DAILY_DRIP = ${DAILY_DRIP};</div>`
-      },
-      {
-        title:'Admin Credentials',
-        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px">Admin authentication is now managed via Supabase Auth.</p>
-        <div style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);border-radius:8px;margin-bottom:14px">
-          <svg width="16" height="16" fill="none" stroke="#4ade80" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-          <span style="font-size:12px;color:#4ade80;font-weight:600">Credentials managed server-side — no passwords stored in browser</span>
-        </div>
-        <p style="font-size:12px;color:var(--muted);line-height:1.6">To change the admin password: use <strong style="color:#fff">Admin Forgot Password</strong> on the login screen, or update directly in Supabase Auth → Users dashboard.</p>`
-      },
-      {
-        title:'Data Management',
-        body:`<p style="font-size:13px;color:rgba(255,255,255,0.65);margin-bottom:14px">Student data is stored in browser localStorage. Export to JSON for backup.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          ${glassBtn('Export All Data','exportData()')}
-          ${glassBtn('Import Data','importDataPrompt()')}
-        </div>
-        <input id="import-file" type="file" accept=".json" style="display:none" onchange="doImport(event)"/>`
-      }
-    ].map(s=>`<div class="lg" style="padding:20px;margin-bottom:16px">
-      <p style="font-size:13px;font-weight:700;color:var(--brand-2);margin-bottom:10px">${s.title}</p>
-      ${s.body}
-    </div>`).join('')}
-  </div>
+    ${setCard({icon:'clock',tone:'grey',title:'Daily drip limit',desc:'How many new classes a student can unlock per day.'},`
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px"><span style="font-size:28px;font-weight:800;color:#fff;font-family:'Montserrat',sans-serif">${DAILY_DRIP}</span><span class="adm-muted" style="font-size:13px">classes / day</span></div>
+      <p class="adm-hint" style="margin:0">Change the <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">DAILY_DRIP</code> constant in the source code to adjust.</p>`)}
+
+    ${setCard({icon:'db',tone:'grey',title:'Data management',desc:'Export students, videos and progress to a JSON backup, or restore from one.'},`
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="exportData()" class="adm-btn">Export all data</button>
+        <button onclick="importDataPrompt()" class="adm-btn">Import data</button>
+      </div>
+      <input id="import-file" type="file" accept=".json" style="display:none" onchange="doImport(event)"/>`)}
+
+    </div>
   </div>`;
 
   window.exportData=()=>{
@@ -201,8 +180,10 @@ async function adminLoadMaintenanceStatus(){
 
     // Status badge
     statusRow.innerHTML=enabled
-      ?'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.4);border-radius:6px;padding:4px 10px;font-size:12px;color:#f97316;font-weight:700">🚧 MAINTENANCE IS ON</span>'
-      :'<span style="display:inline-flex;align-items:center;gap:6px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:6px;padding:4px 10px;font-size:12px;color:#4ade80;font-weight:700">✓ App is LIVE</span>';
+      ?'<span class="adm-badge bad live">Maintenance is on — students blocked</span>'
+      :'<span class="adm-badge ok">App is live</span>';
+    var maintCard=document.getElementById('maint-section');
+    if(maintCard) maintCard.classList.toggle('maint-on',enabled);
 
     // Active info panel
     if(activeInfo) activeInfo.style.display=enabled?'block':'none';

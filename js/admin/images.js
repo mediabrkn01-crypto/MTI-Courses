@@ -1,121 +1,107 @@
-/* images.js — extracted verbatim from the original single-file index.html.
-   Source lines: 3726-3865
+/* images.js — Class Images admin tab.
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
-// ── SETTINGS ──────────────────────────────────────────────────────────────────
+function _imgSourceLabel(url){
+  if(!url) return '<span class="adm-badge muted">No image</span>';
+  if(url.indexOf('data:')===0){
+    var kb=Math.round(url.length*0.75/1024);
+    return '<span class="adm-badge ok">Uploaded</span><span class="adm-meta" style="display:inline;margin-left:6px">'+kb+' KB</span>';
+  }
+  var host='';try{host=new URL(url).hostname;}catch(e){}
+  return '<span class="adm-badge info">Linked</span><span class="adm-meta" style="display:inline;margin-left:6px">'+escapeHtml(host)+'</span>';
+}
+
+function _imgCard(order,tag,title,thumb,fallback){
+  var isData=thumb.indexOf('data:')===0;
+  return '<div class="adm-img-card" id="img-card-'+order+'">'
+    +'<div class="adm-img-prev" id="img-prev-'+order+'"><span class="adm-img-tag">'+tag+'</span>'
+      +(thumb?'<img src="'+escapeAttr(thumb)+'" alt="" loading="lazy" onerror="this.remove()"/>':fallback+'<span>No image yet</span>')
+    +'</div>'
+    +'<div class="adm-img-body">'
+      +'<p class="adm-name" title="'+escapeAttr(title)+'">'+escapeHtml(title)+'</p>'
+      +'<div id="img-src-'+order+'">'+_imgSourceLabel(thumb)+'</div>'
+      +'<div class="adm-img-url" id="img-url-row-'+order+'">'
+        +'<input id="img-url-'+order+'" class="adm-input" style="padding:8px 10px;font-size:12px" type="text" value="'+(isData?'':escapeAttr(thumb))+'" placeholder="https://…" onkeydown="if(event.key===\'Enter\')saveImgUrl('+order+')"/>'
+        +'<button class="adm-btn adm-btn-primary" onclick="saveImgUrl('+order+')">Save</button>'
+      +'</div>'
+      +'<div class="adm-img-actions">'
+        +'<label class="adm-btn" style="flex:1" id="img-up-'+order+'">'+ADM_ICON.upload+'Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/></label>'
+        +'<button class="adm-btn" style="flex:1" onclick="toggleImgUrl('+order+')">'+ADM_ICON.link+'Paste URL</button>'
+        +(thumb?'<button class="adm-btn adm-btn-danger adm-icon-btn" aria-label="Remove image" title="Remove image" onclick="clearImg('+order+')">'+ADM_ICON.trash+'</button>':'')
+      +'</div>'
+    +'</div>'
+  +'</div>';
+}
+
 function renderAdminImages(){
   const videos=loadVideos();
-
-  // Build rows for all 30 lessons
-  var rows='';
-  ALL_LESSONS.forEach(function(l){
-    var v=videos[l.order]||{};
-    var thumb=v.thumb||'';
-    rows+='<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'\'">'+
-      // Thumbnail preview
-      '<div style="width:120px;height:68px;border-radius:10px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);position:relative">'+
-        (thumb
-          ?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'"/>'
-          :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px">📷</div>'
-        )+
-        '<div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">D'+String(l.order).padStart(2,'0')+'</div>'+
-      '</div>'+
-      // Title + URL input
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+getLessonTitle(l)+'</div>'+
-        '<div style="display:flex;gap:8px;align-items:center">'+
-          '<input id="img-url-'+l.order+'" type="text" value="'+thumb+'" placeholder="Paste image URL or upload below…"'+
-            ' style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;min-width:0"'+
-            ' onfocus="this.style.borderColor=\'rgba(255,45,120,.4)\'" onblur="this.style.borderColor=\'rgba(255,255,255,.12)\'"'+
-          '/>'+
-          '<button onclick="saveImgUrl('+l.order+')" style="padding:7px 14px;background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">Save</button>'+
-          '<label style="padding:7px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--muted);font-size:11px;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">'+
-            '📁 Upload'+
-            '<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+l.order+')"/>'+
-          '</label>'+
-        '</div>'+
-      '</div>'+
-    '</div>';
-  });
-
-  // WV rows
-  var wvRows='';
-  WV_DATA.forEach(function(f,i){
-    var wvOrder=100+i+1;
-    var v=videos[wvOrder]||{};
-    var thumb=v.thumb||'';
-    wvRows+='<div style="display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid rgba(255,255,255,.06);transition:background .15s" onmouseover="this.style.background=\'rgba(255,255,255,.03)\'" onmouseout="this.style.background=\'\'">'+
-      '<div style="width:120px;height:68px;border-radius:10px;overflow:hidden;flex-shrink:0;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);position:relative">'+
-        (thumb
-          ?'<img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover" onerror="this.style.display=\'none\'"/>'
-          :'<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px">'+f.icon+'</div>'
-        )+
-        '<div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">WV'+(i+1)+'</div>'+
-      '</div>'+
-      '<div style="flex:1;min-width:0">'+
-        '<div style="font-weight:700;font-size:13px;color:#fff;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+f.icon+' '+f.title+'</div>'+
-        '<div style="display:flex;gap:8px;align-items:center">'+
-          '<input id="img-url-'+wvOrder+'" type="text" value="'+thumb+'" placeholder="Paste image URL…"'+
-            ' style="flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 10px;color:#fff;font-size:12px;font-family:Inter,sans-serif;outline:none;min-width:0"'+
-            ' onfocus="this.style.borderColor=\'rgba(255,45,120,.4)\'" onblur="this.style.borderColor=\'rgba(255,255,255,.12)\'"'+
-          '/>'+
-          '<button onclick="saveImgUrl('+wvOrder+')" style="padding:7px 14px;background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">Save</button>'+
-          '<label style="padding:7px 12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--muted);font-size:11px;cursor:pointer;white-space:nowrap;font-family:Montserrat,sans-serif;flex-shrink:0">'+
-            '📁 Upload'+
-            '<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+wvOrder+')"/>'+
-          '</label>'+
-        '</div>'+
-      '</div>'+
-    '</div>';
-  });
+  var core=ALL_LESSONS.map(function(l){
+    return _imgCard(l.order,'D'+String(l.order).padStart(2,'0'),getLessonTitle(l)||l.title,(videos[l.order]||{}).thumb||'',ADM_ICON.image);
+  }).join('');
+  var wv=WV_DATA.map(function(f,i){
+    var o=101+i;
+    return _imgCard(o,'W'+(i+1),f.title,(videos[o]||{}).thumb||'','<span style="font-size:24px">'+f.icon+'</span>');
+  }).join('');
+  var coreSet=ALL_LESSONS.filter(function(l){return (videos[l.order]||{}).thumb;}).length;
+  var wvSet=WV_DATA.filter(function(f,i){return (videos[101+i]||{}).thumb;}).length;
 
   app.innerHTML=adminTopBar('images')+`
-  <div id="main-content" style="padding:24px 28px 80px">
-    <h2 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">Class Images</h2>
-    <p style="font-size:13px;color:var(--muted);margin-bottom:24px">Paste an image URL or upload a file for each class. Shown in lesson view, sidebar, and dashboard cards.</p>
-
-    <!-- ACCENT JOURNEY -->
-    <div style="margin-bottom:28px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-family:JetBrains Mono,monospace">ACCENT JOURNEY — 20 Classes</div>
-      <div class="lg" style="overflow:hidden;border-radius:16px">${rows}</div>
+  <div class="adm-page">
+    ${admHead('Class Images','Upload a file or paste an image URL for each class. Shown in the lesson view, sidebar and dashboard cards.')}
+    ${admStats([
+      ['Class images', coreSet, coreSet<ALL_LESSONS.length?'warn':'ok', '/'+ALL_LESSONS.length],
+      ['Workshop images', wvSet, wvSet<WV_DATA.length?'warn':'ok', '/'+WV_DATA.length]
+    ])}
+    <div class="adm-section">
+      ${admSectionLabel('Accent Journey', ALL_LESSONS.length+' classes')}
+      <div class="adm-img-grid">${core}</div>
     </div>
-
-    <!-- WORD VAULT -->
-    <div style="margin-bottom:28px">
-      <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;font-family:JetBrains Mono,monospace">PRONUNCIATION WORKSHOP — 10 Classes</div>
-      <div class="lg" style="overflow:hidden;border-radius:16px">${wvRows}</div>
+    <div class="adm-section">
+      ${admSectionLabel('Pronunciation Workshop', WV_DATA.length+' classes')}
+      <div class="adm-img-grid">${wv}</div>
     </div>
   </div>`;
 
-  // Save URL helper
-  window.saveImgUrl=function(order){
-    var inp=document.getElementById('img-url-'+order);
-    if(!inp) return;
-    var url=inp.value.trim();
+  window.toggleImgUrl=function(order){
+    var row=document.getElementById('img-url-row-'+order);
+    if(!row) return;
+    row.classList.toggle('open');
+    if(row.classList.contains('open')) document.getElementById('img-url-'+order).focus();
+  };
+
+  function _applyImg(order,url){
     var vids=loadVideos();
     if(!vids[order]) vids[order]={};
     vids[order].thumb=url;
     saveVideos(vids);
-    // Flash feedback
-    var btn=inp.nextElementSibling;
-    if(btn){var orig=btn.textContent;btn.textContent='✓ Saved';btn.style.background='rgba(34,197,94,.8)';setTimeout(function(){btn.textContent=orig;btn.style.background='var(--grad)';},1500);}
-    // Refresh preview
-    var preview=inp.closest('div[style*="display:flex"]').previousElementSibling;
-    if(preview){
-      var img=preview.querySelector('img');
-      if(img){img.src=url;}
-      else if(url){preview.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover"/><div style="position:absolute;top:4px;left:5px;font-size:9px;font-weight:700;font-family:JetBrains Mono,monospace;color:rgba(255,255,255,.7);background:rgba(0,0,0,.6);padding:2px 5px;border-radius:4px">'+preview.querySelector('div[style*="position:absolute"]').textContent+'</div>';}
-    }
+    var card=document.getElementById('img-card-'+order);
+    if(!card) return;
+    var tag=card.querySelector('.adm-img-tag').textContent;
+    var title=card.querySelector('.adm-name').textContent;
+    var fb=order>100?'<span style="font-size:24px">'+WV_DATA[order-101].icon+'</span>':ADM_ICON.image;
+    var tmp=document.createElement('div');
+    tmp.innerHTML=_imgCard(order,tag,title,url,fb);
+    card.replaceWith(tmp.firstChild);
+  }
+
+  window.saveImgUrl=function(order){
+    var inp=document.getElementById('img-url-'+order);
+    if(!inp) return;
+    var url=inp.value.trim();
+    if(url && !/^https?:\/\//i.test(url)){ inp.style.borderColor='#fb7185'; return; }
+    _applyImg(order,url);
+  };
+
+  window.clearImg=function(order){
+    if(!confirm('Remove this image?')) return;
+    _applyImg(order,'');
   };
 
   // File upload — compress locally and save (no external service)
   window.handleImgUpload=function(evt,order){
     var file=evt.target.files[0];
     if(!file) return;
-    var label=evt.target.closest('label');
-    function resetLabel(){
-      if(label){label.innerHTML='📁 Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,\''+order+'\')"/>';label.style.color='var(--muted)';}
-    }
-    if(label){label.textContent='⏳ Uploading…';label.style.color='var(--g3)';}
+    var label=document.getElementById('img-up-'+order);
+    if(label){label.firstChild&&label.childNodes.forEach(function(n){if(n.nodeType===3)n.textContent='Uploading…';});label.style.pointerEvents='none';}
     var r=new FileReader();
     r.onload=function(e){
       var img=new Image();
@@ -126,16 +112,12 @@ function renderAdminImages(){
         if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
         var c=document.createElement('canvas');c.width=w;c.height=h;
         c.getContext('2d').drawImage(img,0,0,w,h);
-        var url=c.toDataURL('image/jpeg',0.8);
-        var inp=document.getElementById('img-url-'+order);
-        if(inp){inp.value=url;}
-        saveImgUrl(order);
-        resetLabel();
+        _applyImg(order,c.toDataURL('image/jpeg',0.8));
       };
-      img.onerror=function(){alert('Could not read that image.');resetLabel();};
+      img.onerror=function(){alert('Could not read that image.');renderAdminImages();};
       img.src=e.target.result;
     };
-    r.onerror=function(){alert('Could not read the file.');resetLabel();};
+    r.onerror=function(){alert('Could not read the file.');renderAdminImages();};
     r.readAsDataURL(file);
   };
 }

@@ -7,11 +7,13 @@
 var _demoAdminRows = [], _demoAdminServerOffset = 0, _demoAdminTick = null;
 
 function _demoStatusPill(status){
-  if(status==='active')   return '<span class="pill pill-green">Active</span>';
-  if(status==='expired')  return '<span class="pill pill-red">Expired</span>';
-  if(status==='revoked')  return '<span class="pill pill-yellow">Revoked</span>';
-  return '<span class="pill pill-grey">Not Started</span>';
+  if(status==='active')   return '<span class="adm-badge ok live">Live now</span>';
+  if(status==='expired')  return '<span class="adm-badge muted">Ended</span>';
+  if(status==='revoked')  return '<span class="adm-badge bad">Revoked</span>';
+  return '<span class="adm-badge info">Not opened</span>';
 }
+var _demoFilter = 'all';
+function _demoSetFilter(k){ _demoFilter=k; _demoAdminRenderTable(); }
 function _demoLinkUrl(token){ return location.origin + location.pathname + '?demo=' + token; }
 
 // Admin actions authenticate with the real Supabase Auth session (same JWT the
@@ -35,36 +37,40 @@ function _demoAuthErrMsg(resp){
 
 function renderDemoAdmin(){
   app.innerHTML = adminTopBar('demo') + `
-  <div style="padding:24px;position:relative;z-index:1">
-    <div style="margin-bottom:16px">
-      <h1 style="font-size:22px;font-weight:800;color:#fff;margin-bottom:2px;font-family:'Montserrat',sans-serif">Demo Access</h1>
-      <p style="font-size:13px;color:var(--muted)">Generate secure, one-time demo class invitations (1–80 min). The countdown starts only when the student first opens the link.</p>
+  <div class="adm-page">
+    ${admHead('Demo Access','Generate secure, one-time demo class invitations (1–80 min). The countdown starts only when the student first opens the link.')}
+
+    <div id="demo-stats"></div>
+
+    <div class="adm-card" style="margin-bottom:20px">
+      <div class="adm-card-head"><h2 class="adm-card-title">Generate demo link</h2></div>
+      <div class="adm-card-pad">
+        <div class="demo-gen-grid">
+          <div><label class="adm-label">Counsellor WhatsApp <span style="color:var(--g1)">*</span></label>
+            <input id="demo-counsellor" class="glass-input" placeholder="+91 98765 43210" inputmode="tel"/></div>
+          <div><label class="adm-label">Student name</label>
+            <input id="demo-name" class="glass-input" placeholder="Optional"/></div>
+          <div><label class="adm-label">Phone number</label>
+            <input id="demo-phone" class="glass-input" placeholder="Optional" inputmode="tel"/></div>
+          <div><label class="adm-label">Email</label>
+            <input id="demo-email" class="glass-input" placeholder="Optional" type="email"/></div>
+          <div><label class="adm-label">Demo duration</label>
+            <div id="demo-duration-dd"></div></div>
+          <div class="demo-gen-btn-cell"><button onclick="demoAdminCreate()" class="btn-primary" style="width:100%;padding:12px 20px">Generate secure demo link</button></div>
+        </div>
+        <div id="demo-gen-result" style="display:none;margin-top:16px"></div>
+      </div>
     </div>
 
-    <div class="panel-card" style="padding:20px;margin-bottom:22px">
-      <h2 style="font-size:15px;font-weight:800;color:#fff;margin-bottom:14px;font-family:'Montserrat',sans-serif">Generate Demo Link</h2>
-      <div class="demo-gen-grid">
-        <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px">Student Name</label>
-          <input id="demo-name" class="glass-input" placeholder="Optional"/></div>
-        <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px">Phone Number</label>
-          <input id="demo-phone" class="glass-input" placeholder="Optional"/></div>
-        <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px">Email</label>
-          <input id="demo-email" class="glass-input" placeholder="Optional"/></div>
-        <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px">Counsellor WhatsApp <span style="color:var(--g1)">*</span></label>
-          <input id="demo-counsellor" class="glass-input" placeholder="+91 98765 43210" inputmode="tel"/></div>
-        <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px">Demo Duration</label>
-          <div id="demo-duration-dd"></div></div>
-        <div class="demo-gen-btn-cell"><button onclick="demoAdminCreate()" class="btn-primary" style="width:100%;padding:12px 20px">Generate Secure Demo Link</button></div>
+    <div class="adm-card">
+      <div class="adm-card-head">
+        <h2 class="adm-card-title">Demo links</h2>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div class="adm-chips" id="demo-chips"></div>
+          <button onclick="demoAdminRefresh()" class="adm-btn">${ADM_ICON.refresh}Refresh</button>
+        </div>
       </div>
-      <div id="demo-gen-result" style="display:none;margin-top:16px"></div>
-    </div>
-
-    <div class="panel-card" style="padding:20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <h2 style="font-size:15px;font-weight:800;color:#fff;font-family:'Montserrat',sans-serif">Demo Links</h2>
-        <button onclick="demoAdminRefresh()" class="btn-ghost" style="width:auto;padding:6px 12px;font-size:12px">↻ Refresh</button>
-      </div>
-      <div id="demo-links-wrap" style="overflow-x:auto"><p style="font-size:13px;color:var(--muted)">Loading…</p></div>
+      <div id="demo-links-wrap" style="overflow-x:auto"><p class="adm-empty">Loading…</p></div>
     </div>
   </div>`;
   // Branded custom duration dropdown (1–80 min, default 15) — replaces the native <select>.
@@ -111,39 +117,62 @@ function _demoRowParts(r){
   var durTxt = (r.duration_minutes||15)+' min demo';
   var counsNum = r.counsellor_whatsapp ? normalizeWhatsApp(r.counsellor_whatsapp) : '';
   var actions = '';
-  if(status==='not_started' || status==='active') actions += '<button onclick="demoAdminRevoke(\''+r.id+'\')" class="demo-abtn demo-abtn-revoke">Revoke</button>';
-  actions += '<button onclick="demoAdminDelete(\''+r.id+'\')" class="demo-abtn demo-abtn-delete">Delete</button>';
+  if(status==='not_started' || status==='active') actions += '<button onclick="demoAdminRevoke(\''+r.id+'\')" class="adm-btn">Revoke</button>';
+  actions += '<button onclick="demoAdminDelete(\''+r.id+'\')" class="adm-btn adm-btn-danger adm-icon-btn" aria-label="Delete link" title="Delete link">'+ADM_ICON.trash+'</button>';
+  actions = '<div style="display:inline-flex;gap:6px;align-items:center">'+actions+'</div>';
   return {status:status, remTxt:remTxt, durTxt:durTxt, counsNum:counsNum, actions:actions};
+}
+function _demoAdminRenderStats(parts){
+  var c={all:parts.length,active:0,not_started:0,expired:0,revoked:0};
+  parts.forEach(function(p){ c[p.status]=(c[p.status]||0)+1; });
+  var statsEl=document.getElementById('demo-stats');
+  var statsHtml=admStats([
+    ['Live now', c.active, c.active?'ok':''],
+    ['Not opened yet', c.not_started, c.not_started?'info':''],
+    ['Ended', c.expired],
+    ['Total links', c.all]
+  ]);
+  if(statsEl && statsEl.innerHTML!==statsHtml) statsEl.innerHTML=statsHtml;
+  var chipsEl=document.getElementById('demo-chips');
+  var chipsHtml=[['all','All'],['active','Live'],['not_started','Not opened'],['expired','Ended'],['revoked','Revoked']].map(function(k){
+    return '<button class="adm-chip'+(_demoFilter===k[0]?' on':'')+'" onclick="_demoSetFilter(\''+k[0]+'\')">'+k[1]+'<span class="n">'+(c[k[0]]||0)+'</span></button>';
+  }).join('');
+  if(chipsEl && chipsEl.innerHTML!==chipsHtml) chipsEl.innerHTML=chipsHtml;
 }
 function _demoAdminRenderTable(){
   var wrap = document.getElementById('demo-links-wrap');
   if(!wrap) return;
-  if(!_demoAdminRows.length){ wrap.innerHTML='<p style="font-size:13px;color:var(--muted);padding:6px 2px">No demo links yet. Generate one above.</p>'; return; }
-  var rows = _demoAdminRows.map(function(r){
-    var p = _demoRowParts(r);
-    var who = '<div style="font-weight:700;color:#fff;font-size:13.5px">'+(r.student_name||'Demo')+'</div>'+
-              '<div style="font-size:10.5px;color:var(--muted);margin-top:2px">'+p.durTxt+'</div>'+
-              (r.student_phone?'<div style="font-size:10px;color:var(--muted)">'+r.student_phone+'</div>':'');
+  var all = _demoAdminRows.map(function(r){ return {r:r, p:_demoRowParts(r)}; });
+  _demoAdminRenderStats(all.map(function(x){return x.p;}));
+  if(!_demoAdminRows.length){ wrap.innerHTML='<p class="adm-empty">No demo links yet. Generate one above.</p>'; return; }
+  var shown = all.filter(function(x){ return _demoFilter==='all' || x.p.status===_demoFilter; });
+  if(!shown.length){ wrap.innerHTML='<p class="adm-empty">No links in this view.</p>'; return; }
+  var rows = shown.map(function(x){
+    var r = x.r, p = x.p;
+    var who = '<p class="adm-name">'+escapeHtml(r.student_name||'Unnamed demo')+'</p>'+
+              '<p class="adm-meta">'+p.durTxt+(r.student_phone?' · '+escapeHtml(r.student_phone):'')+'</p>';
     var couns = p.counsNum
-      ? '<a href="https://wa.me/'+p.counsNum+'" target="_blank" rel="noopener" style="color:rgba(74,222,128,.9);text-decoration:none;font-size:12.5px">+'+p.counsNum+'</a>'
-      : '<span style="color:var(--muted)">—</span>';
-    var remCell = (p.status==='active') ? '<span style="font-family:\'JetBrains Mono\',monospace;color:#fff">'+p.remTxt+'</span>' : '<span style="color:var(--muted)">'+p.remTxt+'</span>';
-    return '<tr>'+
+      ? '<a href="https://wa.me/'+p.counsNum+'" target="_blank" rel="noopener" class="adm-num" style="color:#86efac;text-decoration:none">+'+p.counsNum+'</a>'
+      : '<span class="adm-muted">—</span>';
+    var remCell = (p.status==='active') ? '<span class="adm-num" style="color:#fff;font-size:13px">'+p.remTxt+'</span>' : '<span class="adm-muted">—</span>';
+    var dim = (p.status==='expired'||p.status==='revoked') ? ' style="opacity:.62"' : '';
+    return '<tr'+dim+'>'+
       '<td>'+who+'</td>'+
-      '<td style="white-space:nowrap">'+couns+'</td>'+
-      '<td style="white-space:nowrap;color:rgba(255,255,255,.7)">'+_demoFmtTime(r.activated_at)+'</td>'+
-      '<td style="white-space:nowrap;color:rgba(255,255,255,.7)">'+_demoFmtTime(r.expires_at)+'</td>'+
-      '<td>'+remCell+'</td>'+
       '<td>'+_demoStatusPill(p.status)+'</td>'+
-      '<td style="white-space:nowrap;text-align:right">'+p.actions+'</td>'+
+      '<td>'+remCell+'</td>'+
+      '<td style="white-space:nowrap">'+couns+'</td>'+
+      '<td style="white-space:nowrap">'+(r.activated_at
+        ? '<span style="color:rgba(255,255,255,.8);font-size:13px">'+_demoFmtTime(r.activated_at)+'</span><p class="adm-meta">ends '+_demoFmtTime(r.expires_at)+'</p>'
+        : '<span class="adm-muted">Not opened yet</span>')+'</td>'+
+      '<td class="right" style="white-space:nowrap">'+p.actions+'</td>'+
     '</tr>';
   }).join('');
   // Mobile card layout (shown < 720px via the wrapper's own overflow; here we provide both)
-  var cards = _demoAdminRows.map(function(r){
-    var p = _demoRowParts(r);
+  var cards = shown.map(function(x){
+    var r = x.r, p = x.p;
     return '<div style="border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:14px 16px;background:rgba(255,255,255,.02)">'+
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">'+
-        '<div><div style="font-weight:700;color:#fff;font-size:14px">'+(r.student_name||'Demo')+'</div>'+
+        '<div><div style="font-weight:700;color:#fff;font-size:14px">'+escapeHtml(r.student_name||'Unnamed demo')+'</div>'+
              '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+p.durTxt+'</div></div>'+
         _demoStatusPill(p.status)+'</div>'+
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px">'+
@@ -156,10 +185,10 @@ function _demoAdminRenderTable(){
     '</div>';
   }).join('');
   wrap.innerHTML =
-    '<div class="demo-tbl-desktop" style="overflow-x:auto"><table class="demo-tbl">'+
-      '<thead><tr><th>Student</th><th>Counsellor</th><th>Started</th><th>Expires</th><th>Remaining</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead>'+
+    '<div class="demo-tbl-desktop" style="overflow-x:auto"><table class="admin-table" style="min-width:760px">'+
+      '<thead><tr><th>Student</th><th>Status</th><th style="white-space:nowrap">Time left</th><th>Counsellor</th><th>Opened</th><th class="right"></th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table></div>'+
-    '<div class="demo-tbl-cards" style="display:none;flex-direction:column;gap:12px">'+cards+'</div>';
+    '<div class="demo-tbl-cards" style="display:none;flex-direction:column;gap:12px;padding:14px">'+cards+'</div>';
 }
 
 window.demoAdminCreate = async function(){

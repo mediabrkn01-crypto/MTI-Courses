@@ -32,6 +32,15 @@ function validityBadge(student){
   return`<span style="border-radius:99px;padding:2px 8px;font-size:10px;font-weight:600;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#4ade80">${days}d left — ${validUntil.toLocaleDateString()}</span>`;
 }
 
+function admValidityCell(student){
+  var v=getValidity(student);
+  if(!v.validUntil) return '<span class="adm-badge muted">No expiry</span>';
+  var date=v.validUntil.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+  if(v.expired) return '<span class="adm-badge bad">Expired</span><p class="adm-meta">'+date+'</p>';
+  var days=Math.ceil((v.validUntil-today)/86400000);
+  return '<span class="adm-badge '+(days<=14?'warn':'ok')+'">'+days+' day'+(days===1?'':'s')+' left</span><p class="adm-meta">until '+date+'</p>';
+}
+
 var _stuAvatarColors=['#6366f1','#8b5cf6','#d946ef','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
 function stuTableAvatar(student){
   var i=(student.name||'').split(' ').map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2);
@@ -44,8 +53,8 @@ function stuTableAvatar(student){
 
 function stuOverflowBtn(sid){
   return '<div class="stu-actions">'
-    +glassBtn('Manage',"navigate('admin-student',{id:'"+sid+"'})",'ghost')
-    +'<button class="stu-overflow-btn" data-sid="'+sid+'" onclick="event.stopPropagation();toggleStuMenu(this)">⋮</button>'
+    +'<button class="adm-btn" onclick="navigate(\'admin-student\',{id:\''+sid+'\'})">Manage</button>'
+    +'<button class="adm-btn adm-icon-btn" aria-label="More actions" data-sid="'+sid+'" onclick="event.stopPropagation();toggleStuMenu(this)">⋮</button>'
   +'</div>';
 }
 
