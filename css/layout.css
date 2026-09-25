@@ -261,3 +261,81 @@
 .wv-chip{padding:7px 14px;border-radius:99px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--muted2);font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0}
 .wv-chip:hover{color:#fff;border-color:rgba(255,255,255,.22)}
 .wv-chip.active{color:#fff;background:rgba(237,31,81,.14);border-color:rgba(237,31,81,.45)}
+
+/* Lesson pager (all sizes) */
+.ls-pager{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.ls-pg{display:flex;flex-direction:column;gap:4px;text-align:left;padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);color:#fff;cursor:pointer;min-width:0;transition:border-color .15s,background .15s}
+.ls-pg.next{text-align:right}
+.ls-pg:not(.locked):hover{border-color:rgba(255,255,255,.2);background:rgba(255,255,255,.06)}
+.ls-pg.locked{opacity:.5;cursor:default}
+.ls-pg-k{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.06em}
+.ls-pg-t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cr-mstat{display:none}
+
+/* Hide scrollbars on horizontal swipe rows (still scrollable) */
+.dsh-phases,.dsh-wv-row,.wvg-chips,#jp-dots{scrollbar-width:none}
+.dsh-phases::-webkit-scrollbar,.wvg-chips::-webkit-scrollbar,#jp-dots::-webkit-scrollbar{display:none}
+
+/* Achievements: locked badges readable */
+.ach-card.locked-ach{opacity:.55}
+.ach-card.locked-ach .ach-emoji{filter:grayscale(1)}
+
+/* ══ PHONE (≤767px) ══ */
+@media(max-width:767px){
+  /* Drawer above the bottom nav so its footer (Profile / Sign out) is reachable */
+  #sidebar{z-index:300!important;padding-bottom:env(safe-area-inset-bottom)}
+  #sidebar-overlay{z-index:290!important}
+  #sidebar .sb-toggle{display:none}
+
+  /* Dashboard */
+  #dash-inner>div:first-child{align-items:stretch!important;margin-bottom:18px!important}
+  #dash-inner>div:first-child h1{font-size:26px!important}
+  #dash-inner>div:first-child>.dsh-card{width:100%;box-sizing:border-box}
+  .dsh-mission .star-border-container{display:block!important}
+  .dsh-mission #cm-btn{width:100%;justify-content:center}
+  .dsh-stat{padding:14px}
+  .dsh-stat-top{font-size:11.5px;gap:6px;white-space:nowrap}
+  .dsh-stat-ico{display:none}
+  .dsh-journey .dsh-sec-head{align-items:flex-start}
+  .dsh-jcount{display:block;margin:4px 0 0!important}
+  .dsh-link{white-space:nowrap}
+  .dsh-sec-head .dsh-h2{font-size:15px}
+
+  /* Course */
+  .dsh-wrap>div:first-child>.dsh-card{width:100%;min-width:0!important;box-sizing:border-box}
+  .cr-phase-name{font-size:19px}
+  .cr-mstat{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;margin-top:6px}
+  .cr-mstat.done{color:#4ade80}
+  .cr-mstat.locked{color:var(--muted)}
+  .cr-row.next .cr-title{font-size:15px}
+
+  /* Workshop */
+  .dsh-wrap h1{font-size:24px!important}
+  .wvg-banner{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;align-items:start}
+  .wvg-banner .cr-btn{grid-column:1/-1;justify-content:center}
+  .wvg-grid{grid-template-columns:1fr 1fr;gap:10px}
+  .wvc.wvg .wvc-body{padding:10px}
+  .wvc.wvg .wvc-t{font-size:12.5px}
+  .wvg-meta{font-size:10.5px}
+
+  /* Lesson */
+  .ls-top .ls-nav{display:none}
+  .ls-top #mark-complete-btn{padding:8px 11px!important;font-size:11.5px!important}
+  .ls-pager{grid-template-columns:1fr;gap:8px}
+  .ls-pg.next{text-align:left}
+  .ls-card{padding:16px}
+  .ls-obj li{font-size:13.5px}
+
+  /* Profile */
+  .pf-id{display:grid;grid-template-columns:64px minmax(0,1fr);column-gap:14px;row-gap:2px;text-align:left;align-items:center;padding:18px}
+  .pf-id .avatar-upload{grid-row:1/4;margin-bottom:0}
+  .pf-id #profile-avatar>*{width:64px!important;height:64px!important;font-size:22px!important}
+  .pf-id .pf-name{grid-column:2;font-size:18px}
+  .pf-id .pf-email{grid-column:2;margin:0;font-size:12px}
+  .pf-id .pf-role{grid-column:2;justify-self:start;margin-top:4px}
+  .pf-id .pf-hint{display:none}
+  .pf-id .pf-status,.pf-id .pf-signout{grid-column:1/-1}
+  .pf-id .pf-status{margin-top:16px}
+  .pf-stats .dsh-stat-top{font-size:11px;white-space:nowrap}
+  .pf-stats .dsh-stat-val{font-size:20px}
+}

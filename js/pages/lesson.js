@@ -164,9 +164,19 @@ function renderLesson(lessonId){
                 :'<p style="font-size:12px;color:var(--muted);margin:0">No quiz for this mission.</p>')
             +'</div>'
           +'</div>'
+          +(function(){
+            function pg(l,dir){
+              if(!l) return '<span></span>';
+              var ok=isUnlocked(l);
+              return '<button type="button" class="ls-pg '+dir+(ok?'':' locked')+'"'+(ok?' onclick="navigate(\'lesson\',{id:\''+l.id+'\'})"':' disabled')+'>'
+                +'<span class="ls-pg-k">'+(dir==='prev'?'← Previous · Day '+l.order:'Next · Day '+l.order+' →')+(ok?'':' · Locked')+'</span>'
+                +'<span class="ls-pg-t">'+escapeHtml(getLessonTitle(l))+'</span></button>';
+            }
+            return '<div class="ls-pager">'+pg(prevL,'prev')+pg(nextL,'next')+'</div>';
+          })()
         +'</div>'
       +'</div>'
-      +'<aside id="mp-right" class="mp-right-panel ls-side">'
+      +'<aside id="mp-right\" class="mp-right-panel ls-side">'
         +'<div class="ls-side-h">'
           +'<div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span class="ls-side-k">All missions</span><span class="ls-side-n">'+sectionDone+'/'+section.lessons.length+' done</span></div>'
           +'<div class="dsh-bar" style="margin-top:8px;height:4px"><span style="width:'+Math.round(sectionDone/section.lessons.length*100)+'%"></span></div>'

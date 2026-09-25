@@ -165,6 +165,7 @@ function renderMyCourses(){
           +(isNext?'<span class="cr-tag">Up next</span>':'')
           +'<h3 class="cr-title">'+escapeHtml(getLessonTitle(l))+'</h3>'
           +'<div class="cr-meta"><span>'+escapeHtml(dur)+'</span><span>'+diff+'</span><span class="xp">+'+xp+' XP</span></div>'
+          +(completed?'<div class="cr-mstat done">'+checkIc+'Completed</div>':!unlocked?'<div class="cr-mstat locked">'+lockIc+'Locked</div>':'')
         +'</div>'
         +'<div class="cr-act">'+action+'</div>'
       +'</div>';

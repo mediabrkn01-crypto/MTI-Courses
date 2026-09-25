@@ -433,7 +433,7 @@ function renderDashboard(){
     // JOURNEY PROGRESS
     '<div class="dsh-card dsh-journey">'+
       '<div class="dsh-sec-head">'+
-        '<h2 class="dsh-h2">Journey progress <span class="dsh-mono" style="font-size:12px;color:var(--muted2);font-weight:400;margin-left:6px">'+accentDone+' of '+accentLessons.length+' days</span></h2>'+
+        '<h2 class="dsh-h2">Journey progress <span class="dsh-mono dsh-jcount" style="font-size:12px;color:var(--muted2);font-weight:400;margin-left:6px">'+accentDone+' of '+accentLessons.length+' days</span></h2>'+
         '<button class="dsh-link" onclick="navigate(\'courses\')">View all →</button>'+
       '</div>'+
       '<div class="journey-dots dock-row" id="jp-dots">'+dots+'</div>'+
@@ -452,6 +452,19 @@ function renderDashboard(){
     '<div class="dsh-wv-row dock-row">'+wvCards+'</div>'+
 
     '</div></div>';
+
+  // Keep the current day visible in the journey strip on narrow screens.
+  requestAnimationFrame(function(){
+    var strip=document.getElementById('jp-dots');
+    var cur=strip&&strip.querySelector('.jd-dot.current');
+    if(strip&&cur&&strip.scrollWidth>strip.clientWidth){
+      var item=cur.parentElement;
+      strip.scrollLeft=Math.max(0,item.offsetLeft-strip.clientWidth/2+item.clientWidth/2);
+    }
+    var ph=document.querySelector('.dsh-phases');
+    var act=ph&&ph.querySelector('.dsh-phase.active');
+    if(ph&&act&&ph.scrollWidth>ph.clientWidth) ph.scrollLeft=Math.max(0,act.offsetLeft-ph.offsetLeft-14);
+  });
 
   // Wire Continue Mission button
   if(nextLesson){
