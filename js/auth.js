@@ -49,10 +49,17 @@ window.doStudentLogin=async()=>{
         } else if(!profRes.error&&usedSupabaseAuth){
           // Auth succeeded but no student profile found for this JWT — broken link
           if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
-          errEl.textContent="We couldn't load your course account. Please contact your admin. (PROFILE_LINK_ERROR)";
-          errEl.style.display="block";
-          // Sign out the dangling session so they don't get stuck
+          // An admin account has no student profile. Point it to the admin app instead of
+          // showing a link error. Nothing is granted here — the session is signed out either way.
+          var _isAdm=false;
+          try{var _ar=await _sb.rpc('is_admin');_isAdm=!_ar.error&&_ar.data===true;}catch(e){}
           try{await _sb.auth.signOut();}catch(e){}
+          if(_isAdm){
+            errEl.innerHTML='This is an admin account. Admins sign in at the <a href="admin.html" style="color:#fff;font-weight:700;text-decoration:underline">Admin portal</a>.';
+          } else {
+            errEl.textContent="We couldn't load your course account. Please contact your admin. (PROFILE_LINK_ERROR)";
+          }
+          errEl.style.display="block";
           return;
         }
       }
