@@ -32,6 +32,57 @@ function validityBadge(student){
   return`<span style="border-radius:99px;padding:2px 8px;font-size:10px;font-weight:600;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:#4ade80">${days}d left — ${validUntil.toLocaleDateString()}</span>`;
 }
 
+var _stuAvatarColors=['#6366f1','#8b5cf6','#d946ef','#ec4899','#f43f5e','#f97316','#eab308','#22c55e','#14b8a6','#06b6d4','#3b82f6'];
+function stuTableAvatar(student){
+  var i=(student.name||'').split(' ').map(function(n){return n[0]||'';}).join('').toUpperCase().slice(0,2);
+  var hash=0;for(var c=0;c<(student.email||student.name||'').length;c++)hash=((hash<<5)-hash)+(student.email||student.name).charCodeAt(c);
+  var bg=_stuAvatarColors[Math.abs(hash)%_stuAvatarColors.length];
+  var p=getPhoto(student.id);
+  if(p) return '<img src="'+p+'" class="stu-avatar" style="object-fit:cover" alt=""/>';
+  return '<div class="stu-avatar" style="background:'+bg+'">'+i+'</div>';
+}
+
+function stuOverflowBtn(sid){
+  return '<div class="stu-actions">'
+    +glassBtn('Manage',"navigate('admin-student',{id:'"+sid+"'})",'ghost')
+    +'<button class="stu-overflow-btn" data-sid="'+sid+'" onclick="event.stopPropagation();toggleStuMenu(this)">⋮</button>'
+  +'</div>';
+}
+
+// Single menu attached to <body>: the .lg table wrapper's backdrop-filter makes it
+// the containing block for fixed children, so an in-row menu gets clipped.
+window.toggleStuMenu=function(btn){
+  var sid=btn.getAttribute('data-sid');
+  var menu=document.getElementById('stu-overflow-menu');
+  var wasOpen=menu&&menu.classList.contains('open')&&menu.getAttribute('data-sid')===sid;
+  closeStuMenus();
+  if(wasOpen) return;
+  if(!menu){
+    menu=document.createElement('div');
+    menu.id='stu-overflow-menu';
+    menu.className='stu-overflow-menu';
+    menu.addEventListener('click',function(e){e.stopPropagation();});
+    document.body.appendChild(menu);
+  }
+  menu.setAttribute('data-sid',sid);
+  menu.innerHTML=
+    '<button onclick="closeStuMenus();openEditStudent(\''+sid+'\')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit</button>'
+    +'<button class="danger-item" onclick="closeStuMenus();confirmDelete(\''+sid+'\')"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>Delete</button>';
+  var r=btn.getBoundingClientRect();
+  menu.classList.add('open');
+  var mh=menu.offsetHeight;
+  var top=(r.bottom+4+mh>window.innerHeight)?(r.top-4-mh):(r.bottom+4);
+  menu.style.top=top+'px';
+  menu.style.left=Math.min(window.innerWidth-menu.offsetWidth-8,Math.max(8,r.right-menu.offsetWidth))+'px';
+};
+window.addEventListener('scroll',function(){closeStuMenus();},true);
+window.closeStuMenus=function(){
+  [].slice.call(document.querySelectorAll('.stu-overflow-menu.open')).forEach(function(m){m.classList.remove('open');});
+};
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.stu-actions')) closeStuMenus();
+});
+
 function _fmtClock(ms){
   var s = Math.max(0, Math.round(ms/1000));
   var m = Math.floor(s/60); s = s%60;

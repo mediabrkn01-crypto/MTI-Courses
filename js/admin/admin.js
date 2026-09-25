@@ -146,36 +146,14 @@ function renderAdmin(tab){
             <button onclick="bulkDeleteStudents()" style="padding:8px 18px;border-radius:10px;background:rgba(248,113,113,.15);border:1px solid rgba(248,113,113,.4);color:#f87171;font-size:13px;font-weight:700;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(248,113,113,.28)'" onmouseout="this.style.background='rgba(248,113,113,.15)'">Delete Selected</button>
             <button onclick="bulkClearSelection()" style="padding:8px 14px;border-radius:10px;background:none;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:13px;font-weight:600;cursor:pointer">Clear</button>
           </div>
-          <table class="admin-table" style="min-width:660px">
+          <table class="admin-table" style="min-width:580px">
             <thead><tr>
               <th style="width:38px"><input type="checkbox" id="bulk-all" onchange="bulkToggleAll(this.checked)" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></th>
               <th>Student</th><th>Validity</th>
-              <th class="center">Access</th><th class="center">Status</th>
+              <th class="center">Access</th>
               <th class="right">Actions</th>
             </tr></thead>
-            <tbody id="stu-tbody">
-              ${list.map((s,i)=>{
-                const{expired}=getValidity(s);
-                const locked=getLockedVideos(s.id);
-                return`<tr>
-                  <td><input type="checkbox" class="bulk-chk" data-sid="${s.id}" onchange="bulkUpdateBar()" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></td>
-                  <td><p style="font-weight:600;color:#fff">${s.name}</p><p style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:1px">${s.email}</p></td>
-                  <td>${validityBadge(s)}</td>
-                  <td class="center"><span class="pill pill-orange">${(s.accessList||[]).length}/${ALL_LESSONS.length}</span></td>
-                  <td class="center">
-                    ${expired?'<span class="pill pill-red">Expired</span>':'<span class="pill pill-green">Active</span>'}
-                    ${locked.length>0?`<span class="pill pill-yellow" style="margin-left:4px">${locked.length} locked</span>`:''}
-                  </td>
-                  <td class="right" style="white-space:nowrap">
-                    <div style="display:inline-flex;gap:6px">
-                      ${glassBtn('Manage',`navigate('admin-student',{id:'${s.id}'})`,'ghost')}
-                      ${glassBtn('Edit',`openEditStudent('${s.id}')`,'ghost')}
-                      ${glassBtn('Delete',`confirmDelete('${s.id}')`,'danger')}
-                    </div>
-                  </td>
-                </tr>`;
-              }).join('')}
-            </tbody>
+            <tbody id="stu-tbody"></tbody>
           </table>
         </div>`}
   </div>`;
@@ -198,17 +176,18 @@ function renderAdmin(tab){
     tbody.innerHTML=filtered.map(function(s){
       var v=getValidity(s); var expired=v.expired;
       var locked=getLockedVideos(s.id);
-      return '<tr>'+
-        '<td><input type="checkbox" class="bulk-chk" data-sid="'+s.id+'" onchange="bulkUpdateBar()" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></td>'+
-        '<td><p style="font-weight:600;color:#fff">'+s.name+'</p><p style="font-size:12px;color:rgba(255,255,255,0.45);margin-top:1px">'+s.email+'</p></td>'+
-        '<td>'+validityBadge(s)+'</td>'+
+      var statusDot=expired
+        ?'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:6px;flex-shrink:0;vertical-align:middle"></span>'
+        :'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:6px;flex-shrink:0;vertical-align:middle"></span>';
+      return '<tr onclick="navigate(\'admin-student\',{id:\''+s.id+'\'})" style="cursor:pointer">'+
+        '<td onclick="event.stopPropagation()"><input type="checkbox" class="bulk-chk" data-sid="'+s.id+'" onchange="bulkUpdateBar()" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></td>'+
+        '<td><div style="display:flex;align-items:center;gap:12px">'+stuTableAvatar(s)+
+          '<div style="min-width:0"><p style="font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.name+'</p>'+
+          '<p style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+s.email+'</p></div></div></td>'+
+        '<td><div style="display:flex;align-items:center">'+statusDot+validityBadge(s)+'</div>'+
+          (locked.length>0?'<span class="pill pill-yellow" style="margin-top:4px;display:inline-flex">'+locked.length+' locked</span>':'')+'</td>'+
         '<td class="center"><span class="pill pill-orange">'+(s.accessList||[]).length+'/'+ALL_LESSONS.length+'</span></td>'+
-        '<td class="center">'+(expired?'<span class="pill pill-red">Expired</span>':'<span class="pill pill-green">Active</span>')+(locked.length>0?'<span class="pill pill-yellow" style="margin-left:4px">'+locked.length+' locked</span>':'')+'</td>'+
-        '<td class="right" style="white-space:nowrap"><div style="display:inline-flex;gap:6px">'+
-          glassBtn('Manage',"navigate('admin-student',{id:'"+s.id+"'})",'ghost')+
-          glassBtn('Edit',"openEditStudent('"+s.id+"')",'ghost')+
-          glassBtn('Delete',"confirmDelete('"+s.id+"')",'danger')+
-        '</div></td>'+
+        '<td class="right" style="white-space:nowrap" onclick="event.stopPropagation()">'+stuOverflowBtn(s.id)+'</td>'+
       '</tr>';
     }).join('');
   };
