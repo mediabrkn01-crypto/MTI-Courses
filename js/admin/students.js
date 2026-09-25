@@ -283,10 +283,19 @@ async function renderAdminStudent(id){
     if(msg)msg.style.display='none';
     var result=await window.adminSetStudentPassword(sid,pass);
     if(result.success){
-      if(msg){msg.textContent='✓ Login password updated. Student can now sign in on any device.';msg.style.color='#4ade80';msg.style.display='block';}
+      if(msg){msg.textContent='✓ Login password updated. Student can now sign in on any device.'+(result.warning?' (Note: '+result.warning+')':'');msg.style.color='#4ade80';msg.style.display='block';}
       if(document.getElementById('sp-pass'))document.getElementById('sp-pass').value='';
       if(document.getElementById('sp-pass2'))document.getElementById('sp-pass2').value='';
-      if(result.warning&&msg)msg.textContent+=' (Note: '+result.warning+')';
+      // Offer the onboarding guide with the password Supabase just accepted (memory only, this page only).
+      var _stu=loadStudents()[sid]||{};
+      var _creds={name:_stu.name||'',email:_stu.email||'',password:pass};
+      if(msg&&_creds.name&&_creds.email){
+        var gb=document.createElement('button');
+        gb.type='button'; gb.className='adm-btn adm-btn-primary'; gb.style.marginTop='10px';
+        gb.innerHTML='<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>Download Student Guide';
+        gb.onclick=function(){ downloadStudentGuide(_creds,gb).catch(function(e){ msg.appendChild(document.createTextNode(' — Could not create the PDF: '+(e.message||e))); }); };
+        msg.appendChild(document.createElement('br')); msg.appendChild(gb);
+      }
     }else{
       if(msg){msg.textContent='Failed: '+(result.error||'unknown error');msg.style.color='#f87171';msg.style.display='block';}
     }

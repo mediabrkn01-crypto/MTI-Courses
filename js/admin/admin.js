@@ -332,24 +332,33 @@ function renderAdmin(tab){
     _smOpen();
   };
   window.closeModal=()=>{
+    _smGuideCreds=null; window._smCreds='';
     _smEl('student-modal').style.display='none';
     document.removeEventListener('keydown',_smEsc);
     var p=_smEl('s-pass'); if(p){p.value='';p.type='password';}
   };
+  // Credentials for the guide exist only in this closure while the success screen is open.
+  var _smGuideCreds=null;
   function _smDone(name,email,pass,isNew){
     _smEl('sm-body').style.display='none'; _smEl('sm-foot').style.display='none';
     var d=_smEl('sm-done'); d.style.display='';
+    _smGuideCreds=pass?{name:name,email:email,password:pass}:null;
     d.innerHTML='<div class="sm-ok"><div class="sm-ok-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>'
-      +'<h3>'+(isNew?'Student added':'Changes saved')+'</h3>'
+      +'<h3>'+(isNew?'Student created successfully':(pass?'Password updated':'Changes saved'))+'</h3>'
       +'<p class="adm-hint" style="margin:4px 0 16px">'+escapeHtml(name)+(pass?' can now sign in with these details on any device.':'.')+'</p>'
-      +(pass?'<div class="sm-cred"><div><span>Email</span><b>'+escapeHtml(email)+'</b></div><div><span>Password</span><b id="sm-cred-pass">'+escapeHtml(pass)+'</b></div></div>'
+      +(pass?'<div class="sm-cred"><div><span>Student</span><b style="font-family:inherit">'+escapeHtml(name)+'</b></div><div><span>Email</span><b>'+escapeHtml(email)+'</b></div><div><span>Password</span><b id="sm-cred-pass">'+escapeHtml(pass)+'</b></div></div>'
+        +'<button type="button" id="sm-guide-btn" class="adm-btn adm-btn-primary adm-btn-lg" style="width:100%;margin-bottom:8px" onclick="smDownloadGuide(this)">'
+          +'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>Download Student Guide</button>'
+        +'<p id="sm-guide-err" class="adm-hint" style="display:none;color:#fb7185;margin:0 0 8px"></p>'
         +'<button type="button" class="adm-btn" style="width:100%;margin-bottom:10px" onclick="smCopyCreds(this)">Copy sign-in details</button>':'')
-      +'<button type="button" class="adm-btn adm-btn-primary adm-btn-lg" style="width:100%" onclick="closeModal();navigate(\'admin\',{tab:\'students\'})">Done</button></div>';
+      +'<button type="button" class="adm-btn'+(pass?'':' adm-btn-primary adm-btn-lg')+'" style="width:100%" onclick="closeModal();navigate(\'admin\',{tab:\'students\'})">Done</button></div>';
     window._smCreds=pass?('Email: '+email+'\nPassword: '+pass+'\nSign in at: '+new URL('./',location.href).href):'';
   }
-  window.smCopyCreds=function(btn){
-    var t=window._smCreds||''; if(!t) return;
-    (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){btn.textContent='Copied ✓';},function(){btn.textContent='Copy failed — select the text above';});
+  window.smDownloadGuide=async function(btn){
+    var err=_smEl('sm-guide-err'); if(err) err.style.display='none';
+    if(!_smGuideCreds) return;
+    try{ await downloadStudentGuide(_smGuideCreds,btn); }
+    catch(e){ if(err){ err.textContent='Could not create the PDF: '+(e.message||e); err.style.display='block'; } }
   };
   // Update ONLY this student in the local cache (saveStudents() would re-upload every student).
   function _smCacheStudent(stu){
