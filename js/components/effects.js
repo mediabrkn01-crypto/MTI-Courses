@@ -2,16 +2,18 @@
    Source lines: 7244-7447
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
 // ── DOCK MAGNIFICATION (macOS-style hover scaling) ──────────────────────────
-function initDockMagnify(row, mode){
+function initDockMagnify(row, mode, opts){
   if(!row || row.dataset.dockInit) return;
   row.dataset.dockInit = '1';
   mode = mode || 'row'; // 'row' = horizontal strip, 'col' = vertical list
+  if(!opts && row.dataset.dockOpts){ try{ opts = JSON.parse(row.dataset.dockOpts); }catch(e){} }
+  opts = opts || {};
 
-  var maxScale = mode === 'col' ? 1.11 : 1.14; // noticeable pop, kept inside the gaps
-  var influence = mode === 'col' ? 120 : 140; // reach
-  var maxLift = mode === 'col' ? 6 : 10; // px the hovered item shifts by, dock-style
+  var maxScale = opts.maxScale || (mode === 'col' ? 1.11 : 1.14); // noticeable pop, kept inside the gaps
+  var influence = opts.influence || (mode === 'col' ? 120 : 140); // reach
+  var maxLift = opts.maxLift != null ? opts.maxLift : (mode === 'col' ? 6 : 10); // px the hovered item shifts by, dock-style
   var isSingleRow = getComputedStyle(row).display.indexOf('grid') === -1;
-  var origin = mode === 'col' ? 'center left' : (isSingleRow ? 'bottom center' : 'center center');
+  var origin = opts.origin || (mode === 'col' ? 'center left' : (isSingleRow ? 'bottom center' : 'center center'));
 
   var children = Array.prototype.slice.call(row.children);
   var state = children.map(function(){ return {current: 1, target: 1}; });

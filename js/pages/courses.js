@@ -177,7 +177,7 @@ function renderMyCourses(){
         +'<div class="cr-phase-p"><span>'+phaseDoneCount+'/'+phaseLessons.length+' done</span>'
         +'<div class="dsh-bar'+(isPhaseComplete?' ok':'')+'" style="width:120px;height:4px"><span style="width:'+Math.round(phaseDoneCount/phaseLessons.length*100)+'%"></span></div></div>'
       +'</div>'
-      +'<div class="cr-list">'+rows+'</div>'
+      +'<div class="cr-list dock-col" data-dock-opts=\'{"maxScale":1.04,"influence":170,"maxLift":0,"origin":"center center"}\'>'+rows+'</div>'
       +'</section>';
   }).join('');
 
@@ -199,5 +199,7 @@ function renderMyCourses(){
       ${phaseHtml}
     </div>
   </div>`;
+  requestAnimationFrame(function(){
+    document.querySelectorAll('.cr-list.dock-col').forEach(function(el){ initDockMagnify(el,'col'); });
+  });
 }
-
