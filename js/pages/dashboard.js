@@ -415,9 +415,9 @@ function renderDashboard(){
           '<div class="dsh-meta"><span>'+escapeHtml(cmDur)+'</span><span>+'+cmXp+' XP</span><span>'+cmDiff+'</span></div>'+
           '<div><div class="star-border-container" style="border-radius:10px;display:inline-block"><div class="border-gradient-bottom"></div><div class="border-gradient-top"></div><button id="cm-btn" type="button" class="star-border-inner" style="display:inline-flex;align-items:center;gap:10px;padding:13px 26px;background:var(--grad);border:1px solid #222;border-radius:10px;color:#fff;font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(255,45,120,.4);letter-spacing:.02em">'+(completedCount===0?'Start your journey →':'Continue mission →')+'</button></div></div>'+
         '</div>'+
-        '<div class="dsh-mission-thumb">'+
+        '<div class="dsh-mission-art'+(cmThumb?'':' empty')+'">'+
           (cmThumb?'<img src="'+escapeAttr(cmThumb)+'" alt="" onerror="this.remove()"/>':'')+
-          '<div class="dsh-play"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="#ED1F51"><path d="M8 5v14l11-7z"/></svg></span></div>'+
+          '<span class="dsh-play"><svg width="22" height="22" viewBox="0 0 24 24" fill="#ED1F51"><path d="M8 5v14l11-7z"/></svg></span>'+
         '</div>'+
       '</div>'
     :'')+

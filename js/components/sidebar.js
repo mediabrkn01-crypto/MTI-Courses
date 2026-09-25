@@ -88,21 +88,21 @@ function sidebarHtml(active){
     <!-- NAV -->
     <nav class="sb-nav">
       <div class="sb-sec">Core</div>
-      <div class="sb-item ${active==='dashboard'?'active':''}" data-tip="Dashboard" title="Dashboard" onclick="closeSidebar();navigate('dashboard')">
+      <div class="sb-item ${active==='dashboard'?'active':''}" data-tip="Dashboard" onclick="closeSidebar();navigate('dashboard')">
         <span class="sb-icon"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><div class="sb-lbl">Dashboard</div>
       </div>
-      <div class="sb-item ${active==='courses'?'active':''}" data-tip="The Course" title="The Course" onclick="closeSidebar();navigate('courses')">
+      <div class="sb-item ${active==='courses'?'active':''}" data-tip="The Course" onclick="closeSidebar();navigate('courses')">
         <span class="sb-icon"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20"/></svg></span><div class="sb-lbl">The Course</div>
       </div>
-      <div class="sb-item ${active==='wordvault'?'active':''}" data-tip="Pronunciation Workshop" title="Pronunciation Workshop" onclick="closeSidebar();navigate('wordvault')">
+      <div class="sb-item ${active==='wordvault'?'active':''}" data-tip="Pronunciation Workshop" onclick="closeSidebar();navigate('wordvault')">
         <span class="sb-icon"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0"/><path d="M12 18v3.5"/></svg></span><div class="sb-lbl">Pronunciation Workshop</div>
       </div>
-      <div class="sb-item ${active==='live'?'active':''}" data-tip="Live With Sreekanth" title="Live With Sreekanth" onclick="closeSidebar();navigateLive(${completedCount})">
+      <div class="sb-item ${active==='live'?'active':''}" data-tip="Live With Sreekanth" onclick="closeSidebar();navigateLive(${completedCount})">
         <span class="sb-icon"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="13" height="12" rx="2.5"/><path d="m16 10 5-3v10l-5-3z"/></svg></span><div class="sb-lbl">Live With Sreekanth</div>
         ${(completedCount+(typeof WV_DATA!=='undefined'?WV_DATA.filter(function(f){return isCompleted(f.id);}).length:0))>=30?'':'<span class="sb-lock-ic"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>'}
       </div>
       <div class="sb-sec">You</div>
-      <div class="sb-item ${active==='achievements'?'active':''}" data-tip="Achievements" title="Achievements" onclick="closeSidebar();navigate('achievements')">
+      <div class="sb-item ${active==='achievements'?'active':''}" data-tip="Achievements" onclick="closeSidebar();navigate('achievements')">
         <span class="sb-icon"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0z"/><path d="M7 6H4.5a2.5 2.5 0 0 0 3 4.5"/><path d="M17 6h2.5a2.5 2.5 0 0 1-3 4.5"/><path d="M9 20h6"/><path d="M12 13v7"/></svg></span><div class="sb-lbl">Achievements</div>
         ${(function(){
           var earnedNow = BADGES.filter(function(b){return b.check&&b.check({completed:completedCount,quizzes:0});}).map(function(b){return b.id;});
