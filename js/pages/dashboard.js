@@ -77,109 +77,99 @@ function renderProfile(){
   const quizCount=ALL_LESSONS.filter(l=>hasRealQuiz(l)&&isUnlocked(l)&&isCompleted(l.id)).length;
   const pct=Math.round((completedCount/ALL_LESSONS.length)*100);
 
+  const quizTotal=ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
+  const fmtLong=d=>d.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
+  const access=(()=>{
+    const{validUntil,expired}=getValidity(student);
+    if(student.completedAt) return{c:'ok',t:'Course complete — lifetime access',s:'Finished '+fmtLong(new Date(student.completedAt))+'. Revisit any lesson anytime.'};
+    if(!validUntil) return{c:'muted',t:'Active access',s:'Complete all lessons to keep everything unlocked for life.'};
+    const days=Math.ceil((validUntil-today)/86400000);
+    if(expired) return{c:'bad',t:'Access expired',s:'Ended '+fmtLong(validUntil)+'. Contact your admin to renew.'};
+    if(days<=7) return{c:'bad',t:'Expires in '+days+' day'+(days===1?'':'s'),s:'Valid until '+fmtLong(validUntil)+'. Contact your admin to extend.'};
+    if(days<=30) return{c:'warn',t:days+' days remaining',s:'Valid until '+fmtLong(validUntil)+'. Finish the course to keep lifetime access.'};
+    return{c:'ok',t:'Active · '+days+' days left',s:'Valid until '+fmtLong(validUntil)+'. Finish the course to keep lifetime access.'};
+  })();
+  const pfStat=(label,val,of)=>`<div class="dsh-card dsh-stat">
+    <div class="dsh-stat-top">${label}</div>
+    <div class="dsh-stat-val">${val}${of?`<small>/${of}</small>`:''}</div>
+    ${of?`<div class="dsh-bar${val>=of?' ok':''}"><span style="width:${Math.round(val/of*100)}%"></span></div>`:''}
+  </div>`;
+  const eyeOff='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  const pwField=(id,label,ph)=>`<div>
+    <label style="display:block;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);margin-bottom:6px">${label}</label>
+    <div style="position:relative"><input id="${id}" type="password" autocomplete="new-password" placeholder="${ph}" class="glass-input" style="padding-right:44px"/><button type="button" aria-label="Show password" onclick="togglePw('${id}',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,.55);padding:0;line-height:1">${eyeOff}</button></div>
+  </div>`;
+
   app.innerHTML=sidebarHtml("profile")+`
   <div id="main-content">
     ${topBarHtml(student)}
     ${mobileNavHtml("profile")}
-    <div style="padding:20px 16px 60px;max-width:720px;width:100%">
-      <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">Profile</h1>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:20px">Your account details and learning progress.</p>
+    <div class="pf-wrap">
+      <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:#fff;margin:0 0 4px">Profile</h1>
+      <p style="font-size:13px;color:var(--muted2);margin:0 0 22px">Your account details and learning progress.</p>
 
-      <div class="lg" style="padding:20px;margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-        <div class="avatar-upload" style="flex-shrink:0" onclick="document.getElementById('photo-input').click()" title="Tap to change photo">
-          <div id="profile-avatar">${avatarHtml(student,64,24)}</div>
-          <div class="avatar-overlay rounded-2xl">
-            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
-            </svg>
+      <div class="pf-grid">
+        <aside class="dsh-card pf-id">
+          <div class="avatar-upload" onclick="document.getElementById('photo-input').click()" title="Change photo">
+            <div id="profile-avatar">${avatarHtml(student,88,32)}</div>
+            <div class="avatar-overlay rounded-2xl">
+              <svg style="width:22px;height:22px;color:#fff" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <input id="photo-input" type="file" accept="image/*" style="display:none" onchange="handlePhotoUpload(event,'${student.id}')"/>
           </div>
-          <input id="photo-input" type="file" accept="image/*" style="display:none" onchange="handlePhotoUpload(event,'${student.id}')"/>
-        </div>
-        <div style="flex:1;min-width:0">
-          <p style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:17px;color:#fff">${student.name}</p>
-          <p style="font-size:13px;color:var(--muted);margin-top:3px">${student.email}</p>
-          <span style="display:inline-block;margin-top:8px;border-radius:99px;background:rgba(232,52,26,0.15);border:1px solid rgba(232,52,26,0.28);padding:2px 10px;font-size:11px;font-weight:700;color:var(--brand-2)">Student</span>
-          <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:6px">Tap photo to change</p>
+          <p class="pf-name">${escapeHtml(student.name)}</p>
+          <p class="pf-email">${escapeHtml(student.email)}</p>
+          <span class="pf-role">Student</span>
+          <p class="pf-hint">Tap your photo to change it</p>
+          <div class="pf-status ${access.c}">
+            <p class="pf-status-t">${access.t}</p>
+            <p class="pf-status-s">${access.s}</p>
+          </div>
+          <button onclick="logout()" class="pf-signout">
+            <svg style="width:16px;height:16px;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Sign out
+          </button>
+        </aside>
+
+        <div style="min-width:0">
+          <div class="pf-stats">
+            ${pfStat('Lessons done',completedCount,ALL_LESSONS.length)}
+            ${pfStat('Quizzes done',quizCount,quizTotal)}
+            ${pfStat('Progress',pct+'%')}
+          </div>
+
+          <section class="dsh-card pf-sec">
+            <div class="pf-sec-head"><h2 class="dsh-h2">Account details</h2></div>
+            <dl class="pf-rows">
+              <div class="pf-row"><dt>Full name</dt><dd>${escapeHtml(student.name)}</dd></div>
+              <div class="pf-row"><dt>Email address</dt><dd>${escapeHtml(student.email)}</dd></div>
+              <div class="pf-row"><dt>Member since</dt><dd>${student.createdAt?fmtLong(new Date(student.createdAt)):'—'}</dd></div>
+            </dl>
+            <p class="pf-note">To update your name or email, contact your course admin.</p>
+          </section>
+
+          <section class="dsh-card pf-sec" id="pass-card">
+            <div class="pf-sec-head">
+              <h2 class="dsh-h2">Password</h2>
+              <button onclick="togglePassForm()" id="pass-toggle-btn" class="pf-btn">Change</button>
+            </div>
+            <div id="pass-form" style="display:none;flex-direction:column;gap:12px">
+              ${pwField('new-pass','New password','At least 6 characters')}
+              ${pwField('confirm-pass','Confirm password','Re-enter new password')}
+              <div style="display:flex;gap:10px">
+                <button id="pass-save-btn" onclick="savePassword()" class="btn-primary flex-1" style="padding:11px;font-size:14px">Save password</button>
+                <button onclick="togglePassForm()" class="btn-ghost flex-1" style="padding:11px;font-size:14px">Cancel</button>
+              </div>
+              <p id="pass-err" style="display:none;font-size:12px;color:#fca5a5;margin:0"></p>
+              <p id="pass-ok" style="display:none;font-size:12px;color:#4ade80;margin:0">✓ Password updated successfully.</p>
+            </div>
+            <p id="pass-placeholder" style="margin:0;font-size:13px;color:var(--muted2)">Use a password you don't use anywhere else.</p>
+          </section>
         </div>
       </div>
-
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
-        ${[
-          {label:"Lessons Done",value:completedCount,color:"#4ade80"},
-          {label:"Quizzes Ready",value:quizCount,color:"var(--g3)"},
-          {label:"Progress",value:pct+"%",color:"#60a5fa"},
-        ].map(s=>`<div class="stat-card">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:${s.color};line-height:1;margin-bottom:4px">${s.value}</div>
-          <div class="stat-label">${s.label}</div>
-        </div>`).join("")}
-      </div>
-
-      <div class="lg" style="padding:20px;margin-bottom:16px">
-        <p style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:#fff;margin-bottom:16px">Account Details</p>
-        <div style="display:flex;flex-direction:column;gap:14px">
-          ${[
-            ["Full Name",student.name],
-            ["Email Address",student.email],
-            ["Member Since",new Date(student.createdAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})],
-          ].map(([lbl,val])=>`<div>
-            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">${lbl}</label>
-            <div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:12px 16px;font-size:14px;color:rgba(255,255,255,0.85);box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.1)">${val}</div>
-          </div>`).join("")}
-          <div>
-            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">Course Access Validity</label>
-            ${(()=>{
-              const{validUntil,expired}=getValidity(student);
-              if(student.completedAt) return`<div style="background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.25);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">
-                <svg style="width:16px;height:16px;color:#4ade80;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <div><p style="font-size:13px;font-weight:600;color:#4ade80">Course Complete 🎉 — Lifetime Access</p>
-                <p style="font-size:11px;color:rgba(74,222,128,0.7);margin-top:2px">Finished ${new Date(student.completedAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p></div>
-              </div>`;
-              if(!validUntil) return`<div style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.14);border-radius:12px;padding:12px 16px;font-size:14px;color:rgba(255,255,255,0.6)">Active access — complete all lessons to unlock everything.</div>`;
-              const days=Math.ceil((validUntil-today)/86400000);
-              const col=expired?'rgba(239,68,68,0.12)':days<=7?'rgba(239,68,68,0.1)':days<=30?'rgba(234,179,8,0.1)':'rgba(34,197,94,0.1)';
-              const bcol=expired?'rgba(239,68,68,0.28)':days<=7?'rgba(239,68,68,0.22)':days<=30?'rgba(234,179,8,0.22)':'rgba(34,197,94,0.22)';
-              const tcol=expired?'#fca5a5':days<=7?'#fca5a5':days<=30?'#facc15':'#4ade80';
-              const msg=expired?`Access expired on ${validUntil.toLocaleDateString()}`:days<=7?`⚠ Expiring in ${days} days — ${validUntil.toLocaleDateString()}`:days<=30?`⏳ ${days} days remaining — valid until ${validUntil.toLocaleDateString()}`:`✓ Active — valid until ${validUntil.toLocaleDateString()}`;
-              const sub=expired?'Contact your admin to renew.':'Once you complete the course, all lessons will be unlocked and you can revisit anytime.';
-              return`<div style="background:${col};border:1px solid ${bcol};border-radius:12px;padding:12px 16px">
-                <p style="font-size:13px;font-weight:600;color:${tcol}">${msg}</p>
-                <p style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:3px">${sub}</p>
-              </div>`;
-            })()}
-          </div>
-        </div>
-        <p style="font-size:11px;color:rgba(255,255,255,0.3);margin-top:14px">To update your name or email, contact your course admin.</p>
-      </div>
-
-      <div class="lg" style="padding:20px;margin-bottom:16px" id="pass-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <p style="font-family:'Montserrat',sans-serif;font-weight:700;font-size:13px;color:#fff">Change Password</p>
-          <button onclick="togglePassForm()" id="pass-toggle-btn" style="font-size:12px;color:var(--g3);background:none;border:none;cursor:pointer;font-weight:600;font-family:'JetBrains Mono',monospace">Change</button>
-        </div>
-        <div id="pass-form" style="display:none;flex-direction:column;gap:12px">
-          <div>
-            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">New Password</label>
-            <div style="position:relative"><input id="new-pass" type="password" autocomplete="new-password" placeholder="Enter new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('new-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
-          </div>
-          <div>
-            <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">Confirm Password</label>
-            <div style="position:relative"><input id="confirm-pass" type="password" autocomplete="new-password" placeholder="Confirm new password" class="glass-input" style="padding-right:40px"/><button type="button" onclick="togglePw('confirm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
-          </div>
-          <div style="display:flex;gap:10px">
-            <button id="pass-save-btn" onclick="savePassword()" class="btn-primary flex-1" style="padding:11px;font-size:14px">Save</button>
-            <button onclick="togglePassForm()" class="btn-ghost flex-1" style="padding:11px;font-size:14px">Cancel</button>
-          </div>
-          <p id="pass-err" style="display:none;font-size:12px;color:#fca5a5;margin:0"></p>
-          <p id="pass-ok" style="display:none;font-size:12px;color:#4ade80;margin:0">✓ Password updated successfully.</p>
-        </div>
-        <div id="pass-placeholder" style="background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:12px 16px;color:rgba(255,255,255,0.3);font-size:14px;box-shadow:inset 0 1.5px 0 rgba(255,255,255,0.08)">••••••••••</div>
-      </div>
-
-      <button onclick="logout()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border:1px solid rgba(237,31,81,.3);border-radius:12px;background:rgba(237,31,81,.08);color:var(--g3);font-size:14px;font-weight:600;cursor:pointer;transition:all .18s;margin-top:8px" onmouseover="this.style.background='rgba(237,31,81,.15)'" onmouseout="this.style.background='rgba(237,31,81,.08)'">
-        <svg style="width:16px;height:16px;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-        Sign Out
-      </button>
     </div>
   </div>`;
 
@@ -320,27 +310,13 @@ function renderDashboard(){
     var phaseLessons=ph.orders.map(function(o){return ALL_LESSONS.find(function(l){return l.order===o;});}).filter(Boolean);
     var phaseDoneCount=phaseLessons.filter(function(l){return isCompleted(l.id);}).length;
     var isPhaseComplete=phaseLessons.length>0&&phaseDoneCount===phaseLessons.length;
-
-    var bg, border, badge;
-    if(isPhaseComplete){
-      bg='rgba(34,197,94,.1)'; border='rgba(34,197,94,.35)';
-      badge='<div style="position:absolute;top:10px;right:10px;font-size:14px;color:#4ade80">✓</div>';
-    } else if(isActive){
-      bg='rgba(255,45,120,.12)'; border='rgba(255,45,120,.3)'; badge='';
-    } else {
-      bg='rgba(255,255,255,.05)'; border='rgba(255,255,255,.09)'; badge='';
-    }
-
-    phaseCards+='<div style="min-width:180px;border-radius:16px;padding:18px;cursor:pointer;position:relative;'+
-      'background:'+bg+';'+
-      'border:1px solid '+border+';'+
-      'flex-shrink:0;transition:all .2s" onclick="navigateToPhase('+pi+')">'+
-      badge+
-      '<div style="font-size:9px;font-weight:700;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">PHASE '+(pi+1)+'</div>'+
-      '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px;color:'+(isPhaseComplete?'#4ade80':'#fff')+';margin-bottom:2px">'+ph.name+'</div>'+
-      '<div style="font-size:11px;color:var(--muted)">'+ph.days+'</div>'+
-      (isPhaseComplete?'<div style="width:28px;height:2px;background:#4ade80;border-radius:2px;margin-top:10px"></div>':
-       isActive?'<div style="width:28px;height:2px;background:var(--gradh);border-radius:2px;margin-top:10px"></div>':'')+
+    var cls=isPhaseComplete?' done':isActive?' active':'';
+    var tag=isPhaseComplete?'<span class="dsh-tag ok">DONE</span>':isActive?'<span class="dsh-tag now">NOW</span>':'';
+    phaseCards+='<div class="dsh-card dsh-phase'+cls+'" onclick="navigateToPhase('+pi+')">'+
+      '<div class="dsh-phase-k"><span>Phase '+(pi+1)+'</span>'+tag+'</div>'+
+      '<p class="dsh-phase-name">'+ph.name+'</p>'+
+      '<p class="dsh-phase-days">'+ph.days+' · '+phaseDoneCount+'/'+phaseLessons.length+' done</p>'+
+      '<div class="dsh-bar'+(isPhaseComplete?' ok':'')+'"><span style="width:'+(phaseLessons.length?Math.round(phaseDoneCount/phaseLessons.length*100):0)+'%"></span></div>'+
       '</div>';
   });
 
@@ -378,107 +354,111 @@ function renderDashboard(){
     cmDiff=nextLesson.order<=4?'Beginner':nextLesson.order<=12?'Intermediate':'Advanced';
   }
 
-  // Stat cards
-  var accentDone=SECTIONS[0]?SECTIONS[0].lessons.filter(function(l){return isCompleted(l.id);}).length:completedCount;
-  var allQuizLessons=ALL_LESSONS.filter(function(l){return hasRealQuiz(l)&&isUnlocked(l)&&isCompleted(l.id);});
-  var quizAccStr=allQuizLessons.length>0?Math.round(allQuizLessons.length/Math.max(1,ALL_LESSONS.filter(function(l){return hasRealQuiz(l);}).length)*100)+'%':'—';
+  // Stat cards — each value is exactly what its label says.
+  var accentLessons=SECTIONS[0]?SECTIONS[0].lessons:ALL_LESSONS;
+  var accentDone=accentLessons.filter(function(l){return isCompleted(l.id);}).length;
+  var quizTotal=ALL_LESSONS.filter(function(l){return hasRealQuiz(l);}).length;
+  var quizDone=ALL_LESSONS.filter(function(l){return hasRealQuiz(l)&&isUnlocked(l)&&isCompleted(l.id);}).length;
+  var ico={
+    book:'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20V3H6.5A2.5 2.5 0 004 5.5v14zM20 17v4H6.5A2.5 2.5 0 014 18.5"/></svg>',
+    bolt:'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+    check:'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>',
+    unlock:'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 019.9-1"/></svg>'
+  };
+  function statCard(icon,label,val,of){
+    var pctv=of?Math.round(Number(val)/of*100):null;
+    return '<div class="dsh-card dsh-stat">'+
+      '<div class="dsh-stat-top"><span class="dsh-stat-ico">'+icon+'</span>'+label+'</div>'+
+      '<div class="dsh-stat-val">'+val+(of?'<small>/'+of+'</small>':'')+'</div>'+
+      (of?'<div class="dsh-bar'+(pctv>=100?' ok':'')+'"><span style="width:'+pctv+'%"></span></div>':'')+
+    '</div>';
+  }
+  var cmThumb=nextLesson?((loadVideos()[nextLesson.order]||{}).thumb||''):'';
 
   app.innerHTML=sidebarHtml("dashboard")+
     '<div id="main-content">'+
     topBarHtml(student)+
     mobileNavHtml("dashboard")+
-    '<div style="padding:28px 32px 80px" id="dash-inner">'+
+    '<div class="dsh-wrap" id="dash-inner">'+
 
     // GREETING + VOICE SCORE
-    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap">'+
+    '<div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap">'+
       '<div>'+
-        '<div style="font-size:11px;color:var(--muted);font-family:JetBrains Mono,monospace;letter-spacing:.07em;margin-bottom:4px">'+dateStr+'</div>'+
-        '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:34px;line-height:1.1;margin-bottom:4px">'+
-          greet+', <span style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+student.name.split(' ')[0]+'</span> 👋'+
-        '</div>'+
-        '<div style="font-size:13px;color:var(--muted2)">'+
+        '<div class="dsh-mono" style="font-size:11px;color:var(--muted);letter-spacing:.07em;margin-bottom:6px">'+dateStr+'</div>'+
+        '<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:32px;line-height:1.1;margin:0 0 6px;color:#fff">'+
+          greet+', <span style="background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+escapeHtml(student.name.split(' ')[0])+'</span>'+
+        '</h1>'+
+        '<div style="font-size:14px;color:var(--muted2)">'+
           (completedCount===0?'Day 1 awaits. Your transformation begins now.':nextLesson?'Day '+nextLesson.order+' awaits. Keep going.':'Course complete! Amazing work.')+
         '</div>'+
       '</div>'+
-      '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:16px 20px;backdrop-filter:blur(20px);display:flex;align-items:center;gap:16px;box-shadow:inset 0 1px 0 rgba(255,255,255,.1);flex-shrink:0">'+
-        '<div style="position:relative;width:64px;height:64px;flex-shrink:0">'+
-          '<svg width="64" height="64" viewBox="0 0 64 64" style="position:absolute;inset:0">'+
-            '<circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="5"/>'+
-            '<circle cx="32" cy="32" r="26" fill="none" stroke="url(#vgr)" stroke-width="5" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="'+vsArc+'" transform="rotate(-90 32 32)" style="transition:stroke-dashoffset 1s ease"/>'+
+      '<div class="dsh-card" style="padding:14px 18px;display:flex;align-items:center;gap:14px;flex-shrink:0">'+
+        '<div style="position:relative;width:56px;height:56px;flex-shrink:0">'+
+          '<svg width="56" height="56" viewBox="0 0 64 64" style="position:absolute;inset:0">'+
+            '<circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="6"/>'+
+            '<circle cx="32" cy="32" r="26" fill="none" stroke="url(#vgr)" stroke-width="6" stroke-linecap="round" stroke-dasharray="163.4" stroke-dashoffset="'+vsArc+'" transform="rotate(-90 32 32)" style="transition:stroke-dashoffset 1s ease"/>'+
             '<defs><linearGradient id="vgr" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF2D78"/><stop offset="100%" stop-color="#FF8C00"/></linearGradient></defs>'+
           '</svg>'+
-          '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:JetBrains Mono,monospace;font-size:13px;font-weight:600;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">'+pct+'%</div>'+
+          '<div class="dsh-mono" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff">'+pct+'%</div>'+
         '</div>'+
         '<div>'+
-          '<div style="font-size:9px;color:var(--muted);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Voice Score</div>'+
+          '<div class="dsh-mono" style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px">Voice Score</div>'+
           '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:18px;color:#fff">Level '+(Math.floor(pct/20)+1)+'</div>'+
-          '<div style="font-size:11px;color:var(--g3);margin-top:2px">'+pct+'% total progress</div>'+
+          '<div style="font-size:11px;color:var(--muted2);margin-top:2px">'+(pct>=100?'Max level reached':(20-pct%20)+'% to Level '+(Math.floor(pct/20)+2))+'</div>'+
         '</div>'+
       '</div>'+
     '</div>'+
 
     // CONTINUE MISSION CARD
     (nextLesson?
-      '<div id="cm-card" style="background:rgba(255,45,120,.07);border:1px solid rgba(255,45,120,.2);border-radius:22px;padding:26px 28px;margin-bottom:22px;position:relative;overflow:hidden;cursor:pointer;backdrop-filter:blur(20px);box-shadow:0 4px 40px rgba(255,45,120,.1),inset 0 1px 0 rgba(255,255,255,.12);transition:transform .2s,box-shadow .2s" onclick="navigate(\'lesson\',{id:\''+nextLesson.id+'\'})" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'">'+
-        '<div style="position:absolute;top:-80px;right:-60px;width:300px;height:300px;background:radial-gradient(circle,rgba(255,45,120,.18) 0%,transparent 70%);pointer-events:none"></div>'+
-        '<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent)"></div>'+
-        '<div style="font-size:10px;font-family:JetBrains Mono,monospace;color:var(--g1);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;display:flex;align-items:center;gap:6px">'+
-          '<span style="width:6px;height:6px;border-radius:50%;background:var(--g1);animation:blink 1.5s ease-in-out infinite;display:inline-block"></span>'+
-          '🎯 Today\'s Mission · Day '+nextLesson.order+
+      '<div id="cm-card" class="dsh-card dsh-mission">'+
+        '<div class="dsh-mission-body">'+
+          '<div class="dsh-eyebrow"><span class="dot"></span>Today\'s mission · Day '+nextLesson.order+'</div>'+
+          '<h2 class="dsh-mission-title">'+escapeHtml(getLessonTitle(nextLesson))+'</h2>'+
+          '<div class="dsh-meta"><span>'+escapeHtml(cmDur)+'</span><span>+'+cmXp+' XP</span><span>'+cmDiff+'</span></div>'+
+          '<div><div class="star-border-container" style="border-radius:10px;display:inline-block"><div class="border-gradient-bottom"></div><div class="border-gradient-top"></div><button id="cm-btn" type="button" class="star-border-inner" style="display:inline-flex;align-items:center;gap:10px;padding:13px 26px;background:var(--grad);border:1px solid #222;border-radius:10px;color:#fff;font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(255,45,120,.4);letter-spacing:.02em">'+(completedCount===0?'Start your journey →':'Continue mission →')+'</button></div></div>'+
         '</div>'+
-        '<div style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:4px">'+getLessonTitle(nextLesson)+'</div>'+
-        '<div style="font-size:12px;color:var(--muted2);margin-bottom:20px;display:flex;gap:14px;flex-wrap:wrap">'+
-          '<span>⏱ '+cmDur+'</span><span>⚡ +'+cmXp+' XP</span><span>📊 '+cmDiff+'</span>'+
+        '<div class="dsh-mission-thumb">'+
+          (cmThumb?'<img src="'+escapeAttr(cmThumb)+'" alt="" onerror="this.remove()"/>':'')+
+          '<div class="dsh-play"><span><svg width="20" height="20" viewBox="0 0 24 24" fill="#ED1F51"><path d="M8 5v14l11-7z"/></svg></span></div>'+
         '</div>'+
-        '<div class="star-border-container" style="border-radius:10px"><div class="border-gradient-bottom"></div><div class="border-gradient-top"></div><button id="cm-btn" type="button" class="star-border-inner" style="display:inline-flex;align-items:center;gap:10px;padding:13px 26px;background:var(--grad);border:1px solid #222;border-radius:10px;color:#fff;font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(255,45,120,.4);letter-spacing:.02em">'+(completedCount===0?'Start Your Accent Neutralization Journey':'Continue Mission →')+'</button></div>'+
       '</div>'
     :'')+
 
     // STAT CARDS
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px" class="dash-stats-grid">'+
-      [
-        {icon:'🔥',val:Math.max(1,completedCount),label:'Day Streak'},
-        {icon:'⚡',val:xpTotal,label:'XP Earned'},
-        {icon:'📅',val:accentDone+'/20',label:'Missions Done'},
-        {icon:'🎯',val:quizAccStr,label:'Quiz Accuracy'},
-      ].map(function(s){
-        return '<div style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:18px;position:relative;overflow:hidden;transition:transform .2s" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'">'+
-          '<div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)"></div>'+
-          '<div style="font-size:20px;margin-bottom:10px">'+s.icon+'</div>'+
-          '<div style="font-family:JetBrains Mono,monospace;font-size:26px;font-weight:600;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1;margin-bottom:3px">'+s.val+'</div>'+
-          '<div style="font-size:11px;color:var(--muted)">'+s.label+'</div>'+
-          '</div>';
-      }).join('')+
+    '<div class="dsh-stats">'+
+      statCard(ico.book,'Classes done',accentDone,accentLessons.length)+
+      statCard(ico.bolt,'XP earned',xpTotal)+
+      statCard(ico.check,'Quizzes done',quizDone,quizTotal||null)+
+      statCard(ico.unlock,'Classes unlocked',unlockedCount,ALL_LESSONS.length)+
     '</div>'+
 
     // JOURNEY PROGRESS
-    '<div style="background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--r);padding:20px;margin-bottom:22px;overflow:visible">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
-        '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:14px">Journey Progress</div>'+
-        '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'courses\')">View all →</div>'+
+    '<div class="dsh-card dsh-journey">'+
+      '<div class="dsh-sec-head">'+
+        '<h2 class="dsh-h2">Journey progress <span class="dsh-mono" style="font-size:12px;color:var(--muted2);font-weight:400;margin-left:6px">'+accentDone+' of '+accentLessons.length+' days</span></h2>'+
+        '<button class="dsh-link" onclick="navigate(\'courses\')">View all →</button>'+
       '</div>'+
       '<div class="journey-dots dock-row" id="jp-dots">'+dots+'</div>'+
     '</div>'+
 
     // PHASES
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
-      '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Your Journey Phases</div>'+
-    '</div>'+
-    '<div style="display:flex;gap:24px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px 16px;" class="dock-row">'+phaseCards+'</div>'+
+    '<div class="dsh-sec-head"><h2 class="dsh-h2">Your journey phases</h2></div>'+
+    '<div class="dsh-phases">'+phaseCards+'</div>'+
 
     // WORD VAULT PREVIEW
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">'+
-      '<div style="font-family:Montserrat,sans-serif;font-weight:700;font-size:16px">Pronunciation Workshop</div>'+
-      '<div style="font-size:12px;color:var(--g1);cursor:pointer" onclick="navigate(\'wordvault\')">Browse all →</div>'+
+    '<div class="dsh-sec-head">'+
+      '<h2 class="dsh-h2">Pronunciation Workshop</h2>'+
+      '<button class="dsh-link" onclick="navigate(\'wordvault\')">Browse all →</button>'+
     '</div>'+
-    '<div style="display:flex;gap:24px;overflow-x:auto;overflow-y:visible;padding:60px 50px 14px;margin:-32px -46px -6px" class="dock-row">'+wvCards+'</div>'+
+    '<div class="dsh-wv-row dock-row">'+wvCards+'</div>'+
 
     '</div></div>';
 
   // Wire Continue Mission button
   if(nextLesson){
     var cmBtn=document.getElementById('cm-btn');
-    if(cmBtn) cmBtn.addEventListener('click',function(){navigate('lesson',{id:nextLesson.id});});
+    if(cmBtn) cmBtn.addEventListener('click',function(e){e.stopPropagation();navigate('lesson',{id:nextLesson.id});});
     var cmCard=document.getElementById('cm-card');
     if(cmCard) cmCard.addEventListener('click',function(){navigate('lesson',{id:nextLesson.id});});
   }
