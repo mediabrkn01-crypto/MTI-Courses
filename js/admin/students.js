@@ -173,101 +173,102 @@ async function renderAdminStudent(id){
     }catch(e){}
   }
 
+  const unlockedN=access.size, totalN=ALL_LESSONS.length;
+  const classCard=l=>{
+    const granted=access.has(l.order);
+    const vidLk=locked.has(l.order);
+    const qLk=quizLocked.has(l.order);
+    const hasQuiz=hasRealQuiz(l);
+    return `<div class="ms-card${granted?' on':''}">
+      <div class="ms-top">
+        <span class="adm-day">${l.order}</span>
+        <button type="button" class="adm-track${granted?' on':''}" role="switch" aria-checked="${granted}" aria-label="Access to class ${l.order}" title="${granted?'Lock class':'Unlock class'}" onclick="toggleAccess('${id}',${l.order})"><span class="adm-thumb"></span></button>
+      </div>
+      <p class="ms-title" title="${escapeAttr(l.title)}">${escapeHtml(l.title)}</p>
+      ${granted
+        ? `<div class="ms-locks">
+            <button type="button" class="ms-chip${vidLk?' lk':''}" onclick="toggleVideoLock('${id}',${l.order})" title="${vidLk?'Video is locked — click to allow':'Click to lock the video'}">${vidLk?'Video locked':'Video on'}</button>
+            ${hasQuiz?`<button type="button" class="ms-chip${qLk?' lk':''}" onclick="toggleQuizLock('${id}',${l.order})" title="${qLk?'Quiz is locked — click to allow':'Click to lock the quiz'}">${qLk?'Quiz locked':'Quiz on'}</button>`:''}
+          </div>`
+        : '<p class="ms-off">No access</p>'}
+    </div>`;
+  };
+
   app.innerHTML=adminTopBar('students')+`
-  <div style="padding:24px;position:relative;z-index:1">
-    <button onclick="navigate('admin',{tab:'students'})" style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);background:none;border:none;cursor:pointer;margin-bottom:20px;transition:color .18s" onmouseover="this.style.color='var(--g3)'" onmouseout="this.style.color='var(--muted)'">
-      <svg style="width:14px;height:14px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+  <div class="adm-page">
+    <button onclick="navigate('admin',{tab:'students'})" class="adm-btn" style="margin-bottom:18px">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
       Back to Students
     </button>
 
-    <div class="lg" style="padding:20px;margin-bottom:20px">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
-        <div>
-          <h1 style="font-size:20px;font-weight:800;color:#fff;font-family:'Montserrat',sans-serif">${s.name}</h1>
-          <p style="font-size:13px;color:rgba(255,255,255,0.45);margin-top:2px">${s.email}</p>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">
-            ${validityBadge(s)}
-            <span class="pill pill-orange">${access.size}/${ALL_LESSONS.length} unlocked</span>
-            ${locked.size>0?`<span class="pill pill-yellow">${locked.size} video${locked.size>1?'s':''} locked</span>`:''}
-            ${quizLocked.size>0?`<span class="pill" style="background:rgba(139,92,246,0.14);border:1px solid rgba(139,92,246,0.3);color:#c4b5fd">${quizLocked.size} quiz${quizLocked.size>1?'zes':''} locked</span>`:''}
+    <div class="adm-card adm-card-pad" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:14px;min-width:0">
+          <div class="ms-av">${stuTableAvatar(s)}</div>
+          <div style="min-width:0">
+            <h1 class="adm-title" style="font-size:22px">${escapeHtml(s.name)}</h1>
+            <p class="adm-meta" style="font-size:13px">${escapeHtml(s.email)}</p>
           </div>
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
-          ${glassBtn('Unlock All',`grantAll('${id}')`,'brand')}
-          ${glassBtn('Lock All',`revokeAll('${id}')`,'ghost')}
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="adm-btn" onclick="revokeAll('${id}')">Lock all classes</button>
+          <button class="adm-btn adm-btn-primary" onclick="grantAll('${id}')">Unlock all classes</button>
         </div>
       </div>
-      <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1)">
-        <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:10px">Extend / Set Validity</p>
+      <div class="ms-facts">
+        <div><span class="adm-label">Validity</span>${admValidityCell(s)}</div>
+        <div><span class="adm-label">Classes unlocked</span><div style="display:flex;align-items:center;gap:10px"><div class="adm-meter${unlockedN>=totalN?' ok':''}" style="max-width:140px"><span style="width:${Math.round(unlockedN/totalN*100)}%"></span></div><span class="adm-num">${unlockedN}/${totalN}</span></div></div>
+        <div><span class="adm-label">Restrictions</span>${locked.size||quizLocked.size
+          ? (locked.size?`<span class="adm-badge warn nodot">${locked.size} video${locked.size>1?'s':''} locked</span> `:'')+(quizLocked.size?`<span class="adm-badge info nodot">${quizLocked.size} quiz${quizLocked.size>1?'zes':''} locked</span>`:'')
+          : '<span class="adm-muted" style="font-size:13px">None</span>'}</div>
+        <div><span class="adm-label">Login</span>${authLinked?'<span class="adm-badge ok">Auth linked</span>':'<span class="adm-badge warn">Not linked</span>'}</div>
+      </div>
+    </div>
+
+    <div class="ms-two">
+      <div class="adm-card adm-card-pad">
+        <h2 class="adm-card-title" style="margin-bottom:4px">Course validity</h2>
+        <p class="adm-hint" style="margin:0 0 14px">Extend from the current end date, or set an exact date.</p>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          ${[['7','+1 week'],['30','+1 month'],['90','+3 months'],['365','+1 year']].map(([d,l])=>`<button class="adm-btn" onclick="extendValidity('${id}',${d})">${l}</button>`).join('')}
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          ${[['7','+ 1 Wk'],['30','+ 1 Mo'],['90','+ 3 Mo'],['365','+ 1 Yr']].map(([d,l])=>glassBtn(l,`extendValidity('${id}',${d})`,'ghost')).join('')}
-          <input id="ext-date" type="date" class="glass-input" style="width:auto;padding:8px 12px;font-size:12px"/>
-          ${glassBtn('Set Date',`setCustomValidity('${id}')`,'brand')}
-          ${glassBtn('Remove Expiry',`clearValidity('${id}')`,'ghost')}
+          <input id="ext-date" type="date" class="adm-input" style="width:auto;padding:8px 12px;color-scheme:dark"/>
+          <button class="adm-btn adm-btn-primary" onclick="setCustomValidity('${id}')">Set date</button>
+          <button class="adm-btn" onclick="clearValidity('${id}')">Remove expiry</button>
+        </div>
+      </div>
+
+      <div class="adm-card adm-card-pad">
+        <h2 class="adm-card-title" style="margin-bottom:4px">Login password</h2>
+        <p class="adm-hint" style="margin:0 0 14px">The student signs in with their email and this password on any device.${authLinked?'':' A Supabase Auth account will be created automatically.'}</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px" class="ms-pw">
+          <input id="sp-pass" type="password" autocomplete="new-password" placeholder="New password (min 6)" class="adm-input"/>
+          <input id="sp-pass2" type="password" autocomplete="new-password" placeholder="Confirm password" class="adm-input"/>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button id="sp-btn" onclick="adminSaveStudentPassword('${id}')" class="adm-btn adm-btn-primary">Set password</button>
+          <div id="sp-msg" style="display:none;font-size:13px"></div>
         </div>
       </div>
     </div>
 
-    <div class="lg" style="padding:20px;margin-bottom:20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4)">Authentication</p>
-        <span style="font-size:12px;font-weight:700;padding:3px 10px;border-radius:99px;${authLinked?'background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);color:#4ade80':'background:rgba(255,113,0,.12);border:1px solid rgba(255,113,0,.35);color:#fb923c'}">
-          ${authLinked?'✓ Auth Linked':'⚠ Not Linked'}
-        </span>
-      </div>
-      <p style="font-size:12px;color:rgba(255,255,255,.45);margin-bottom:14px;line-height:1.6">
-        Set a new login password for this student. After saving, student can sign in with their email + this password on any device.<br>
-        <span style="color:rgba(255,255,255,.3);font-size:11px">If "Not Linked", a Supabase Auth account will be created automatically.</span>
-      </p>
-      <div style="display:flex;flex-direction:column;gap:10px;max-width:360px">
-        <input id="sp-pass" type="password" autocomplete="new-password" placeholder="New password (min 6 characters)" class="glass-input" style="font-size:14px"/>
-        <input id="sp-pass2" type="password" autocomplete="new-password" placeholder="Confirm new password" class="glass-input" style="font-size:14px"/>
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          <button id="sp-btn" onclick="adminSaveStudentPassword('${id}')" style="background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px 20px;cursor:pointer;font-family:Montserrat,sans-serif">Set Password</button>
-        </div>
-        <div id="sp-msg" style="display:none;font-size:13px;margin-top:4px"></div>
-      </div>
-    </div>
-
-    ${SECTIONS.map(section=>`
-      <div style="margin-bottom:24px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.4)">${section.title}</p>
-          <div style="display:flex;gap:12px">
-            <button onclick="grantSection('${id}','${section.id}')" style="font-size:12px;color:var(--g3);background:none;border:none;cursor:pointer;font-weight:600;font-family:'JetBrains Mono',monospace">Unlock all</button>
-            <span style="color:rgba(255,255,255,0.2)">|</span>
-            <button onclick="revokeSection('${id}','${section.id}')" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;font-weight:600;font-family:'JetBrains Mono',monospace">Lock all</button>
+    ${SECTIONS.map(section=>{
+      const on=section.lessons.filter(l=>access.has(l.order)).length;
+      return `<div class="adm-section">
+        <div class="ms-sec-head">
+          ${admSectionLabel(section.title, on+'/'+section.lessons.length+' unlocked')}
+          <div style="display:flex;gap:6px">
+            <button class="adm-btn" onclick="revokeSection('${id}','${section.id}')">Lock all</button>
+            <button class="adm-btn" onclick="grantSection('${id}','${section.id}')">Unlock all</button>
           </div>
         </div>
-        <div class="class-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px">
-          ${section.lessons.map(l=>{
-            const granted=access.has(l.order);
-            const vidLk=locked.has(l.order);
-            const qLk=quizLocked.has(l.order);
-            const hasQuiz=hasRealQuiz(l);
-            const cardCls=granted?(vidLk?'class-card vid-locked':qLk?'class-card quiz-locked':'class-card unlocked'):'class-card';
-            const labelCol=granted?(vidLk?'#facc15':qLk?'#c4b5fd':'#4ade80'):'rgba(255,255,255,0.35)';
-            return`<div class="${cardCls}">
-              <p style="font-weight:700;font-size:12px;color:${labelCol};margin-bottom:2px">Class ${l.order}</p>
-              <p style="font-size:10px;color:rgba(255,255,255,0.5);line-height:1.35;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${l.title}</p>
-              <div style="display:flex;flex-direction:column;gap:5px">
-                <button onclick="toggleAccess('${id}',${l.order})" style="padding:5px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${granted?'background:rgba(34,197,94,0.14);border-color:rgba(34,197,94,0.32);color:#4ade80':'background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.45)'}">
-                  ${granted?'✓ Unlocked':'<img src="data:image/png;base64,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" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;filter:brightness(1.4) drop-shadow(0 0 3px rgba(255,255,255,.3))"/> Locked'}
-                </button>
-                ${granted?`<button onclick="toggleVideoLock('${id}',${l.order})" style="padding:5px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${vidLk?'background:rgba(234,179,8,0.14);border-color:rgba(234,179,8,0.32);color:#facc15':'background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4)'}">
-                  ▶ ${vidLk?'Video Locked':'Lock Video'}
-                </button>`:''}
-                ${granted&&hasQuiz?`<button onclick="toggleQuizLock('${id}',${l.order})" style="padding:5px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;transition:all .15s;${qLk?'background:rgba(139,92,246,0.14);border-color:rgba(139,92,246,0.32);color:#c4b5fd':'background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.15);color:rgba(255,255,255,0.4)'}">
-                  ✎ ${qLk?'Quiz Locked':'Lock Quiz'}
-                </button>`:''}
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>`).join('')}
+        <div class="ms-grid">${section.lessons.map(classCard).join('')}</div>
+      </div>`;
+    }).join('')}
 
     <div style="display:flex;justify-content:flex-end;margin-top:8px">
-      ${glassBtn('Done',`navigate('admin',{tab:'students'})`,'brand')}
+      <button class="adm-btn adm-btn-primary adm-btn-lg" onclick="navigate('admin',{tab:'students'})">Done</button>
     </div>
   </div>`;
 

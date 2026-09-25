@@ -59,10 +59,12 @@ function sidebarHtml(active){
             <stop offset="0%" stop-color="#FF2D78"/><stop offset="100%" stop-color="#FF8C00"/>
           </linearGradient></defs>
         </svg>
+        <span class="sb-ring-pct">${pct}</span>
       </div>
       <div class="sb-voice-info">
-        <div class="sv-label">VOICE SCORE</div>
-        <div class="sv-val">${pct}%</div>
+        <div class="sv-label">Voice score</div>
+        <div class="sv-row"><span class="sv-lvl">Level ${Math.floor(pct/20)+1}</span><span class="sv-sub">${completedCount}/${ALL_LESSONS.length} days</span></div>
+        <div class="sb-voice-bar"><span style="width:${pct}%"></span></div>
       </div>
     </div>
 
@@ -74,9 +76,10 @@ function sidebarHtml(active){
       var thumb=vm.thumb||al.thumbnailUrl||"";
       return "<div class=\"sb-nowplaying\" style=\"margin:10px 12px;border-radius:12px;overflow:hidden;position:relative;height:90px;cursor:pointer;border:1px solid rgba(255,255,255,.1)\" onclick=\"navigate(\'lesson\',{id:\'"+al.id+"\'})\">"+
         "<img src=\""+thumb+"\" style=\"width:100%;height:100%;object-fit:cover\" onerror=\"this.parentElement.style.display=\'none\'\"/>"+
-        "<div style=\"position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 60%)\"></div>"+
+        "<div style=\"position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,transparent 65%)\"></div>"+
+        "<span class=\"sb-np-play\"><svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"#ED1F51\"><path d=\"M8 5v14l11-7z\"/></svg></span>"+
         "<div style=\"position:absolute;bottom:6px;left:8px;right:8px\">"+
-          "<div style=\"font-size:8px;color:rgba(255,255,255,.6);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em\">NOW PLAYING</div>"+
+          "<div style=\"font-size:8.5px;color:rgba(255,255,255,.7);font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.07em\">Continue · Day "+al.order+"</div>"+
           "<div style=\"font-size:11px;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis\">"+((loadVideos()[al.order]||{}).panelTitle||(loadVideos()[al.order]||{}).title||al.title)+"</div>"+
         "</div>"+
       "</div>";
@@ -117,7 +120,7 @@ function sidebarHtml(active){
       <div class="sb-user" data-tip="${uName||'Profile'}" onclick="closeSidebar();navigate('profile')">
         <div style="overflow:hidden;display:flex;align-items:center;justify-content:center;flex-shrink:0">${stu?avatarSmallHtml(stu):'<div style=\"width:32px;height:32px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0\">?</div>'}</div>
         <div class="sb-uname" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:var(--text)">${uName}</div>
-        <div class="sb-out" onclick="event.stopPropagation();logout()" title="Sign out" style="color:var(--muted);cursor:pointer;font-size:16px;flex-shrink:0;padding:4px;transition:color .15s" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'">⇥</div>
+        <div class="sb-out" onclick="event.stopPropagation();logout()" title="Sign out" style="color:var(--muted);cursor:pointer;font-size:16px;flex-shrink:0;padding:4px;transition:color .15s" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'" aria-label="Sign out" role="button"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></div>
       </div>
     </div>
   </div>

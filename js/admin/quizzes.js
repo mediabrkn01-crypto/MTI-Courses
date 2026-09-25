@@ -223,28 +223,29 @@ window.adminQuizPreview=function(order){
   if(!qs.length){alert('No dynamic quiz for Day '+order);return;}
 
   var overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto';
+  overlay.className='qe-overlay';
 
   function renderEditor(){
     var container=document.getElementById('qeditor-wrap');
     if(!container) return;
+    var cnt=document.getElementById('qe-count');
+    if(cnt) cnt.textContent=qs.length+' question'+(qs.length===1?'':'s');
     container.innerHTML=qs.map(function(q,qi){
       var optHtml=q.options.map(function(o,oi){
-        return '<div draggable="true" data-qi="'+qi+'" data-oi="'+oi+'" style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-          +'<span style="color:rgba(255,255,255,.3);cursor:grab;font-size:14px">⠿</span>'
-          +'<input data-opt="'+qi+'-'+oi+'" value="'+o.replace(/"/g,'&quot;')+'" style="flex:1;background:rgba(255,255,255,'+(o===q.answer?'.12':'.05')+');border:1px solid rgba(255,255,255,'+(o===q.answer?'.4':'.1')+');border-radius:6px;color:#fff;font-size:12px;padding:5px 8px;outline:none"/>'
-          +'<button onclick="setAnswer('+qi+','+oi+')" title="Set as correct" style="background:'+(o===q.answer?'rgba(34,197,94,.3)':'rgba(255,255,255,.08)')+';border:1px solid rgba(255,255,255,.1);border-radius:6px;color:'+(o===q.answer?'#4ade80':'rgba(255,255,255,.4)')+';font-size:11px;padding:3px 7px;cursor:pointer">'+(o===q.answer?'✓':'○')+'</button>'
-          +'<button onclick="delOption('+qi+','+oi+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:6px;color:#f87171;font-size:11px;padding:3px 7px;cursor:pointer">✕</button>'
+        var ok=o===q.answer;
+        return '<div class="qe-opt'+(ok?' correct':'')+'" draggable="true" data-qi="'+qi+'" data-oi="'+oi+'">'
+          +'<span class="qe-grip" title="Drag to reorder">⠿</span>'
+          +'<button type="button" class="qe-radio" onclick="setAnswer('+qi+','+oi+')" title="'+(ok?'Correct answer':'Mark as correct answer')+'" aria-pressed="'+ok+'">'+(ok?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':'')+'</button>'
+          +'<input class="qe-in" data-opt="'+qi+'-'+oi+'" value="'+escapeAttr(o)+'" aria-label="Option '+(oi+1)+'"/>'
+          +'<button type="button" class="qe-x" onclick="delOption('+qi+','+oi+')" aria-label="Remove option" title="Remove option">×</button>'
           +'</div>';
       }).join('');
-      return '<div style="margin-bottom:14px;padding:12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:10px">'
-        +'<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:8px">'
-        +'<span style="color:rgba(255,255,255,.5);font-size:12px;font-weight:700;flex-shrink:0;margin-top:6px">'+(qi+1)+'.</span>'
-        +'<textarea data-prompt="'+qi+'" rows="2" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:6px;color:#fff;font-size:12px;padding:6px 8px;outline:none;resize:vertical">'+q.prompt+'</textarea>'
-        +'<button onclick="delQuestion('+qi+')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:#f87171;font-size:11px;padding:4px 8px;cursor:pointer;flex-shrink:0">🗑</button>'
-        +'</div>'
-        +'<div id="opts-'+qi+'">'+ optHtml+'</div>'
-        +'<button onclick="addOption('+qi+')" style="margin-top:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;cursor:pointer">+ Add option</button>'
+      return '<div class="qe-q">'
+        +'<div class="qe-qh"><span class="qe-num">Question '+(qi+1)+'</span>'
+        +'<button type="button" class="adm-btn adm-btn-danger adm-icon-btn" style="width:28px;height:28px" onclick="delQuestion('+qi+')" aria-label="Delete question" title="Delete question">'+ADM_ICON.trash+'</button></div>'
+        +'<textarea class="qe-prompt" data-prompt="'+qi+'" rows="2" aria-label="Question '+(qi+1)+'">'+escapeHtml(q.prompt)+'</textarea>'
+        +'<div class="qe-opts" id="opts-'+qi+'">'+optHtml+'</div>'
+        +'<button type="button" class="qe-add" onclick="addOption('+qi+')">+ Add option</button>'
         +'</div>';
     }).join('');
 
@@ -292,21 +293,23 @@ window.adminQuizPreview=function(order){
     collectEdits();
     qs.push({id:'q'+(qs.length+1),prompt:'New question?',options:['Option A','Option B','Option C','Option D'],answer:'Option A'});
     renderEditor();
-    setTimeout(function(){overlay.scrollTop=overlay.scrollHeight;},50);
+    setTimeout(function(){var bd=document.getElementById('qe-body');if(bd)bd.scrollTop=bd.scrollHeight;},50);
   };
 
-  overlay.innerHTML='<div style="background:#12121f;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:20px;width:100%;max-width:600px;margin:auto">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-    +'<h3 style="font-family:Montserrat,sans-serif;font-weight:800;color:#fff;font-size:15px">⚡ Day '+order+' Quiz Editor</h3>'
-    +'<button onclick="window._closeQuizPreview()" style="background:rgba(255,255,255,.1);border:none;border-radius:8px;color:#fff;font-size:14px;padding:4px 10px;cursor:pointer">✕</button>'
+  overlay.innerHTML='<div class="qe-panel" role="dialog" aria-modal="true" aria-label="Day '+order+' quiz editor">'
+    +'<div class="qe-head">'
+      +'<div><h3 class="adm-card-title" style="font-size:17px">Day '+order+' quiz</h3>'
+      +'<p class="adm-hint" style="margin:3px 0 0"><span id="qe-count"></span> · Click the circle to mark the correct answer · Drag ⠿ to reorder</p></div>'
+      +'<button type="button" class="adm-btn adm-icon-btn" onclick="window._closeQuizPreview()" aria-label="Close">✕</button>'
     +'</div>'
-    +'<p style="font-size:11px;color:rgba(255,255,255,.35);margin-bottom:12px">Edit questions/options inline • Drag ⠿ to reorder options • ○ to set correct answer • ✕ to delete</p>'
-    +'<div id="qeditor-wrap"></div>'
-    +'<button onclick="addQuestion()" style="width:100%;margin-top:6px;background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.2);border-radius:10px;color:rgba(255,255,255,.5);font-size:12px;padding:8px;cursor:pointer">+ Add Question</button>'
-    +'<div style="display:flex;gap:8px;margin-top:12px">'
-    +'<button onclick="window._saveQuizOrder('+order+')" style="flex:1;background:var(--grad);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;padding:10px;cursor:pointer;font-family:Montserrat,sans-serif">💾 Save All Changes</button>'
+    +'<div class="qe-body" id="qe-body"><div id="qeditor-wrap"></div>'
+      +'<button type="button" class="qe-addq" onclick="addQuestion()">+ Add question</button>'
     +'</div>'
-    +'<div id="qpreview-save-status" style="font-size:12px;text-align:center;margin-top:8px"></div>'
+    +'<div class="qe-foot">'
+      +'<div id="qpreview-save-status" style="font-size:12px;color:var(--muted2);margin-right:auto"></div>'
+      +'<button type="button" class="adm-btn" onclick="window._closeQuizPreview()">Cancel</button>'
+      +'<button type="button" class="adm-btn adm-btn-primary adm-btn-lg" onclick="window._saveQuizOrder('+order+')">Save changes</button>'
+    +'</div>'
     +'</div>';
 
   window._closeQuizPreview=function(){try{overlay.remove();}catch(e){}};
