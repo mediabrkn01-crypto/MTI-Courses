@@ -14,7 +14,8 @@ function _demoStatusPill(status){
 }
 var _demoFilter = 'all';
 function _demoSetFilter(k){ _demoFilter=k; _demoAdminRenderTable(); }
-function _demoLinkUrl(token){ return location.origin + location.pathname + '?demo=' + token; }
+// Demo links always point at the STUDENT app (index.html), never at admin.html.
+function _demoLinkUrl(token){ return new URL('./', location.href).href + '?demo=' + token; }
 
 // Admin actions authenticate with the real Supabase Auth session (same JWT the
 // rest of the admin panel uses) — the legacy course_config.admin_cred email/

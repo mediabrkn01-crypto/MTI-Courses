@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="robots" content="noindex, nofollow"/>
+<meta name="referrer" content="strict-origin-when-cross-origin"/>
+<title>Broken English — Admin</title>
+<link id="favicon" rel="icon" type="image/png" href=""/>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+<!-- ADMIN APP. Separate from the student app (index.html); shares only the Supabase backend. -->
+<link rel="stylesheet" href="css/variables.css?v=20260926a"/>
+<link rel="stylesheet" href="css/base.css?v=20260926a"/>
+<link rel="stylesheet" href="css/components.css?v=20260926a"/>
+<link rel="stylesheet" href="css/admin.css?v=20260926a"/>
+<link rel="stylesheet" href="css/responsive.css?v=20260926a"/>
+<link rel="stylesheet" href="css/demo.css?v=20260926a"/>
+<meta name="theme-color" content="#0d0d1c">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+</head>
+<body>
+
+<div id="app"></div>
+
+<!-- Regular <script src> (not modules): the UI uses inline onclick="fn()" handlers that
+     resolve against window. Order is dependency order. -->
+<!-- shared -->
+<script src="js/config.js?v=20260926a"></script>
+<script src="js/data.js?v=20260926a"></script>
+<script src="js/shared/supabase-config.js?v=20260926a"></script>
+<script src="js/admin/admin-supabase.js?v=20260926a"></script>
+<script src="js/shared/state.js?v=20260926a"></script>
+<script src="js/utils/storage.js?v=20260926a"></script>
+<script src="js/utils/formatting.js?v=20260926a"></script>
+<script src="js/utils/security.js?v=20260926a"></script>
+<script src="js/services/videos.js?v=20260926a"></script>
+<script src="js/services/students.js?v=20260926a"></script>
+<script src="js/services/quizzes.js?v=20260926a"></script>
+<script src="js/services/elevenlabs.js?v=20260926a"></script>
+<script src="js/shared/demo-api.js?v=20260926a"></script>
+<script src="js/components/modal.js?v=20260926a"></script>
+<!-- admin -->
+<script src="js/admin/admin-ui.js?v=20260926a"></script>
+<script src="js/admin/settings.js?v=20260926a"></script>
+<script src="js/admin/students.js?v=20260926a"></script>
+<script src="js/admin/progress.js?v=20260926a"></script>
+<script src="js/admin/classes.js?v=20260926a"></script>
+<script src="js/admin/quizzes.js?v=20260926a"></script>
+<script src="js/admin/images.js?v=20260926a"></script>
+<script src="js/admin/demo-access.js?v=20260926a"></script>
+<script src="js/admin/admin.js?v=20260926a"></script>
+<script src="js/admin/admin-app.js?v=20260926a"></script>
+</body>
+</html>

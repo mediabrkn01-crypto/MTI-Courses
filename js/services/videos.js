@@ -51,7 +51,7 @@ function refreshLessonThumbs(){
         if(v.src){
           // Re-render lesson to get the video
           if(currentSession&&currentSession.lessonId){
-            renderLesson(currentSession.lessonId);
+            if(typeof renderLesson==='function') renderLesson(currentSession.lessonId);
           }
         }
       }
@@ -64,4 +64,11 @@ function loadVideos(){if(Object.keys(_videoData).length>0)return _videoData;try{
 function saveVideos(v){
   localStorage.setItem("brokeneng_videos",JSON.stringify(v));
   if(typeof _sb!=="undefined") sbSaveVideos(v);
+}
+
+// Get admin-set title for a lesson (falls back to lesson.title)
+function getLessonTitle(lesson){
+  if(!lesson) return '';
+  var vm=loadVideos()[lesson.order]||{};
+  return vm.panelTitle||vm.title||lesson.title;
 }

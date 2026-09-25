@@ -93,7 +93,6 @@ function getUnlockedSet(student){
 }
 
 function isUnlocked(lesson){
-  if(adminUnlockAll)return true;
   if(isDemoSession())return (typeof canDemoLesson==='function')?canDemoLesson(lesson):true;
   if(currentSession?.role==="student"){
     const s=loadStudents()[currentSession.studentId];

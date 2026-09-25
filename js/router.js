@@ -2,8 +2,21 @@
    Source lines: 1831-1906, 6559-6567
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
 var ASYNC_SCREENS=['dashboard','courses','lesson'];
+
+// The admin panel is a separate app (admin.html). Old admin links/bookmarks that land on the
+// student app (#admin, #admin-login, #admin-student, #admin-progress-student) are sent there.
+var ADMIN_SCREENS=['admin','admin-login','admin-student','admin-progress-student'];
+function _isAdminScreen(screen){ return ADMIN_SCREENS.indexOf(String(screen||''))!==-1; }
+function _goAdminApp(){ try{ location.replace('admin.html'); }catch(e){ location.href='admin.html'; } }
+function _checkAdminHash(){
+  var h=(location.hash||'').replace('#','').split(/[?&/]/)[0];
+  if(_isAdminScreen(h)) _goAdminApp();
+}
+_checkAdminHash();
+window.addEventListener('hashchange',_checkAdminHash);
 var _fromPop=false;
 function navigate(screen,params){
+  if(_isAdminScreen(screen)){ _goAdminApp(); return; }
   document.body.style.overflow=''; // restore scroll when leaving lesson
   if(ASYNC_SCREENS.indexOf(screen)!==-1) showAppLoader();
   // Push into browser history so phone back button navigates in-app instead of closing
@@ -38,7 +51,7 @@ window.addEventListener('popstate',function(e){
   // Guard: authenticated student must never popstate-navigate to login.
   // This is the last line of defence against the iOS swipe-back / Android back-button
   // race during the boot splash animation.
-  if((target==='login'||target==='admin-login')&&currentSession&&currentSession.role==='student'){
+  if(target==='login'&&currentSession&&currentSession.role==='student'){
     try{ history.replaceState({screen:'dashboard',params:{}},'','#dashboard'); }catch(er){}
     target='dashboard'; targetParams={};
   }
@@ -48,10 +61,6 @@ window.addEventListener('popstate',function(e){
 });
 function render(screen,params){
   if(screen==="login")        { renderLogin(); return; }
-  if(screen==="admin-login")  { renderAdminLogin(); return; }
-  if(screen==="admin")        { renderAdmin(params.tab||"students"); return; }
-  if(screen==="admin-student"){ renderAdminStudent(params.id); return; }
-  if(screen==="admin-progress-student"){ renderAdminProgressStudent(params.id); return; }
   if(screen==="dashboard"){
     if(typeof _sb!=="undefined"){
       renderDashboard(); hideAppLoader(); if(!_videosBootLoaded){sbLoadVideos().catch(function(){});}else{_videosBootLoaded=false;}

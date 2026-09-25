@@ -35,7 +35,7 @@ function renderLogin(){
       <button id="login-btn-main" onclick="doStudentLogin()" class="btn-primary" style="margin-bottom:20px;font-size:15px;font-weight:800;letter-spacing:.02em">Sign In</button>
 
       <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:10px">Accounts are created by the course admin.</p>
-      <p style="text-align:center"><span style="font-size:12px;color:var(--muted2);cursor:pointer" onclick="navigate('admin-login')">Admin portal</span></p>
+      <p style="text-align:center"><a href="admin.html" style="font-size:12px;color:var(--muted2);text-decoration:none">Admin portal</a></p>
       <p style="text-align:center;margin-top:10px"><span style="font-size:12px;color:rgba(255,45,120,.8);cursor:pointer;text-decoration:underline" onclick="showStudentForgotPassword()">Forgot Password?</span></p>
       <p style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.35)">Having trouble? Contact <a href="mailto:mediabrkn01@gmail.com" style="color:rgba(255,45,120,.7);text-decoration:none">mediabrkn01@gmail.com</a></p>
     </div>
@@ -44,42 +44,6 @@ function renderLogin(){
   if(lp) lp.addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
 }
 
-// ─── ADMIN LOGIN ─────────────────────────────────────────────────────────────
-function renderAdminLogin(){
-  if(typeof sbLoadAdminCred==='function')sbLoadAdminCred().catch(function(){});
-  app.innerHTML=`
-  <div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:16px">
-    <div class="orb o1"></div><div class="orb o2"></div>
-    <div data-glow-init="1" style="position:relative;z-index:2;width:420px;max-width:100%;
-      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:28px;
-      padding:48px 40px 40px;backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
-      box-shadow:0 40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.15)">
-      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);border-radius:28px 28px 0 0"></div>
-      <div style="display:flex;align-items:center;gap:13px;margin-bottom:34px">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--grad);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,45,120,.45);flex-shrink:0;overflow:hidden">
-          <img src="${getLogoSrc()}" style="width:44px;height:44px;object-fit:contain;border-radius:12px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><span style="display:none;font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px;color:#fff">BE</span>
-        </div>
-        <div>
-          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${SITE_NAME}</div>
-          <span style="display:inline-block;margin-top:3px;border-radius:99px;background:rgba(237,31,81,.15);border:1px solid rgba(237,31,81,.3);padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);font-family:'JetBrains Mono',monospace">Admin Access</span>
-        </div>
-      </div>
-      <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:var(--text);margin-bottom:5px">Admin Panel</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.5">Sign in to manage students and courses.</p>
-      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Admin Email</label>
-      <input id="adm-email" type="email" placeholder="Email" class="glass-input" style="margin-bottom:14px"/>
-      <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;display:block;margin-bottom:7px">Password</label>
-      <div style="position:relative"><input id="adm-pass" type="password" placeholder="••••••••" class="glass-input" style="margin-bottom:8px;padding-right:40px"/><button type="button" onclick="togglePw('adm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
-      <p id="adm-err" style="display:none;color:var(--g1);font-size:13px;margin-bottom:8px">Invalid admin credentials.</p>
-      <button onclick="doAdminLogin()" class="btn-primary" style="margin-top:8px">Sign In as Admin</button>
-      <p style="margin-top:12px;text-align:center"><span style="font-size:12px;color:rgba(255,45,120,.8);cursor:pointer;text-decoration:underline" onclick="showAdminForgotPassword()">Forgot Password?</span></p>
-      <p style="margin-top:10px;text-align:center">
-        <button onclick="navigate('login')" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer" onmouseover="this.style.color='var(--g3)'" onmouseout="this.style.color='var(--muted)'">← Student login</button>
-      </p>
-    </div>
-  </div>`;
-  var ap=document.getElementById("adm-pass");if(ap)ap.addEventListener("keydown",e=>{if(e.key==="Enter")doAdminLogin();});
-}
 // ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
 // Now uses Supabase Auth resetPasswordForEmail(). Never emails the actual password.
 window.showStudentForgotPassword=function(){
@@ -205,20 +169,6 @@ window.doForcePasswordReset=async function(skip){
     if(btn){btn.disabled=false;btn.textContent='Set New Password';}
   }
 };
-window.showAdminForgotPassword=async function(){
-  // Admin uses Supabase Auth — send password reset email via Supabase
-  var email=(document.getElementById('adm-email')?.value||'').trim().toLowerCase();
-  if(!email||typeof _sb==='undefined'){
-    alert('Enter your admin email first, then click Forgot Password.');
-    return;
-  }
-  // Supabase sends reset link — we don't reveal if email exists or not
-  await _sb.auth.resetPasswordForEmail(email,{
-    redirectTo:'https://academy.brokenenglish.in/?reset=1'
-  }).catch(function(){});
-  alert('If that email has an admin account, a reset link has been sent.');
-};
-
 // ── PASSWORD RESET FROM EMAIL LINK ────────────────────────────────────────────
 // Called by onAuthStateChange when event === 'PASSWORD_RECOVERY'.
 // Student clicked the email link, Supabase established a recovery session.

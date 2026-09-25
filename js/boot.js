@@ -66,17 +66,9 @@ async function bootApp(opts){
     }catch(e){ sbAuthErr=e; _bootLog('AUTH_NET_ERR',{msg:e.message}); }
   }
 
-  // 3. Local session (fast-path, valid for offline / network error cases)
+  // 3. Local session (fast-path, valid for offline / network error cases).
+  //    loadSession() only ever returns role:'student' — the admin panel is admin.html.
   var localSess=loadSession();
-
-  // 4. Admin path — always bypasses maintenance
-  if(localSess&&localSess.role==='admin'){
-    currentSession=localSess;
-    waitForSb().then(function(ok){ if(ok) sbLoadAllStudents().catch(function(){}); });
-    navigate('admin');
-    startMaintenancePolling();
-    return;
-  }
 
   // 5. Check maintenance config (now that we have auth state for bypass check)
   var maintEnabled=false, maintMsg='', maintBypassAuthUid=null;
@@ -131,7 +123,16 @@ async function bootApp(opts){
       }catch(e){ _bootLog('REBUILD_ERR',{msg:e.message}); }
     }
 
-    currentSession=localSess||{role:'student',studentId:null};
+    // A Supabase session with no linked student profile (e.g. an admin account signed in
+    // here by an older build) is never treated as a student.
+    if(!localSess){
+      _bootLog('JWT_WITHOUT_STUDENT');
+      navigate('login');
+      startMaintenancePolling();
+      return;
+    }
+
+    currentSession=localSess;
     showAppLoader();
 
     // Background data — NEVER block navigation on these
@@ -202,19 +203,9 @@ function startMaintenancePolling(){
       var isOn=!!cfg.enabled;
       var pollMsg=cfg.message||'';
       var bypassUid=cfg.bypass_auth_user_id||null;
-      var bypassName=cfg.bypass_student_name||'';
       _maintBypassAuthUserId=bypassUid;
       _maintenanceActive=isOn;
 
-      // Update admin badge
-      var badge=document.getElementById('admin-maint-badge');
-      if(badge){
-        badge.style.display=isOn?'inline-flex':'none';
-        if(isOn&&bypassName) badge.textContent='🚧 MAINTENANCE ON | Bypass: '+bypassName;
-        else badge.textContent='🚧 MAINTENANCE ON';
-      }
-
-      if(currentSession&&currentSession.role==='admin') return; // admin unaffected
 
       // Check bypass for current user using server-signed JWT
       var authRes=await _sb.auth.getSession();
@@ -250,7 +241,6 @@ window.addEventListener('pageshow',function(e){
     waitForSb(5000).then(function(ok){
       if(!ok) return;
       sbLoadVideos().catch(function(){});
-      if(currentSession&&currentSession.role==='admin') return;
       Promise.all([
         _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle(),
         _sb.auth.getSession()

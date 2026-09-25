@@ -1,7 +1,13 @@
 /* auth.js — extracted verbatim from the original single-file index.html.
    Source lines: 1357-1358, 2267-2435, 2472-2508
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
-function logout(){currentSession=null;clearSession();navigate('login');}
+function logout(){
+  currentSession=null;clearSession();
+  // End the Supabase Auth session too, otherwise boot would silently rebuild the
+  // student session from the still-valid JWT on the next page load.
+  if(typeof _sb!=='undefined'){ try{ _sb.auth.signOut().catch(function(){}); }catch(e){} }
+  navigate('login');
+}
 
 window.doStudentLogin=async()=>{
   const email=document.getElementById("login-email").value.trim().toLowerCase();
@@ -77,17 +83,9 @@ window.doStudentLogin=async()=>{
     }catch(e){console.warn("Legacy auth:",e);}
   }
 
-  // ── Auth path 3: localStorage (offline/network error) ────────────────────────
-  // Skip for migrated students (auth_user_id set) — they MUST use Supabase Auth.
-  // Without this guard, localStorage s.password match gives access with no JWT session,
-  // causing updateUser() → "Auth session missing!" in Profile → Change Password.
-  if(!byEmail&&!usedSupabaseAuth&&!_legStudentHasAuthId){
-    var cachedStudents=loadStudents();
-    var found=Object.values(cachedStudents).find(function(s){
-      return s.email&&s.email.toLowerCase()===email&&s.password===pass;
-    })||null;
-    if(found)byEmail=found;
-  }
+  // (The old "path 3" — matching a password cached in localStorage — was removed.
+  //  Supabase Auth is the only source of truth for student passwords, so credentials
+  //  behave the same on every device and browser.)
 
   if(!byEmail){
     if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
@@ -200,40 +198,3 @@ function showBootSplash(student, cb){
   }
   setTimeout(step, 300);
 }
-
-window.doAdminLogin=async()=>{
-  const email=(document.getElementById("adm-email")?.value||'').trim().toLowerCase();
-  const pass=document.getElementById("adm-pass")?.value||'';
-  if(!email||!pass)return;
-  var btn=document.querySelector('button.btn-primary');
-  var er=document.getElementById("adm-err");
-  if(btn){btn.disabled=true;btn.textContent='Signing in...';}
-  if(er)er.style.display='none';
-  function _fail(){if(er){er.textContent='Invalid admin credentials.';er.style.display='block';}if(btn){btn.disabled=false;btn.textContent='Sign In as Admin';}}
-
-  // ── Admin auth via Supabase Auth + admin_users table ───────────────────────
-  // Admin credentials are NEVER stored in course_config or localStorage.
-  // Use scripts/bootstrap-admin.js to create the admin Supabase Auth account.
-  if(typeof _sb==='undefined'){_fail();return;}
-  try{
-    var {data:authData,error:authErr}=await _sb.auth.signInWithPassword({email,password:pass});
-    if(authErr||!authData?.user){_fail();return;}
-
-    // Verify admin via is_admin() SECURITY DEFINER function (admin_users has deny-all RLS)
-    var {data:isAdmin,error:adminErr}=await _sb.rpc('is_admin');
-
-    if(adminErr||!isAdmin){
-      // Not in admin_users — sign out the Supabase session and reject
-      await _sb.auth.signOut().catch(function(){});
-      _fail();return;
-    }
-
-    // Authenticated admin
-    currentSession={role:"admin",authUserId:authData.user.id};
-    saveSession(currentSession);
-    navigate("admin");
-  }catch(e){
-    console.warn("Admin login error:",e);
-    _fail();
-  }
-};

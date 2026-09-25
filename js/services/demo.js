@@ -7,7 +7,7 @@
 // activation & expiry. The client only DISPLAYS a monotonic countdown derived
 // from the server-provided expires_at, and re-syncs every heartbeat.
 // ============================================================================
-var DEMO_ENDPOINT   = SUPABASE_URL + '/functions/v1/clever-api';
+// DEMO_ENDPOINT + _demoApi() live in js/shared/demo-api.js (shared with the admin app).
 var DEMO_ALLOW_ALL  = true;                 // demo can freely explore all lessons for the window
 var DEMO_LESSONS    = [1];                  // used only when DEMO_ALLOW_ALL=false (lesson .order values)
 var DEMO_HEARTBEAT_MS = 20000;              // revalidate against server every 20s
@@ -33,17 +33,6 @@ function _demoDeviceId(){
     if(!v){ v=(Date.now().toString(36)+Math.random().toString(36).slice(2)); localStorage.setItem(k,v); }
     return v;
   }catch(e){ return 'nodev'; }
-}
-async function _demoApi(payload, authToken){
-  var res = await fetch(DEMO_ENDPOINT, {
-    method:'POST',
-    headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+(authToken||SUPABASE_KEY)},
-    body: JSON.stringify(payload)
-  });
-  var out;
-  try{ out = await res.json(); }catch(e){ out = {}; }
-  out._httpStatus = res.status;
-  return out;
 }
 
 function parseDemoTokenFromUrl(){

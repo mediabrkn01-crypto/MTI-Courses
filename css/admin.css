@@ -2,7 +2,6 @@
    Source lines: 140-143, 212-223
    No rules were edited; only relocated. */
 /* TOP BAR */
-.top-bar{background:rgba(13,13,28,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 2px 12px rgba(0,0,0,.3);position:sticky;top:0;z-index:30;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .admin-top-bar{background:rgba(13,13,28,.92);backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);border-bottom:1px solid rgba(255,255,255,.08);box-shadow:0 2px 12px rgba(0,0,0,.3);position:sticky;top:0;z-index:30;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
 .stats-strip{background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.06)}
 /* ADMIN TABLE */

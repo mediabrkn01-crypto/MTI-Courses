@@ -55,9 +55,10 @@ async function sbSaveStudent(student){
     // Removed once all students migrated to Supabase Auth via scripts/migrate-students.js.
     if(student.password_hash) row.password_hash=student.password_hash;
     const{error}=await _sb.from('students').upsert(row, {onConflict:'id'});
-    if(error) console.warn('Supabase student save error:', error.message);
-    else console.log('Student synced to Supabase:', student.name);
-  }catch(e){console.warn('Supabase error:', e);}
+    if(error){ console.warn('Supabase student save error:', error.message); return {ok:false,error:error.message}; }
+    console.log('Student synced to Supabase:', student.name);
+    return {ok:true};
+  }catch(e){console.warn('Supabase error:', e); return {ok:false,error:(e&&e.message)||String(e)};}
 }
 
 // Delete student from Supabase

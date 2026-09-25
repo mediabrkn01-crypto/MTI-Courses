@@ -227,12 +227,6 @@ let activeLesson=null;
 let currentPage=0;
 const PAGE_SIZE=5;
 
-// Get admin-set title for a lesson (falls back to lesson.title)
-function getLessonTitle(lesson){
-  if(!lesson) return '';
-  var vm=loadVideos()[lesson.order]||{};
-  return vm.panelTitle||vm.title||lesson.title;
-}
 
 function renderDashboard(){
   document.body.style.overflow=""; // clear any lesson scroll-lock

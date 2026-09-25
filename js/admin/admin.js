@@ -202,6 +202,7 @@ function renderAdmin(tab){
     document.getElementById('modal-title').textContent='Add Student';
     document.getElementById('s-validity').value='90';
     ['s-id','s-name','s-email','s-pass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    var _pi=document.getElementById('s-pass'); if(_pi) _pi.placeholder='Set a password (min 6 characters)';
     document.getElementById('s-validity').value='';
     document.getElementById('s-custom-date-wrap').style.display='none';
     document.getElementById('modal-err').style.display='none';
@@ -252,20 +253,29 @@ function renderAdmin(tab){
     delete stu.password; // remove legacy field if present
     students[id]=stu;
     saveStudents(students);
-    // Sync profile to Supabase
-    if(typeof sbSaveStudent==='function') sbSaveStudent({id,name,email,validUntil,accessList:stu.accessList,createdAt:stu.createdAt});
-    // New student: create Supabase Auth user + set password via Edge Function
-    if(isNew&&pass){
-      var saveBtn=document.querySelector('#student-modal button.btn-primary');
-      if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Creating...';}
+    var saveBtn=document.querySelector('#student-modal button.btn-primary');
+    function _busy(t){ if(saveBtn){saveBtn.disabled=!!t;saveBtn.textContent=t||'Save';} }
+    function _fail(msg){ errEl.textContent=msg; errEl.style.color='#ff8070'; errEl.style.display='block'; _busy(null); }
+    _busy('Saving...');
+    // 1. Profile row must exist in Supabase BEFORE the password is set — the Edge Function
+    //    looks the student up by id to create/link their Supabase Auth account.
+    var saved=await sbSaveStudent({id,name,email,validUntil,accessList:stu.accessList,createdAt:stu.createdAt});
+    if(!saved||!saved.ok){
+      _fail('Could not save the student to Supabase: '+((saved&&saved.error)||'unknown error')+'. Nothing was changed on the server.');
+      return;
+    }
+    // 2. Password (new student, or a new password typed for an existing student) goes to
+    //    Supabase Auth via the admin-set-student-password Edge Function — never to localStorage.
+    if(pass){
+      if(pass.length<6){ _fail('Profile saved. Password must be at least 6 characters — it was NOT changed.'); return; }
+      _busy(isNew?'Creating login...':'Updating password...');
       var pwResult=await adminSetStudentPassword(id,pass);
       if(!pwResult.success){
-        errEl.textContent='Profile saved but Auth setup failed: '+(pwResult.error||'unknown')+'. Use "Set Password" in Manage Student.';
-        errEl.style.display='block';
-        if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Save';}
-        // Still close — profile exists, password can be set from Manage
+        _fail('Profile saved, but the login password was NOT set: '+(pwResult.error||'unknown error'));
+        return;
       }
     }
+    _busy(null);
     closeModal();navigate('admin',{tab:'students'});
   };
   window.bulkUpdateBar=function(){
