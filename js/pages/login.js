@@ -4,44 +4,36 @@
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function renderLogin(){
   app.innerHTML=`
-  <div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:16px">
+  <div class="auth-wrap">
     <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
-    <div data-glow-init="1" style="position:relative;z-index:2;width:420px;max-width:100%;
-      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:28px;
-      padding:48px 40px 40px;backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
-      box-shadow:0 40px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,45,120,.1),inset 0 1px 0 rgba(255,255,255,.15)">
-      <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);border-radius:28px 28px 0 0"></div>
+    <main class="auth-card center" data-glow-init="1">
+      <div class="auth-logo"><img src="${getSymbolSrc()}" alt="Broken English" onerror="this.style.display='none'"/></div>
+      <h1 class="auth-title">Sign In</h1>
+      <p class="auth-sub">Enter your credentials to access your classes.</p>
 
-      <!-- LOGO — full image, centered, no box -->
-      <div style="text-align:center;margin-bottom:32px">
-        <img src="${getSymbolSrc()}" style="max-height:80px;max-width:80px;object-fit:contain;display:inline-block;mix-blend-mode:screen" onerror="this.style.display='none'"/>
-      </div>
+      <div id="login-err" class="auth-msg error" role="alert" style="display:none"></div>
 
-      <h2 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:6px">Sign In</h2>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:28px">Enter your credentials to access your classes.</p>
+      <form id="login-form" novalidate onsubmit="event.preventDefault();doStudentLogin();">
+        <div class="auth-field">
+          <div class="auth-label-row"><label for="login-email" class="auth-label">Email or username</label></div>
+          <input id="login-email" class="auth-input" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@email.com"/>
+        </div>
+        <div class="auth-field">
+          <div class="auth-label-row">
+            <label for="login-pass" class="auth-label">Password</label>
+            <button type="button" class="auth-link" onclick="showStudentForgotPassword()">Forgot password?</button>
+          </div>
+          <div class="auth-input-wrap">
+            <input id="login-pass" class="auth-input has-eye" type="password" autocomplete="current-password" placeholder="••••••••"/>
+            <button type="button" class="auth-eye" onclick="togglePw('login-pass',this)" aria-label="Show password"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+          </div>
+        </div>
+        <button id="login-btn-main" type="submit" class="auth-btn">Sign In</button>
+      </form>
 
-      <div id="login-err" style="display:none;background:rgba(237,31,81,.1);border:1px solid rgba(237,31,81,.25);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--g1);margin-bottom:16px"></div>
-
-      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px">EMAIL OR USERNAME</label>
-      <input id="login-email" type="text" placeholder="your@email.com or username" autocomplete="username"
-        style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;padding:14px 16px;outline:none;transition:border .2s;box-sizing:border-box;margin-bottom:14px"
-        onfocus="this.style.borderColor='rgba(255,45,120,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/>
-
-      <label style="display:block;font-size:10px;font-weight:600;letter-spacing:.1em;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-bottom:6px">PASSWORD</label>
-      <div style="position:relative;margin-bottom:22px"><input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"
-        style="width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:12px;color:var(--text);font-family:'Inter',sans-serif;font-size:15px;padding:14px 44px 14px 16px;outline:none;transition:border .2s;box-sizing:border-box"
-        onfocus="this.style.borderColor='rgba(255,45,120,.5)'" onblur="this.style.borderColor='rgba(255,255,255,.12)'"/><button type="button" onclick="togglePw('login-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;color:rgba(255,255,255,.55);padding:0;line-height:1"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button></div>
-
-      <button id="login-btn-main" onclick="doStudentLogin()" class="btn-primary" style="margin-bottom:20px;font-size:15px;font-weight:800;letter-spacing:.02em">Sign In</button>
-
-      <p style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:10px">Accounts are created by the course admin.</p>
-      <p style="text-align:center"><a href="admin.html" style="font-size:12px;color:var(--muted2);text-decoration:none">Admin portal</a></p>
-      <p style="text-align:center;margin-top:10px"><span style="font-size:12px;color:rgba(255,45,120,.8);cursor:pointer;text-decoration:underline" onclick="showStudentForgotPassword()">Forgot Password?</span></p>
-      <p style="text-align:center;margin-top:8px;font-size:11px;color:rgba(255,255,255,.35)">Having trouble? Contact <a href="mailto:mediabrkn01@gmail.com" style="color:rgba(255,45,120,.7);text-decoration:none">mediabrkn01@gmail.com</a></p>
-    </div>
+      <p class="auth-foot">Having trouble? Contact <a href="mailto:mediabrkn01@gmail.com">mediabrkn01@gmail.com</a></p>
+    </main>
   </div>`;
-  var lp=document.getElementById("login-pass");
-  if(lp) lp.addEventListener("keydown",e=>{if(e.key==="Enter")doStudentLogin();});
 }
 
 // ── FORGOT PASSWORD ───────────────────────────────────────────────────────────

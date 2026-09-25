@@ -71,41 +71,65 @@ window.addEventListener('popstate',function(e){
 
 // ── ADMIN LOGIN ──────────────────────────────────────────────────────────────
 var _eyeOffSvg='<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
-function renderAdminLogin(notice){
+// notice: optional one-off message from an action that just happened (logout, reset, session end).
+// It lives only in this render — a normal visit or a reload never shows it.
+var _AUTH_ICONS={
+  info:'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>',
+  success:'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>',
+  error:'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>'
+};
+function _authMsg(el,text,type){
+  if(!el) return;
+  if(!text){el.style.display='none';el.innerHTML='';return;}
+  el.className='auth-msg '+(type||'info');
+  el.innerHTML=(_AUTH_ICONS[type]||_AUTH_ICONS.info)+'<span>'+escapeHtml(text)+'</span>';
+  el.style.display='flex';
+}
+function renderAdminLogin(notice,type){
   if(window._demoAdminTick){clearInterval(window._demoAdminTick);window._demoAdminTick=null;}
   var marker=_loadAdminMarker();
   app.innerHTML=`
-  <div style="min-height:100vh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:16px">
+  <div class="auth-wrap">
     <div class="orb o1"></div><div class="orb o2"></div>
-    <div style="position:relative;z-index:2;width:420px;max-width:100%;
-      background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);border-radius:28px;
-      padding:44px 36px 36px;backdrop-filter:blur(40px) saturate(180%);-webkit-backdrop-filter:blur(40px) saturate(180%);
-      box-shadow:0 40px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.15)">
-      <div style="display:flex;align-items:center;gap:13px;margin-bottom:30px">
-        <div style="width:44px;height:44px;border-radius:12px;background:var(--grad);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(255,45,120,.45);flex-shrink:0;overflow:hidden">
-          <img src="${getLogoSrc()}" alt="" style="width:44px;height:44px;object-fit:contain;border-radius:12px" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><span style="display:none;font-family:'Montserrat',sans-serif;font-weight:800;font-size:19px;color:#fff">BE</span>
-        </div>
+    <main class="auth-card">
+      <div class="auth-brand">
+        <div class="auth-brand-mark"><img src="${getSymbolSrc()}" alt="" onerror="this.style.display='none'"/></div>
         <div>
-          <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:17px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${SITE_NAME}</div>
-          <span style="display:inline-block;margin-top:3px;border-radius:99px;background:rgba(237,31,81,.15);border:1px solid rgba(237,31,81,.3);padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--g3);font-family:'JetBrains Mono',monospace">Admin Access</span>
+          <div class="auth-brand-name">${SITE_NAME}</div>
+          <span class="auth-pill">Admin Access</span>
         </div>
       </div>
-      <h1 style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;color:var(--text);margin:0 0 5px">Admin Panel</h1>
-      <p style="font-size:13px;color:var(--muted2);margin:0 0 24px;line-height:1.5">Sign in to manage students and courses.</p>
-      <div id="adm-notice" style="display:${notice?'block':'none'};background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.3);border-radius:10px;padding:10px 14px;font-size:13px;color:#93c5fd;margin-bottom:14px">${notice?escapeHtml(notice):''}</div>
+      <h1 class="auth-title">Admin Panel</h1>
+      <p class="auth-sub">Sign in to manage students and courses.</p>
+
+      <div id="adm-notice" role="status" style="display:none"></div>
+      <div id="adm-err" class="auth-msg error" role="alert" style="display:none"></div>
+
       <form id="adm-form" onsubmit="event.preventDefault();doAdminLogin();" novalidate>
-        <label for="adm-email" class="adm-label">Admin email</label>
-        <input id="adm-email" type="email" autocomplete="username" placeholder="admin@example.com" class="glass-input" style="margin-bottom:14px" value="${marker?escapeAttr(marker.email||''):''}"/>
-        <label for="adm-pass" class="adm-label">Password</label>
-        <div style="position:relative;margin-bottom:10px"><input id="adm-pass" type="password" autocomplete="current-password" placeholder="••••••••" class="glass-input" style="padding-right:44px"/><button type="button" aria-label="Show password" onclick="togglePw('adm-pass',this)" tabindex="-1" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,.55);padding:0;line-height:1">${_eyeOffSvg}</button></div>
-        <div id="adm-err" role="alert" style="display:none;background:rgba(237,31,81,.1);border:1px solid rgba(237,31,81,.3);border-radius:10px;padding:10px 14px;font-size:13px;color:#fb7185;margin:4px 0 10px"></div>
-        <button id="adm-login-btn" type="submit" class="btn-primary" style="margin-top:8px">Sign In as Admin</button>
+        <div class="auth-field">
+          <div class="auth-label-row"><label for="adm-email" class="auth-label">Admin email</label></div>
+          <input id="adm-email" class="auth-input" type="email" inputmode="email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="admin@brokenenglish.in" value="${marker?escapeAttr(marker.email||''):''}"/>
+        </div>
+        <div class="auth-field">
+          <div class="auth-label-row">
+            <label for="adm-pass" class="auth-label">Password</label>
+            <button type="button" class="auth-link" onclick="showAdminForgotPassword()">Forgot password?</button>
+          </div>
+          <div class="auth-input-wrap">
+            <input id="adm-pass" class="auth-input has-eye" type="password" autocomplete="current-password" placeholder="••••••••"/>
+            <button type="button" class="auth-eye" aria-label="Show password" onclick="togglePw('adm-pass',this)">${_eyeOffSvg}</button>
+          </div>
+        </div>
+        <button id="adm-login-btn" type="submit" class="auth-btn">Sign In as Admin</button>
       </form>
-      <p style="margin-top:14px;text-align:center"><button type="button" onclick="showAdminForgotPassword()" style="font-size:12px;color:rgba(255,45,120,.85);background:none;border:none;cursor:pointer;text-decoration:underline">Forgot Password?</button></p>
-    </div>
+    </main>
   </div>`;
+  _authMsg(document.getElementById('adm-notice'),notice,type||'info');
+  // One-off notices disappear as soon as the admin starts signing in again.
+  var form=document.getElementById('adm-form');
+  if(form) form.addEventListener('input',function(){_authMsg(document.getElementById('adm-notice'),'');},{once:true});
   var el=document.getElementById(marker&&marker.email?'adm-pass':'adm-email');
-  if(el) setTimeout(function(){el.focus();},50);
+  if(el&&window.matchMedia('(hover:hover)').matches) setTimeout(function(){el.focus();},50);
 }
 
 window.doAdminLogin=async function(){
@@ -114,10 +138,10 @@ window.doAdminLogin=async function(){
   var btn=document.getElementById('adm-login-btn');
   var er=document.getElementById('adm-err');
   var note=document.getElementById('adm-notice');
-  function busy(on){ if(!btn)return; btn.disabled=on; btn.innerHTML=on?'<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>Signing in…</span>':'Sign In as Admin'; }
-  function fail(msg){ if(er){er.textContent=msg;er.style.display='block';} busy(false); }
-  if(note) note.style.display='none';
-  if(er) er.style.display='none';
+  function busy(on){ if(!btn)return; btn.disabled=on; btn.innerHTML=on?'<span class="auth-spin"></span>Signing in…':'Sign In as Admin'; }
+  function fail(msg){ _authMsg(er,msg,'error'); busy(false); }
+  _authMsg(note,'');
+  _authMsg(er,'');
   if(!email||!pass){fail('Enter your admin email and password.');return;}
   busy(true);
   try{
@@ -153,7 +177,7 @@ window.adminLogout=async function(){
   stopAdminMaintenanceBadge();
   try{await _sb.auth.signOut();}catch(e){}
   try{history.replaceState({screen:'admin-login',params:{}},'','#admin-login');}catch(e){}
-  renderAdminLogin('You have been signed out.');
+  renderAdminLogin('You have been signed out.','success');
 };
 
 // ── ADMIN FORGOT PASSWORD (separate from the student flow) ───────────────────
@@ -230,7 +254,7 @@ window.doAdminSetNewPassword=async function(){
     currentSession=null;_clearAdminMarker();
     document.getElementById('adm-rp-overlay')?.remove();
     try{history.replaceState({screen:'admin-login',params:{}},'',location.pathname+'#admin-login');}catch(e){}
-    renderAdminLogin('Password updated. Sign in with your new password.');
+    renderAdminLogin('Password updated. Sign in with your new password.','success');
   }catch(e){fail('Could not update password. Check your connection and try again.');}
 };
 
@@ -279,7 +303,7 @@ async function bootAdmin(){
     setTimeout(function(){
       if(!document.getElementById('adm-rp-overlay')){
         try{history.replaceState({screen:'admin-login',params:{}},'',location.pathname+'#admin-login');}catch(e){}
-        renderAdminLogin('That reset link is invalid or has expired. Request a new one below.');
+        renderAdminLogin('That reset link is invalid or has expired. Use "Forgot password?" to get a new one.','error');
       }
     },8000);
     return;
@@ -309,7 +333,7 @@ async function bootAdmin(){
     await _sb.auth.signOut().catch(function(){});
     _clearAdminMarker();
     try{history.replaceState({screen:'admin-login',params:{}},'','#admin-login');}catch(e){}
-    renderAdminLogin('That account does not have admin access.');
+    renderAdminLogin('That account does not have admin access.','error');
     return;
   }
   _enterAdmin(sess.user);
@@ -325,7 +349,7 @@ _sb.auth.onAuthStateChange(function(event){
   if(event==='SIGNED_OUT'&&_isAdminAuthed()){
     currentSession=null;_clearAdminMarker();stopAdminMaintenanceBadge();
     try{history.replaceState({screen:'admin-login',params:{}},'','#admin-login');}catch(e){}
-    renderAdminLogin('Your admin session ended. Please sign in again.');
+    renderAdminLogin('Your admin session ended. Please sign in again.','info');
   }
 });
 

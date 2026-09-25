@@ -1,0 +1,88 @@
+/* auth.css — sign-in screens. Shared LOOK for the student login (index.html) and the
+   admin login (admin.html). Each page has its own markup, logic and Supabase session. */
+.auth-wrap{min-height:100vh;min-height:100dvh;background:var(--bg);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;padding:32px 20px;box-sizing:border-box}
+.auth-card{position:relative;z-index:2;width:100%;max-width:400px;box-sizing:border-box;
+  background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.035));
+  border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:36px 36px 28px;
+  backdrop-filter:blur(40px) saturate(170%);-webkit-backdrop-filter:blur(40px) saturate(170%);
+  box-shadow:0 30px 70px rgba(0,0,0,.5),0 0 0 1px rgba(237,31,81,.06),inset 0 1px 0 rgba(255,255,255,.12)}
+.auth-card::before{content:'';position:absolute;top:0;left:24px;right:24px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent)}
+
+/* Brand */
+.auth-logo{display:flex;justify-content:center;margin-bottom:22px}
+.auth-logo img{height:52px;width:auto;max-width:120px;object-fit:contain;mix-blend-mode:screen;display:block}
+.auth-brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.auth-brand-mark{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.auth-brand-mark img{height:28px;width:auto;object-fit:contain;mix-blend-mode:screen;display:block}
+.auth-brand-name{font-family:'Montserrat',sans-serif;font-weight:800;font-size:16px;line-height:1.2;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.auth-pill{display:inline-block;margin-top:4px;border-radius:99px;background:rgba(237,31,81,.12);border:1px solid rgba(237,31,81,.32);padding:2px 9px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fb7185;font-family:'JetBrains Mono',monospace}
+
+/* Headings */
+.auth-title{font-family:'Montserrat',sans-serif;font-weight:800;font-size:26px;line-height:1.15;color:#fff;margin:0 0 6px;letter-spacing:-.01em}
+.auth-sub{font-size:14px;color:var(--muted2);margin:0 0 26px;line-height:1.5}
+.auth-card.center .auth-title,.auth-card.center .auth-sub{text-align:center}
+
+/* Fields */
+.auth-field{margin-bottom:16px}
+.auth-label-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px}
+.auth-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2)}
+.auth-link{background:none;border:none;padding:4px 0;margin:-4px 0;font-size:12.5px;font-weight:600;color:#fb7185;cursor:pointer;text-decoration:none;font-family:inherit}
+.auth-link:hover,.auth-link:focus-visible{color:#fff;text-decoration:underline}
+.auth-input-wrap{position:relative}
+.auth-input{width:100%;box-sizing:border-box;height:50px;padding:0 16px;border-radius:12px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);color:#fff;
+  font-family:'Inter',sans-serif;font-size:15px;outline:none;transition:border-color .15s,box-shadow .15s,background .15s}
+.auth-input::placeholder{color:rgba(255,255,255,.32)}
+.auth-input:hover{border-color:rgba(255,255,255,.22)}
+.auth-input:focus{border-color:rgba(237,31,81,.6);background:rgba(255,255,255,.08);box-shadow:0 0 0 3px rgba(237,31,81,.14)}
+.auth-input.has-eye{padding-right:52px}
+/* Browser autofill otherwise paints the fields light blue on a dark card */
+.auth-input:-webkit-autofill,.auth-input:-webkit-autofill:hover,.auth-input:-webkit-autofill:focus{
+  -webkit-text-fill-color:#fff;caret-color:#fff;-webkit-box-shadow:0 0 0 1000px #1b1726 inset;box-shadow:0 0 0 1000px #1b1726 inset;
+  border-color:rgba(255,255,255,.2);transition:background-color 9999s ease-in-out 0s}
+.auth-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;background:none;border:none;cursor:pointer;color:rgba(255,255,255,.5);padding:0}
+.auth-eye:hover,.auth-eye:focus-visible{color:#fff;background:rgba(255,255,255,.06)}
+.auth-eye svg{width:19px;height:19px}
+
+/* Primary action */
+.auth-btn{width:100%;height:52px;margin-top:8px;border-radius:13px;border:1px solid rgba(255,255,255,.16);
+  background:var(--grad);color:#fff;font-family:'Montserrat',sans-serif;font-weight:800;font-size:15px;letter-spacing:.01em;
+  cursor:pointer;box-shadow:0 8px 24px rgba(237,31,81,.32),inset 0 1px 0 rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .15s,transform .15s,box-shadow .15s}
+.auth-btn:hover{filter:brightness(1.07);box-shadow:0 10px 30px rgba(237,31,81,.42),inset 0 1px 0 rgba(255,255,255,.2)}
+.auth-btn:active{transform:translateY(1px)}
+.auth-btn:disabled{opacity:.7;cursor:default;filter:none}
+.auth-spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+
+/* Messages */
+.auth-msg{display:flex;gap:10px;align-items:flex-start;border-radius:11px;padding:11px 13px;font-size:13px;line-height:1.5;margin:0 0 18px;border:1px solid}
+.auth-msg svg{flex-shrink:0;margin-top:1px}
+.auth-msg.error{background:rgba(244,63,94,.09);border-color:rgba(244,63,94,.3);color:#fda4af}
+.auth-msg.info{background:rgba(59,130,246,.08);border-color:rgba(59,130,246,.28);color:#bfdbfe}
+.auth-msg.success{background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.28);color:#bbf7d0}
+.auth-msg a{color:#fff;font-weight:700}
+
+/* Footer */
+.auth-foot{margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,.07);text-align:center;font-size:12.5px;color:var(--muted);line-height:1.6}
+.auth-foot a{color:#fb7185;text-decoration:none;font-weight:600;display:inline-block;white-space:nowrap}
+.auth-foot a:hover{text-decoration:underline}
+
+@media(max-width:480px){
+  .auth-wrap{align-items:flex-start;padding:max(28px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+  .auth-card{padding:28px 22px 22px;border-radius:20px;margin-top:4vh}
+  .auth-logo{margin-bottom:16px}
+  .auth-logo img{height:42px}
+  .auth-brand{margin-bottom:20px}
+  .auth-title{font-size:23px}
+  .auth-sub{font-size:13.5px;margin-bottom:22px}
+  /* 16px stops iOS Safari from zooming into the field on focus */
+  .auth-input{height:52px;font-size:16px}
+  .auth-btn{height:54px}
+  .auth-link{font-size:13.5px;padding:8px 0;margin:-8px 0}
+  .auth-foot{margin-top:18px;padding-top:16px}
+}
+@media(max-height:560px) and (orientation:landscape){
+  .auth-wrap{align-items:flex-start}
+  .auth-logo{display:none}
+}

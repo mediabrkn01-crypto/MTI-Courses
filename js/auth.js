@@ -49,16 +49,10 @@ window.doStudentLogin=async()=>{
         } else if(!profRes.error&&usedSupabaseAuth){
           // Auth succeeded but no student profile found for this JWT — broken link
           if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
-          // An admin account has no student profile. Point it to the admin app instead of
-          // showing a link error. Nothing is granted here — the session is signed out either way.
-          var _isAdm=false;
-          try{var _ar=await _sb.rpc('is_admin');_isAdm=!_ar.error&&_ar.data===true;}catch(e){}
+          // No student profile for this account (e.g. a staff account). Sign out and show a
+          // student-facing message — the student page does not link to or mention the admin app.
           try{await _sb.auth.signOut();}catch(e){}
-          if(_isAdm){
-            errEl.innerHTML='This is an admin account. Admins sign in at the <a href="admin.html" style="color:#fff;font-weight:700;text-decoration:underline">Admin portal</a>.';
-          } else {
-            errEl.textContent="We couldn't load your course account. Please contact your admin. (PROFILE_LINK_ERROR)";
-          }
+          errEl.textContent="We couldn't find a student account for this login. Please contact support below. (PROFILE_LINK_ERROR)";
           errEl.style.display="block";
           return;
         }
@@ -110,7 +104,7 @@ window.doStudentLogin=async()=>{
   const{expired}=getValidity(byEmail);
   if(expired){
     if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;}
-    errEl.textContent="Your course access has expired. Please contact your admin.";
+    errEl.textContent="Your course access has expired. Please contact support to renew it.";
     errEl.style.display="block";
     return;
   }
