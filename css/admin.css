@@ -227,3 +227,5 @@
 .sm-cred b{color:#fff;font-family:'JetBrains Mono',monospace;font-weight:600;word-break:break-all;text-align:right}
 @media(max-width:600px){.sm-panel .qe-foot .adm-btn{flex:1}}
 .sm-panel .qe-foot{justify-content:flex-end}
+/* Loading placeholder — shown instead of zeros while progress is fetched */
+.adm-skel{display:inline-block;height:.9em;width:3.2em;border-radius:6px;background:rgba(255,255,255,.08);vertical-align:middle;animation:admPulse 1.4s ease-in-out infinite}

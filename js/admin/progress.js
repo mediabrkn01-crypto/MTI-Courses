@@ -1,6 +1,79 @@
 /* progress.js — extracted verbatim from the original single-file index.html.
    Source lines: 3014-3281
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
+// ── SHARED PROGRESS SOURCE ───────────────────────────────────────────────────
+// The Progress list and the per-student page both read progress through here, so
+// they always agree. Server rows (student_progress + quiz_scores) are the source of
+// truth — the same tables the student's own dashboard loads via sbLoadProgress().
+// A student can have duplicate profile rows with the same email; their progress is merged.
+var AdmProgress=(function(){
+  // Supabase caps a select at 1000 rows — page through so large classes aren't cut off.
+  async function fetchAll(table, cols, ids){
+    var out=[], from=0, PAGE=1000;
+    for(;;){
+      var q=_sb.from(table).select(cols).range(from, from+PAGE-1);
+      if(ids) q=q.in('student_id', ids);
+      var res=await q;
+      if(res.error) throw new Error(res.error.message||('Could not load '+table));
+      out=out.concat(res.data||[]);
+      if(!res.data||res.data.length<PAGE) return out;
+      from+=PAGE;
+    }
+  }
+  // Returns {prog:{studentId:Set(lessonId)}, quiz:{studentId:{lessonId:bestPct}}}. Throws on failure.
+  async function load(ids){
+    if(typeof _sb==='undefined') throw new Error('Not connected to the server');
+    var r=await Promise.all([
+      fetchAll('student_progress','student_id,lesson_id',ids),
+      fetchAll('quiz_scores','student_id,lesson_id,pct',ids)
+    ]);
+    var prog={}, quiz={};
+    r[0].forEach(function(x){ (prog[x.student_id]=prog[x.student_id]||new Set()).add(x.lesson_id); });
+    r[1].forEach(function(x){ var m=quiz[x.student_id]=quiz[x.student_id]||{}; m[x.lesson_id]=Math.max(m[x.lesson_id]||0, x.pct||0); });
+    return {prog:prog, quiz:quiz};
+  }
+  function mergedIds(sid, students){
+    var st=students[sid]; if(!st) return [sid];
+    var email=(st.email||'').toLowerCase().trim(); if(!email) return [sid];
+    var ids=Object.values(students).filter(function(x){return (x.email||'').toLowerCase().trim()===email;}).map(function(x){return x.id;});
+    if(ids.indexOf(sid)<0) ids.unshift(sid);
+    return ids;
+  }
+  function wvList(){ return typeof WV_DATA!=='undefined'?WV_DATA:[]; }
+  function totals(){
+    return { lessons: ALL_LESSONS.length+wvList().length, core: ALL_LESSONS.length, wv: wvList().length,
+             quizzes: ALL_LESSONS.filter(function(l){return hasRealQuiz(l);}).length };
+  }
+  // One calculation for every view.
+  function compute(sid, students, data){
+    var ids=mergedIds(sid, students), done=new Set(), quiz={};
+    ids.forEach(function(id){
+      (data.prog[id]||new Set()).forEach(function(x){done.add(x);});
+      loadProgress(id).forEach(function(x){done.add(x);}); // not-yet-synced local rows, if any
+      var q=data.quiz[id]||{};
+      Object.keys(q).forEach(function(k){ quiz[k]=Math.max(quiz[k]||0, q[k]); });
+    });
+    var core=ALL_LESSONS.filter(function(l){return done.has(l.id);});
+    var wv=wvList().filter(function(w){return done.has(w.id);});
+    var t=totals(), completed=core.length+wv.length, last=null;
+    core.forEach(function(l){ if(!last||l.order>last.order) last=l; });
+    return {
+      done:done, quiz:quiz, completed:completed, coreDone:core.length, wvDone:wv.length,
+      total:t.lessons, quizTotal:t.quizzes,
+      pct: t.lessons ? Math.min(100, Math.round(completed/t.lessons*100)) : 0,
+      passed: ALL_LESSONS.filter(function(l){return (quiz[l.id]||0)>=70;}).length,
+      last:last
+    };
+  }
+  return {load:load, compute:compute, mergedIds:mergedIds, totals:totals, wvList:wvList};
+})();
+
+function _admProgError(msg, retry){
+  return '<div class="adm-card adm-empty"><p style="color:#fb7185;font-weight:600;margin:0 0 6px">Could not load progress</p>'
+    +'<p class="adm-meta" style="margin:0 0 14px">'+escapeHtml(msg||'Unknown error')+'. Nothing is shown so a failed load never looks like zero progress.</p>'
+    +'<button class="adm-btn" onclick="'+retry+'">'+ADM_ICON.refresh+' Try again</button></div>';
+}
+
 // ── PROGRESS TAB ─────────────────────────────────────────────────────────────
 function renderAdminProgress(){
   const students = loadStudents();
@@ -11,95 +84,26 @@ function renderAdminProgress(){
     if(_seenEmail[key]) return false;
     _seenEmail[key]=true; return true;
   });
-  const TOTAL_LESSONS = ALL_LESSONS.length + (typeof WV_DATA!=='undefined'?WV_DATA.length:0); // 20 core + 10 WV = 30
+  const T = AdmProgress.totals();
+  const TOTAL_LESSONS = T.lessons;
 
-  app.innerHTML = adminTopBar('progress') + '<div style="padding:48px;text-align:center"><p style="color:var(--muted);font-size:14px">Loading progress from server...</p></div>';
+  app.innerHTML = adminTopBar('progress') + '<div class="adm-page"><div id="prog-loading" class="adm-card adm-empty">Loading progress from server…</div></div>';
 
   (async function(){
-    // Fetch progress from Supabase
-    var sbProgress = {};
-    var sbQuizPassed = {};
-    var sbLastLesson = {};
-    try{
-      if(typeof _sb !== 'undefined'){
-        const [progRes, quizRes] = await Promise.all([
-          _sb.from('student_progress').select('student_id,lesson_id'),
-          _sb.from('quiz_scores').select('student_id,lesson_id,pct')
-        ]);
-        if(!progRes.error && progRes.data){
-          progRes.data.forEach(function(r){
-            if(!sbProgress[r.student_id]) sbProgress[r.student_id] = new Set();
-            sbProgress[r.student_id].add(r.lesson_id);
-          });
-        }
-        if(!quizRes.error && quizRes.data){
-          quizRes.data.forEach(function(r){
-            if(!sbQuizPassed[r.student_id]) sbQuizPassed[r.student_id] = new Set();
-            if(r.pct>=70) sbQuizPassed[r.student_id].add(r.lesson_id);
-          });
-        }
-      }
-    }catch(e){console.warn('Supabase progress fetch error:',e);}
-
-    // Build email→[ids] map to merge progress across duplicate Supabase records
-    var _emailToIds={};
-    list.forEach(function(st){
-      var email=(st.email||'').toLowerCase().trim();
-      if(!_emailToIds[email]) _emailToIds[email]=[];
-      _emailToIds[email].push(st.id);
-    });
-    // Also include all Supabase student_ids that map to the same email
-    Object.values(students).forEach(function(st){
-      var email=(st.email||'').toLowerCase().trim();
-      if(!_emailToIds[email]) _emailToIds[email]=[];
-      if(_emailToIds[email].indexOf(st.id)<0) _emailToIds[email].push(st.id);
-    });
-
-    function getMergedIds(sid){
-      var st=students[sid]; if(!st) return [sid];
-      var email=(st.email||'').toLowerCase().trim();
-      return _emailToIds[email]||[sid];
+    var data, err=null;
+    try{ data = await AdmProgress.load(); }
+    catch(e){ err=e; }
+    // The admin may have opened a student or another tab while this was loading — don't overwrite it.
+    if(!document.getElementById('prog-loading')) return;
+    if(err){
+      var e=err; console.warn('Progress fetch error:',e);
+      app.innerHTML = adminTopBar('progress') + '<div class="adm-page">'+_admProgError(e.message,"renderAdminProgress()")+'</div>';
+      return;
     }
-    function getStudentProgress(sid){
-      var merged=new Set();
-      getMergedIds(sid).forEach(function(id){
-        var sb=sbProgress[id]||new Set();
-        sb.forEach(function(x){merged.add(x);});
-        loadProgress(id).forEach(function(x){merged.add(x);});
-      });
-      return merged;
-    }
-    function getStudentQuizPassed(sid){
-      var merged=new Set();
-      getMergedIds(sid).forEach(function(id){
-        var sb=sbQuizPassed[id]||new Set();
-        sb.forEach(function(x){merged.add(x);});
-        getPassedQuizzes(id).forEach(function(x){merged.add(x);});
-      });
-      return merged;
-    }
-    function getLastLesson(sid, progress){
-      // Find highest completed lesson order
-      var maxOrder = 0; var lastL = null;
-      ALL_LESSONS.forEach(function(l){
-        if(progress.has(l.id) && l.order > maxOrder){ maxOrder=l.order; lastL=l; }
-      });
-      return lastL;
-    }
-
-    const quizTotal = ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
+    const quizTotal = T.quizzes;
     // Compute once per student — rows and stats both read from this.
     var stats = {};
-    list.forEach(function(st){
-      var progress = getStudentProgress(st.id);
-      var completed = progress.size;
-      stats[st.id] = {
-        completed: completed,
-        pct: TOTAL_LESSONS ? Math.min(100,Math.round(completed/TOTAL_LESSONS*100)) : 0,
-        passed: getStudentQuizPassed(st.id).size,
-        last: getLastLesson(st.id, progress)
-      };
-    });
+    list.forEach(function(st){ stats[st.id] = AdmProgress.compute(st.id, students, data); });
     function stage(st){ var p=stats[st.id].pct; return p===0?'none':p>=100?'done':'going'; }
     var counts={all:list.length,none:0,going:0,done:0}, pctSum=0, quizSum=0;
     list.forEach(function(st){ counts[stage(st)]++; pctSum+=stats[st.id].pct; quizSum+=stats[st.id].passed; });
@@ -199,57 +203,17 @@ function renderAdminProgress(){
 }
 
 // ── PER-STUDENT PROGRESS DETAIL ──────────────────────────────────────────────
+// Same data + same calculation as the list (AdmProgress), fetched for this student's
+// merged ids only. Shows a loading state first and an error state on failure — never
+// placeholder zeros.
 function renderAdminProgressStudent(id){
   const students = loadStudents();
   const st = students[id];
   if(!st){ navigate('admin',{tab:'progress'}); return; }
+  const T = AdmProgress.totals();
 
-  const progress = loadProgress(st.id);
-  const passed = getPassedQuizzes(st.id);
-  const attempted = getAttemptedQuizzes(st.id);
-  const lastId = localStorage.getItem('brokeneng_lastlesson_'+st.id);
-  const total = ALL_LESSONS.length;
-  const completed = progress.size;
-  const pct = total ? Math.round(completed/total*100) : 0;
-  const quizTotal = ALL_LESSONS.filter(l=>hasRealQuiz(l)).length;
-
-  function lessonRow(l){
-    const done = progress.has(l.id);
-    const isLast = l.id === lastId;
-    const hasQ = hasRealQuiz(l);
-    const quizPassed = hasQ && passed.has(l.order);
-    const quizTried = hasQ && attempted.has(l.order);
-    return `<tr>
-      <td style="width:40px;text-align:center">
-        <div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:auto;
-          background:${done?'rgba(74,222,128,.15)':'rgba(255,255,255,.06)'};
-          border:1.5px solid ${done?'rgba(74,222,128,.5)':'rgba(255,255,255,.1)'};
-          color:${done?'#4ade80':'rgba(255,255,255,.3)'}">
-          ${done?'✓':l.order}
-        </div>
-      </td>
-      <td>
-        <span style="font-size:13px;font-weight:${done?'600':'400'};color:${done?'#fff':'rgba(255,255,255,.4)'}">${getLessonTitle(l)||'Day '+l.order}</span>
-        ${isLast?'<span style="margin-left:6px;font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(255,45,120,.15);border:1px solid rgba(255,45,120,.3);color:var(--g3);font-weight:700">CURRENT</span>':''}
-      </td>
-      <td class="center">
-        ${hasQ
-          ? quizPassed
-            ? '<span class="pill pill-green" style="font-size:10px">Passed</span>'
-            : quizTried
-              ? '<span class="pill pill-red" style="font-size:10px">Attempted</span>'
-              : '<span style="font-size:11px;color:rgba(255,255,255,.25)">—</span>'
-          : '<span style="font-size:11px;color:rgba(255,255,255,.15)">—</span>'}
-      </td>
-      <td class="center">
-        ${done
-          ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
-          : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>'}
-      </td>
-    </tr>`;
-  }
-
-  app.innerHTML = adminTopBar('progress') + `
+  function page(statsHtml, meterPct, body){
+    return adminTopBar('progress') + `
   <div class="adm-page" style="max-width:960px">
     <button onclick="navigate('admin',{tab:'progress'})" class="adm-btn" style="margin-bottom:20px">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
@@ -260,18 +224,84 @@ function renderAdminProgressStudent(id){
       ${stuTableAvatar(st)}
       <div style="min-width:0">
         <h1 class="adm-title" style="font-size:20px">${escapeHtml(st.name)}</h1>
-        <p class="adm-meta">${escapeHtml(st.email)}</p>
+        <p class="adm-meta">${escapeHtml(st.email||'')}</p>
       </div>
     </div>
 
-    ${admStats([
-      ['Progress', pct, pct>=100?'ok':'', '%'],
-      ['Lessons done', completed, '', '/'+total],
-      ['Quizzes passed', passed.size, '', '/'+quizTotal]
-    ])}
+    ${statsHtml}
 
-    <div class="adm-meter${pct>=100?' ok':''}" style="height:8px;margin-bottom:20px"><span style="width:${pct}%"></span></div>
+    <div class="adm-meter${meterPct>=100?' ok':''}" style="max-width:none;height:8px;margin-bottom:20px"><span style="width:${meterPct}%"></span></div>
 
+    ${body}
+  </div>`;
+  }
+
+  const sk='<span class="adm-skel"></span>';
+  app.innerHTML = page(admStats([['Progress',sk],['Lessons done',sk],['Quizzes passed',sk]]), 0,
+    '<div id="prog-detail-loading" data-sid="'+escapeHtml(st.id)+'" class="adm-card adm-empty">Loading '+escapeHtml(st.name)+'\'s progress…</div>');
+
+  (async function(){
+    var data, err=null;
+    try{ data = await AdmProgress.load(AdmProgress.mergedIds(st.id, students)); }
+    catch(e){ err=e; console.warn('Progress detail fetch error:',e); }
+    // Only render if this student's loading screen is still the one showing.
+    var marker=document.getElementById('prog-detail-loading');
+    if(!marker || marker.getAttribute('data-sid')!==st.id) return;
+    if(err){
+      app.innerHTML = page(admStats([['Progress','—'],['Lessons done','—'],['Quizzes passed','—']]), 0,
+        _admProgError(err.message,"renderAdminProgressStudent('"+st.id+"')"));
+      return;
+    }
+    const s = AdmProgress.compute(st.id, students, data);
+
+    function circle(label, done){
+      return `<div style="width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;margin:auto;
+          background:${done?'rgba(74,222,128,.15)':'rgba(255,255,255,.06)'};
+          border:1.5px solid ${done?'rgba(74,222,128,.5)':'rgba(255,255,255,.1)'};
+          color:${done?'#4ade80':'rgba(255,255,255,.3)'}">${done?'✓':label}</div>`;
+    }
+    function doneCell(done){
+      return done
+        ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+        : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    }
+    function titleCell(title, done, extra){
+      return `<span style="font-size:13px;font-weight:${done?'600':'400'};color:${done?'#fff':'rgba(255,255,255,.4)'}">${escapeHtml(title)}</span>${extra||''}`;
+    }
+    function lessonRow(l){
+      const done = s.done.has(l.id);
+      const pct = s.quiz[l.id];
+      const isLast = s.last && l.id === s.last.id;
+      return `<tr>
+      <td style="width:40px;text-align:center">${circle(l.order, done)}</td>
+      <td>${titleCell(getLessonTitle(l)||'Day '+l.order, done,
+        isLast?'<span style="margin-left:6px;font-size:10px;padding:2px 7px;border-radius:99px;background:rgba(255,45,120,.15);border:1px solid rgba(255,45,120,.3);color:var(--g3);font-weight:700">CURRENT</span>':'')}</td>
+      <td class="center">
+        ${pct!=null
+          ? (pct>=70
+            ? '<span class="pill pill-green" style="font-size:10px">Passed · '+pct+'%</span>'
+            : '<span class="pill pill-red" style="font-size:10px">Attempted · '+pct+'%</span>')
+          : '<span style="font-size:11px;color:rgba(255,255,255,'+(hasRealQuiz(l)?'.25':'.15')+')">—</span>'}
+      </td>
+      <td class="center">${doneCell(done)}</td>
+    </tr>`;
+    }
+    function wvRow(w, i){
+      const done = s.done.has(w.id);
+      return `<tr>
+      <td style="width:40px;text-align:center">${circle('W'+(i+1), done)}</td>
+      <td>${titleCell(w.title, done)}</td>
+      <td class="center"><span style="font-size:11px;color:rgba(255,255,255,.15)">—</span></td>
+      <td class="center">${doneCell(done)}</td>
+    </tr>`;
+    }
+    const wv = AdmProgress.wvList();
+
+    app.innerHTML = page(admStats([
+      ['Progress', s.pct, s.pct>=100?'ok':'', '%'],
+      ['Lessons done', s.completed, '', '/'+s.total],
+      ['Quizzes passed', s.passed, '', '/'+s.quizTotal]
+    ]), s.pct, `
     <div class="adm-card admin-table-wrap">
       <table class="admin-table" style="min-width:400px">
         <thead><tr>
@@ -280,8 +310,9 @@ function renderAdminProgressStudent(id){
           <th class="center">Quiz</th>
           <th class="center">Done</th>
         </tr></thead>
-        <tbody>${ALL_LESSONS.map(lessonRow).join('')}</tbody>
+        <tbody>${ALL_LESSONS.map(lessonRow).join('')}
+        ${wv.length?'<tr><td colspan="4" style="padding-top:18px"><span class="adm-section-label" style="margin:0">Pronunciation Workshop</span></td></tr>'+wv.map(wvRow).join(''):''}</tbody>
       </table>
-    </div>
-  </div>`;
+    </div>`);
+  })();
 }
