@@ -173,7 +173,15 @@ async function renderAdminStudent(id){
     }catch(e){}
   }
 
-  const unlockedN=access.size, totalN=ALL_LESSONS.length;
+  const totalN=ALL_LESSONS.length;
+  // Real unlocked count — same shared source as the Students list and Progress tab.
+  AdmProgress.load(AdmProgress.mergedIds(id, students)).then(function(d){
+    var el=document.getElementById('ms-unlocked'); if(!el||el.getAttribute('data-sid')!==id) return;
+    var n=AdmProgress.compute(id, students, d).unlocked;
+    el.innerHTML='<div style="display:flex;align-items:center;gap:10px"><div class="adm-meter'+(n>=totalN?' ok':'')+'" style="max-width:140px"><span style="width:'+Math.round(n/totalN*100)+'%"></span></div><span class="adm-num">'+n+'/'+totalN+'</span></div>';
+  },function(e){
+    var el=document.getElementById('ms-unlocked'); if(el&&el.getAttribute('data-sid')===id) el.innerHTML='<span class="adm-muted" title="'+escapeHtml(e.message||'')+'">Could not load</span>';
+  });
   const classCard=l=>{
     const granted=access.has(l.order);
     const vidLk=locked.has(l.order);
@@ -217,7 +225,7 @@ async function renderAdminStudent(id){
       </div>
       <div class="ms-facts">
         <div><span class="adm-label">Validity</span>${admValidityCell(s)}</div>
-        <div><span class="adm-label">Classes unlocked</span><div style="display:flex;align-items:center;gap:10px"><div class="adm-meter${unlockedN>=totalN?' ok':''}" style="max-width:140px"><span style="width:${Math.round(unlockedN/totalN*100)}%"></span></div><span class="adm-num">${unlockedN}/${totalN}</span></div></div>
+        <div><span class="adm-label">Classes unlocked</span><div id="ms-unlocked" data-sid="${escapeAttr(id)}"><span class="adm-skel"></span></div></div>
         <div><span class="adm-label">Restrictions</span>${locked.size||quizLocked.size
           ? (locked.size?`<span class="adm-badge warn nodot">${locked.size} video${locked.size>1?'s':''} locked</span> `:'')+(quizLocked.size?`<span class="adm-badge info nodot">${quizLocked.size} quiz${quizLocked.size>1?'zes':''} locked</span>`:'')
           : '<span class="adm-muted" style="font-size:13px">None</span>'}</div>

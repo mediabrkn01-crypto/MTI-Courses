@@ -194,6 +194,18 @@ function renderAdmin(tab){
 
   // Search + sort for students tab
   window._stuList = list;
+  // Classes unlocked comes from the shared progress source (same as Progress tab and the
+  // student's own course page) — not the legacy access_list field, which unlocking ignores.
+  window._stuProg = {state:'loading'};
+  AdmProgress.load().then(function(d){ window._stuProg={state:'ok',data:d}; },function(e){ console.warn('Students: progress load failed',e); window._stuProg={state:'error',msg:e.message}; })
+    .then(function(){ if(document.getElementById('stu-tbody')) applyStuFilters(); });
+  function _stuUnlockedCell(s){
+    var P=window._stuProg, tot=ALL_LESSONS.length;
+    if(P.state==='loading') return '<span class="adm-skel"></span>';
+    if(P.state==='error') return '<span class="adm-muted" title="'+escapeHtml(P.msg||'')+'">—</span>';
+    var n=AdmProgress.compute(s.id, loadStudents(), P.data).unlocked;
+    return '<div style="display:flex;align-items:center;gap:10px"><div class="adm-meter'+(n>=tot?' ok':'')+'"><span style="width:'+Math.round(n/tot*100)+'%"></span></div><span class="adm-num">'+n+'/'+tot+'</span></div>';
+  }
   window.applyStuFilters = function(){
     var q=(document.getElementById('stu-search')||{}).value||'';
     var sort=(document.getElementById('stu-sort')||{}).value||'newest';
@@ -212,14 +224,13 @@ function renderAdmin(tab){
     if(!filtered.length){tbody.innerHTML='<tr><td colspan="5" class="adm-empty">No students match this filter.</td></tr>';if(window.bulkUpdateBar)bulkUpdateBar();return;}
     tbody.innerHTML=filtered.map(function(s){
       var locked=getLockedVideos(s.id);
-      var n=(s.accessList||[]).length, tot=ALL_LESSONS.length;
       return '<tr onclick="navigate(\'admin-student\',{id:\''+s.id+'\'})" style="cursor:pointer">'+
         '<td onclick="event.stopPropagation()"><input type="checkbox" class="bulk-chk" data-sid="'+s.id+'" onchange="bulkUpdateBar()" style="accent-color:#ff2d78;width:16px;height:16px;cursor:pointer"/></td>'+
         '<td><div style="display:flex;align-items:center;gap:12px;min-width:0">'+stuTableAvatar(s)+
           '<div style="min-width:0"><p class="adm-name">'+escapeHtml(s.name)+'</p><p class="adm-meta">'+escapeHtml(s.email)+'</p></div></div></td>'+
         '<td>'+admValidityCell(s)+
           (locked.length>0?' <span class="adm-badge warn nodot" style="margin-top:4px">'+locked.length+' video'+(locked.length>1?'s':'')+' locked</span>':'')+'</td>'+
-        '<td><div style="display:flex;align-items:center;gap:10px"><div class="adm-meter'+(n>=tot?' ok':'')+'"><span style="width:'+Math.round(n/tot*100)+'%"></span></div><span class="adm-num">'+n+'/'+tot+'</span></div></td>'+
+        '<td>'+_stuUnlockedCell(s)+'</td>'+
         '<td class="right" style="white-space:nowrap" onclick="event.stopPropagation()">'+stuOverflowBtn(s.id)+'</td>'+
       '</tr>';
     }).join('');

@@ -8,11 +8,11 @@
 // A student can have duplicate profile rows with the same email; their progress is merged.
 var AdmProgress=(function(){
   // Supabase caps a select at 1000 rows — page through so large classes aren't cut off.
-  async function fetchAll(table, cols, ids){
+  async function fetchAll(table, cols, filter){
     var out=[], from=0, PAGE=1000;
     for(;;){
       var q=_sb.from(table).select(cols).range(from, from+PAGE-1);
-      if(ids) q=q.in('student_id', ids);
+      if(filter) q=filter(q);
       var res=await q;
       if(res.error) throw new Error(res.error.message||('Could not load '+table));
       out=out.concat(res.data||[]);
@@ -20,17 +20,28 @@ var AdmProgress=(function(){
       from+=PAGE;
     }
   }
-  // Returns {prog:{studentId:Set(lessonId)}, quiz:{studentId:{lessonId:bestPct}}}. Throws on failure.
+  // Returns {prog:{studentId:Set(lessonId)}, quiz:{studentId:{lessonId:bestPct}},
+  //          drip:{studentId:Set(lessonOrder)}}. Throws on failure.
+  // drip = classes the course has already opened for the student (written by the
+  // student app's getUnlockedSet into course_config as drip_<studentId>_<date>).
   async function load(ids){
     if(typeof _sb==='undefined') throw new Error('Not connected to the server');
+    var byIds=ids?function(q){return q.in('student_id',ids);}:null;
     var r=await Promise.all([
-      fetchAll('student_progress','student_id,lesson_id',ids),
-      fetchAll('quiz_scores','student_id,lesson_id,pct',ids)
+      fetchAll('student_progress','student_id,lesson_id',byIds),
+      fetchAll('quiz_scores','student_id,lesson_id,pct',byIds),
+      fetchAll('course_config','id,data',function(q){return q.like('id','drip_%');})
     ]);
-    var prog={}, quiz={};
+    var prog={}, quiz={}, drip={};
     r[0].forEach(function(x){ (prog[x.student_id]=prog[x.student_id]||new Set()).add(x.lesson_id); });
     r[1].forEach(function(x){ var m=quiz[x.student_id]=quiz[x.student_id]||{}; m[x.lesson_id]=Math.max(m[x.lesson_id]||0, x.pct||0); });
-    return {prog:prog, quiz:quiz};
+    r[2].forEach(function(x){
+      var m=/^drip_(.+)_(\d{4}-\d{2}-\d{2})$/.exec(x.id||''); if(!m) return;
+      if(ids&&ids.indexOf(m[1])<0) return;
+      var set=drip[m[1]]=drip[m[1]]||new Set();
+      (Array.isArray(x.data)?x.data:[]).forEach(function(o){ set.add(Number(o)); });
+    });
+    return {prog:prog, quiz:quiz, drip:drip};
   }
   function mergedIds(sid, students){
     var st=students[sid]; if(!st) return [sid];
@@ -46,8 +57,9 @@ var AdmProgress=(function(){
   }
   // One calculation for every view.
   function compute(sid, students, data){
-    var ids=mergedIds(sid, students), done=new Set(), quiz={};
+    var ids=mergedIds(sid, students), done=new Set(), quiz={}, opened=new Set([1]);
     ids.forEach(function(id){
+      ((data.drip||{})[id]||new Set()).forEach(function(o){opened.add(o);});
       (data.prog[id]||new Set()).forEach(function(x){done.add(x);});
       loadProgress(id).forEach(function(x){done.add(x);}); // not-yet-synced local rows, if any
       var q=data.quiz[id]||{};
@@ -56,13 +68,15 @@ var AdmProgress=(function(){
     var core=ALL_LESSONS.filter(function(l){return done.has(l.id);});
     var wv=wvList().filter(function(w){return done.has(w.id);});
     var t=totals(), completed=core.length+wv.length, last=null;
+    // Unlocked exactly as the student app sees it: Day 1 + drip-opened + already completed.
+    var unlocked=ALL_LESSONS.filter(function(l){return opened.has(l.order)||done.has(l.id);}).length;
     core.forEach(function(l){ if(!last||l.order>last.order) last=l; });
     return {
       done:done, quiz:quiz, completed:completed, coreDone:core.length, wvDone:wv.length,
       total:t.lessons, quizTotal:t.quizzes,
       pct: t.lessons ? Math.min(100, Math.round(completed/t.lessons*100)) : 0,
       passed: ALL_LESSONS.filter(function(l){return (quiz[l.id]||0)>=70;}).length,
-      last:last
+      last:last, unlocked:unlocked
     };
   }
   return {load:load, compute:compute, mergedIds:mergedIds, totals:totals, wvList:wvList};
