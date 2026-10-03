@@ -346,3 +346,11 @@
 .pd-sum b{color:#fff}
 .cm-slim{max-width:560px}
 .adm-input:disabled::placeholder{color:var(--muted2)}
+.cm-obj-list{display:flex;flex-direction:column;gap:6px}
+.cm-obj{display:flex;align-items:center;gap:6px}
+.cm-obj .adm-input{flex:1;min-width:0;padding:9px 12px}
+.cm-obj-n{width:22px;flex-shrink:0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted2)}
+.cm-obj-b{width:28px;height:28px;flex-shrink:0;border-radius:8px;border:none;background:transparent;color:rgba(255,255,255,.4);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cm-obj-b:hover:not(:disabled){color:#fff;background:rgba(255,255,255,.08)}
+.cm-obj-b:disabled{opacity:.25;cursor:default}
+@media(max-width:520px){.cm-obj-b{width:24px}.cm-obj-n{display:none}}

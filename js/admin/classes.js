@@ -138,10 +138,18 @@ function renderAdminClasses(){
               <a id="vm-src-open" class="adm-btn" target="_blank" rel="noopener" style="display:none">Open</a>
             </div>
           </div>
-          <div class="cm-field" style="margin-bottom:0">
-            <label class="adm-label" for="vm-desc">Lesson page description</label>
-            <textarea id="vm-desc" rows="5" class="adm-input" style="resize:vertical" placeholder="Short description shown under the video on the lesson page"></textarea>
+          <div id="vm-lesson-fields">
+            <div class="cm-field">
+              <div class="cm-label-row"><label class="adm-label" for="vm-desc">Lesson page description</label><span id="vm-desc-src"></span></div>
+              <textarea id="vm-desc" rows="4" class="adm-input" style="resize:vertical" placeholder="Short description shown under the video on the lesson page"></textarea>
+            </div>
+            <div class="cm-field" style="margin-bottom:0">
+              <div class="cm-label-row"><label class="adm-label">Mission objectives</label><span id="vm-obj-src"></span></div>
+              <div id="vm-obj-list" class="cm-obj-list"></div>
+              <button type="button" class="qe-add" onclick="vmObjAdd('',true)">+ Add objective</button>
+            </div>
           </div>
+          <p id="vm-wv-note" class="adm-hint" style="display:none;margin:4px 0 0">Workshop lessons show only the video, so there is no description or objectives to edit.</p>
         </div>
         <div class="qe-foot" style="justify-content:flex-end">
           <span id="vm-save-msg" class="adm-hint" style="margin:0 auto 0 0"></span>
@@ -226,7 +234,39 @@ function renderAdminClasses(){
       : '<span class="adm-badge info">Link</span>';
     o.style.display=ok?'':'none'; if(ok) o.href=u;
   };
-  // Opening reads just this class's src + desc from the server (no thumbnails, no player).
+  // ── Mission objectives rows ──
+  function _vmObjRows(){ return [].slice.call(document.querySelectorAll('#vm-obj-list .cm-obj')); }
+  function _vmObjValues(){ return _vmObjRows().map(function(r){return r.querySelector('input').value.trim();}).filter(Boolean); }
+  function _vmObjRenumber(){
+    var rows=_vmObjRows();
+    rows.forEach(function(r,i){
+      r.querySelector('.cm-obj-n').textContent=i+1;
+      r.querySelector('[data-up]').disabled=i===0;
+      r.querySelector('[data-down]').disabled=i===rows.length-1;
+    });
+  }
+  window.vmObjAdd=function(text,focus){
+    var row=document.createElement('div'); row.className='cm-obj';
+    row.innerHTML='<span class="cm-obj-n"></span>'
+      +'<input type="text" class="adm-input" placeholder="e.g. Practice minimal pairs (sit/seat, bit/beat)"/>'
+      +'<button type="button" class="cm-obj-b" data-up aria-label="Move up" title="Move up"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M18 15l-6-6-6 6"/></svg></button>'
+      +'<button type="button" class="cm-obj-b" data-down aria-label="Move down" title="Move down"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button>'
+      +'<button type="button" class="qe-x" data-del aria-label="Remove objective" title="Remove">×</button>';
+    var inp=row.querySelector('input'); inp.value=text||'';
+    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); vmObjAdd('',true); } });
+    row.querySelector('[data-up]').onclick=function(){ var p=row.previousElementSibling; if(p){ row.parentNode.insertBefore(row,p); _vmObjRenumber(); } };
+    row.querySelector('[data-down]').onclick=function(){ var n=row.nextElementSibling; if(n){ row.parentNode.insertBefore(n,row); _vmObjRenumber(); } };
+    row.querySelector('[data-del]').onclick=function(){ row.remove(); _vmObjRenumber(); };
+    _vmEl('vm-obj-list').appendChild(row);
+    _vmObjRenumber();
+    if(focus) inp.focus();
+  };
+
+  // Opening reads this class's src / desc / bullets from the server (no thumbnails).
+  // When a field is empty in the database the lesson page shows built-in text from
+  // data.js (lesson.description / DAY_BULLETS) — the dialog shows that same text, so
+  // the admin always edits what students actually see.
+  var _vmInitial=null;
   window.openVideoModal=(order)=>{
     var m=_vmEl('video-modal');
     if(m&&m.parentElement!==document.body){ [].forEach.call(document.querySelectorAll('body > #video-modal'),function(x){x.remove();}); document.body.appendChild(m); }
@@ -236,17 +276,32 @@ function renderAdminClasses(){
     _vmEl('vm-order').value=order;
     _vmEl('vm-kicker').textContent=wvItem?'Pronunciation Workshop · W'+(order-100):'Day '+order;
     _vmEl('vm-title').textContent=wvItem?wvItem.title:(cached.title||(lesson?lesson.title:'Edit class'));
+    _vmEl('vm-lesson-fields').style.display=wvItem?'none':'';
+    _vmEl('vm-wv-note').style.display=wvItem?'':'none';
     var src=_vmEl('vm-src'), desc=_vmEl('vm-desc'), btn=_vmEl('vm-save-btn'), msg=_vmEl('vm-save-msg');
-    src.value=''; desc.value=''; src.disabled=desc.disabled=btn.disabled=true;
+    src.value=''; desc.value=''; _vmEl('vm-obj-list').innerHTML='';
+    _vmEl('vm-desc-src').innerHTML=''; _vmEl('vm-obj-src').innerHTML='';
+    src.disabled=desc.disabled=btn.disabled=true;
     src.placeholder='Loading…'; desc.placeholder='Loading…';
     msg.style.color=''; msg.textContent=''; btn.textContent='Save changes';
+    _vmInitial=null;
     vmSrcCheck(); _vmEl('vm-src-kind').innerHTML='';
     m.style.display='flex';
     document.addEventListener('keydown',_vmEsc);
     var t=window._vmOpenToken={};
-    _clsFetchFields([order],['src','desc']).then(function(v){
+    _clsFetchFields([order],['src','desc','bullets']).then(function(v){
       if(window._vmOpenToken!==t) return;
-      src.value=v[order].src; desc.value=v[order].desc;
+      var x=v[order];
+      var builtInDesc=lesson?(lesson.description||''):'';
+      var builtInObj=DAY_BULLETS[order]||['Pronunciation patterns','Stress & intonation','Common mistakes','Real-world examples'];
+      var ownObj=(x.bullets||'').split('\n').map(function(b){return b.trim();}).filter(Boolean);
+      var dDesc=x.desc||builtInDesc, dObj=ownObj.length?ownObj:builtInObj;
+      _vmInitial={src:x.src, desc:dDesc, bullets:dObj.join('\n')};
+      src.value=x.src; desc.value=dDesc;
+      dObj.forEach(function(o){ vmObjAdd(o); });
+      var builtIn='<span class="adm-badge muted nodot" title="Nothing saved for this class yet — students see this built-in text">Built-in text</span>';
+      _vmEl('vm-desc-src').innerHTML=x.desc?'':builtIn;
+      _vmEl('vm-obj-src').innerHTML=ownObj.length?'':builtIn;
       src.disabled=desc.disabled=btn.disabled=false;
       src.placeholder='https://player.mediadelivery.net/play/… or an .mp4 link';
       desc.placeholder='Short description shown under the video on the lesson page';
@@ -256,19 +311,29 @@ function renderAdminClasses(){
       msg.style.color='#fb7185'; msg.textContent='Could not load this class: '+(e.message||e);
     });
   };
-  // Save changes ONLY src + desc. The row is re-read right before writing so thumbnails,
-  // titles, quizzes-related fields and edits made elsewhere are kept exactly as they are.
+  // Save writes ONLY the fields the admin changed. The row is re-read right before
+  // writing, so thumbnails, titles and edits made elsewhere are kept as they are.
   window.saveVideo=async()=>{
     const order=Number(_vmEl('vm-order').value);
-    const src=_vmEl('vm-src').value.trim(), desc=_vmEl('vm-desc').value.trim(), msg=_vmEl('vm-save-msg'), btn=_vmEl('vm-save-btn');
+    const msg=_vmEl('vm-save-msg'), btn=_vmEl('vm-save-btn');
     msg.style.color=''; msg.textContent='';
-    if(src&&!/^https?:\/\//i.test(src)){ msg.style.color='#fb7185'; msg.textContent='The video link must start with https://'; _vmEl('vm-src').focus(); return; }
+    if(!_vmInitial) return;
+    const isWv=order>100;
+    const next={src:_vmEl('vm-src').value.trim()};
+    if(!isWv){ next.desc=_vmEl('vm-desc').value.trim(); next.bullets=_vmObjValues().join('\n'); }
+    const bad=function(t,el){ msg.style.color='#fb7185'; msg.textContent=t; if(el) el.focus(); };
+    if(next.src&&!/^https?:\/\//i.test(next.src)) return bad('The video link must start with https://',_vmEl('vm-src'));
+    if(!isWv&&!next.desc) return bad('Add a lesson description — it is shown under the video.',_vmEl('vm-desc'));
+    if(!isWv&&!next.bullets) return bad('Add at least one mission objective.');
+    const changed={};
+    Object.keys(next).forEach(function(k){ if(next[k]!==_vmInitial[k]) changed[k]=next[k]; });
+    if(!Object.keys(changed).length){ closeVideoModal(); return; }
     btn.disabled=true; btn.textContent='Saving…';
     try{
       const cur=await _sb.from('course_config').select('data').eq('id','videos').maybeSingle();
       if(cur.error) throw new Error(cur.error.message);
       const vids=(cur.data&&cur.data.data)||{};
-      vids[order]={...(vids[order]||{}), src:src, desc:desc};
+      vids[order]=Object.assign({},vids[order]||{},changed);
       const{error}=await _sb.from('course_config').upsert({id:'videos',data:vids,updated_at:new Date().toISOString()},{onConflict:'id'});
       if(error) throw new Error(error.message);
       if(typeof _videoData!=='undefined') _videoData=vids; // keep this tab's copy current (Images etc.)
@@ -278,9 +343,11 @@ function renderAdminClasses(){
       btn.disabled=false; btn.textContent='Save changes';
       return;
     }
-    if(window._clsList){ window._clsList[order]=Object.assign({},window._clsList[order],{src:src}); }
-    var cell=document.getElementById('cls-vid-'+order);
-    if(cell) cell.innerHTML=src?'<span class="adm-badge ok">Uploaded</span>':'<span class="adm-badge warn">Missing</span>';
+    if('src' in changed){
+      if(window._clsList) window._clsList[order]=Object.assign({},window._clsList[order],{src:changed.src});
+      var cell=document.getElementById('cls-vid-'+order);
+      if(cell) cell.innerHTML=changed.src?'<span class="adm-badge ok">Uploaded</span>':'<span class="adm-badge warn">Missing</span>';
+    }
     closeVideoModal();
   };
 }
