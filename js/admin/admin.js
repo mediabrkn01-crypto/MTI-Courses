@@ -52,14 +52,24 @@ function renderAdmin(tab){
     }).catch(function(){});
   }
   if(tab==='progress') return renderAdminProgress();
-  if(tab==='classes'){
-    if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){}).finally(function(){renderAdminClasses();});
-    else renderAdminClasses();
+  // Classes & Videos loads its own small field set — it no longer waits for the full
+  // videos row (which carries every thumbnail). Images needs that full row, so it loads it.
+  if(tab==='classes') return renderAdminClasses();
+  if(tab==='images'){
+    // Show this browser's copy right away, then refresh from the server so edits
+    // never start from stale data.
+    var cached=Object.keys(loadVideos()).length>0;
+    if(cached) renderAdminImages();
+    else app.innerHTML=adminTopBar('images')+'<div class="adm-page"><div class="adm-card adm-empty">Loading images…</div></div>';
+    if(typeof _sb!=="undefined") sbLoadVideos().catch(function(){}).finally(function(){
+      if(!document.querySelector('.atb-tab.on[onclick*="\'images\'"]')) return; // admin left the Images tab
+      if(!document.querySelector('.adm-img-url.open')) renderAdminImages();
+    });
+    else if(!cached) renderAdminImages();
     return;
   }
   if(tab==='quiz')     return renderAdminQuiz();
   if(tab==='settings') return renderAdminSettings();
-  if(tab==='images')   return renderAdminImages();
   if(tab==='demo')     return renderDemoAdmin();
 
   const students=loadStudents();

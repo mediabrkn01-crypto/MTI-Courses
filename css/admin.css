@@ -344,3 +344,5 @@
 .pd-tab.on .n{background:rgba(255,255,255,.22)}
 .pd-sum{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:0 2px 12px;font-size:13px;color:var(--muted2)}
 .pd-sum b{color:#fff}
+.cm-slim{max-width:560px}
+.adm-input:disabled::placeholder{color:var(--muted2)}

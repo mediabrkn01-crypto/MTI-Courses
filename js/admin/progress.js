@@ -24,12 +24,13 @@ var AdmProgress=(function(){
   //          drip:{studentId:Set(lessonOrder)}}. Throws on failure.
   // drip = classes the course has already opened for the student (written by the
   // student app's getUnlockedSet into course_config as drip_<studentId>_<date>).
-  async function load(ids){
+  // opts.quiz===false skips quiz_scores (pages that only need completion/unlocks).
+  async function load(ids, opts){
     if(typeof _sb==='undefined') throw new Error('Not connected to the server');
     var byIds=ids?function(q){return q.in('student_id',ids);}:null;
     var r=await Promise.all([
       fetchAll('student_progress','student_id,lesson_id',byIds),
-      fetchAll('quiz_scores','student_id,lesson_id,pct',byIds),
+      (opts&&opts.quiz===false)?Promise.resolve([]):fetchAll('quiz_scores','student_id,lesson_id,pct',byIds),
       fetchAll('course_config','id,data',function(q){return q.like('id','drip_%');})
     ]);
     var prog={}, quiz={}, drip={};
