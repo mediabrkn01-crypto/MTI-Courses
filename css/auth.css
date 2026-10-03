@@ -86,3 +86,18 @@
   .auth-wrap{align-items:flex-start}
   .auth-logo{display:none}
 }
+
+/* ── Maintenance notice + popup (login page) ── */
+.auth-msg.maint{background:rgba(249,115,22,.09);border-color:rgba(249,115,22,.35);color:#fed7aa;flex-direction:column;gap:4px}
+.auth-msg.maint b{display:flex;align-items:center;gap:8px;color:#fdba74;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.auth-msg.maint b::before{content:'';width:7px;height:7px;border-radius:50%;background:#fb923c;animation:maintDot 1.6s ease-in-out infinite}
+.auth-msg.maint .m2{color:rgba(254,215,170,.75)}
+@keyframes maintDot{0%,100%{opacity:1}50%{opacity:.3}}
+.maint-modal{position:fixed;inset:0;z-index:10050;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(4,4,12,.78);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);opacity:0;transition:opacity .18s}
+.maint-modal.open{opacity:1}
+.maint-box{width:100%;max-width:380px;background:#11111e;border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:26px 24px 22px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.6);transform:translateY(8px) scale(.98);transition:transform .2s}
+.maint-modal.open .maint-box{transform:none}
+.maint-ic{width:52px;height:52px;margin:0 auto 14px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(249,115,22,.12);border:1px solid rgba(249,115,22,.35);color:#fb923c}
+.maint-box h2{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;color:#fff;margin:0 0 8px}
+.maint-box p{font-size:14px;line-height:1.6;color:var(--muted2);margin:0 0 18px}
+.maint-box .auth-btn{margin-top:0}

@@ -11,6 +11,7 @@ function renderLogin(){
       <h1 class="auth-title">Sign In</h1>
       <p class="auth-sub">Enter your credentials to access your classes.</p>
 
+      <div id="maint-banner">${typeof maintBannerHtml==='function'?maintBannerHtml():''}</div>
       <div id="login-err" class="auth-msg error" role="alert" style="display:none"></div>
 
       <form id="login-form" novalidate onsubmit="event.preventDefault();doStudentLogin();">

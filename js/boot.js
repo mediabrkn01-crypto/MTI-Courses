@@ -21,6 +21,79 @@ function _bootLog(ev,data){
   }catch(e){}
 }
 
+
+// ── MAINTENANCE MODE ─────────────────────────────────────────────────────────
+// The login page stays visible during maintenance (with a notice). Only admins and the
+// one bypass account chosen in Admin > Settings may sign in; everyone else is signed out
+// with a popup. The database enforces the same rule (public.maintenance_allows_me() +
+// "maintenance_gate" RLS policies), so this UI is not the only guard.
+var _maintCfg={enabled:false,message:'',bypass:null};
+var _maintAllowedMe=true; // last server answer for the signed-in user
+async function maintFetchConfig(){
+  if(typeof _sb==='undefined') return _maintCfg;
+  try{
+    var r=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
+    if(!r.error){
+      var d=(r.data&&r.data.data)||{};
+      _maintCfg={enabled:!!d.enabled,message:d.message||'',bypass:d.bypass_auth_user_id||null};
+      _maintenanceActive=_maintCfg.enabled;
+      _maintBypassAuthUserId=_maintCfg.bypass;
+      maintRefreshBanner();
+    }
+  }catch(e){}
+  return _maintCfg;
+}
+// Is the signed-in user allowed in right now? Asked of the server (admin / bypass user id).
+async function maintCheckMe(){
+  if(!_maintCfg.enabled) return (_maintAllowedMe=true);
+  try{
+    var r=await _sb.rpc('maintenance_allows_me');
+    if(!r.error) return (_maintAllowedMe=(r.data===true));
+  }catch(e){}
+  // Fallback until the database function is installed: compare the server-signed user id.
+  try{
+    var s=(await _sb.auth.getSession()).data.session;
+    var uid=s&&s.user?s.user.id:null;
+    return (_maintAllowedMe=!!(uid&&_maintCfg.bypass&&uid===_maintCfg.bypass));
+  }catch(e){ return (_maintAllowedMe=false); }
+}
+function maintBannerHtml(){
+  if(!_maintenanceActive) return '';
+  var extra=_maintCfg.message?'<span class="m2">'+escapeHtml(_maintCfg.message)+'</span>':'';
+  return '<div class="auth-msg maint" role="status"><b>System maintenance</b>'
+    +'<span>The platform is currently under maintenance. Student access is temporarily unavailable.</span>'+extra+'</div>';
+}
+function maintRefreshBanner(){
+  var el=document.getElementById('maint-banner');
+  if(el) el.innerHTML=maintBannerHtml();
+}
+function showMaintenanceModal(){
+  if(document.getElementById('maint-modal')) return;
+  var m=document.createElement('div');
+  m.id='maint-modal'; m.className='maint-modal';
+  m.setAttribute('role','alertdialog'); m.setAttribute('aria-modal','true'); m.setAttribute('aria-labelledby','maint-modal-t');
+  m.innerHTML='<div class="maint-box">'
+    +'<div class="maint-ic"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg></div>'
+    +'<h2 id="maint-modal-t">System under maintenance</h2>'
+    +'<p>We\'re currently updating the platform.<br>You can\'t log in right now.<br>Please try again later.</p>'
+    +'<button type="button" class="auth-btn" id="maint-modal-ok">OK</button></div>';
+  var close=function(){ document.removeEventListener('keydown',esc); m.classList.remove('open'); setTimeout(function(){m.remove();},180); };
+  var esc=function(e){ if(e.key==='Escape') close(); };
+  m.querySelector('#maint-modal-ok').onclick=close;
+  m.addEventListener('click',function(e){ if(e.target===m) close(); });
+  document.addEventListener('keydown',esc);
+  document.body.appendChild(m);
+  requestAnimationFrame(function(){ m.classList.add('open'); m.querySelector('#maint-modal-ok').focus(); });
+}
+// Sign a blocked student out and send them to the login page with the popup.
+function maintKickOut(){
+  try{ var v=document.querySelector('video'); if(v&&!v.paused) v.pause(); }catch(e){}
+  currentSession=null; try{clearSession();}catch(e){}
+  if(typeof _sb!=='undefined'){ try{ _sb.auth.signOut().catch(function(){}); }catch(e){} }
+  navigate('login');
+  showMaintenanceModal();
+}
+
 async function bootApp(opts){
   opts=opts||{};
   if(_bootStarted&&!opts.force) return;
@@ -29,7 +102,13 @@ async function bootApp(opts){
 
   // 1. Demo intercept
   var _dtok=parseDemoTokenFromUrl();
-  if(_dtok){ bootDemo(_dtok); return; }
+  if(_dtok){
+    // Demo links are blocked during maintenance (checked before the link is opened, so
+    // its timer does not start).
+    var _dm=await maintFetchConfig();
+    if(_dm.enabled){ renderMaintenanceScreen(_dm.message); startMaintenancePolling(); return; }
+    bootDemo(_dtok); return;
+  }
 
   // 1b. Password recovery link intercept.
   // When student clicks a Supabase reset email, URL has type=recovery.
@@ -70,34 +149,28 @@ async function bootApp(opts){
   //    loadSession() only ever returns role:'student' — the admin panel is admin.html.
   var localSess=loadSession();
 
-  // 5. Check maintenance config (now that we have auth state for bypass check)
-  var maintEnabled=false, maintMsg='', maintBypassAuthUid=null;
-  if(typeof _sb!=='undefined'){
-    try{
-      var mr=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
-      if(!mr.error&&mr.data&&mr.data.data){
-        maintEnabled=!!mr.data.data.enabled;
-        maintMsg=mr.data.data.message||'';
-        maintBypassAuthUid=mr.data.data.bypass_auth_user_id||null;
-      }
-      _bootLog('MAINT_CHECK',{enabled:maintEnabled,hasBypass:!!maintBypassAuthUid});
-    }catch(e){ _bootLog('MAINT_ERR',{msg:e.message}); }
-  }
-  // Store for polling comparisons
-  _maintBypassAuthUserId=maintBypassAuthUid;
+  // 5. Maintenance config
+  var _mc=await maintFetchConfig();
+  _bootLog('MAINT_CHECK',{enabled:_mc.enabled,hasBypass:!!_mc.bypass});
 
-  // 6. Maintenance gate — bypass if this user's JWT uid matches the configured bypass account
-  if(maintEnabled){
-    var currentAuthUid=sbSession&&sbSession.user?sbSession.user.id:null;
-    var isBypassed=!!(maintBypassAuthUid&&currentAuthUid&&currentAuthUid===maintBypassAuthUid);
-    if(!isBypassed){
-      _maintenanceActive=true;
-      renderMaintenanceScreen(maintMsg);
+  // 6. Maintenance gate — login page stays available; only admins and the bypass account
+  //    (server-verified) get past it. A blocked signed-in student is signed out.
+  if(_mc.enabled){
+    var _allowed=sbSession?await maintCheckMe():false;
+    if(!_allowed){
+      if(sbSession||localSess){
+        _bootLog('MAINT_SIGNED_OUT');
+        currentSession=null; try{clearSession();}catch(e){}
+        try{ await _sb.auth.signOut(); }catch(e){}
+        navigate('login'); showMaintenanceModal();
+      } else {
+        navigate('login');
+      }
       startMaintenancePolling();
       return;
     }
-    _bootLog('MAINT_BYPASSED',{uid:currentAuthUid});
-    // Fall through to normal boot — bypass student gets full access
+    _bootLog('MAINT_BYPASSED',{uid:sbSession.user.id});
+    // Fall through to normal boot — bypass student / admin gets full access
   }
 
   // 7. Student auth: JWT is authoritative; local session is a safe fallback on network error
@@ -198,38 +271,19 @@ function startMaintenancePolling(){
   _maintPollInterval=setInterval(async function(){
     if(typeof _sb==='undefined') return;
     try{
-      var r=await _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle();
-      var cfg=(r.data&&r.data.data)||{};
-      var isOn=!!cfg.enabled;
-      var pollMsg=cfg.message||'';
-      var bypassUid=cfg.bypass_auth_user_id||null;
-      _maintBypassAuthUserId=bypassUid;
-      _maintenanceActive=isOn;
-
-
-      // Check bypass for current user using server-signed JWT
-      var authRes=await _sb.auth.getSession();
-      var sess=authRes.data&&authRes.data.session;
-      var currentUid=sess&&sess.user?sess.user.id:null;
-      var isBypassed=!!(bypassUid&&currentUid&&currentUid===bypassUid);
-
-      var screenNow=app.getAttribute('data-screen');
-      if(isOn&&!isBypassed&&screenNow!=='maintenance'){
-        // Maintenance just enabled — pause video, show maintenance
-        var vid=document.querySelector('video');
-        if(vid&&!vid.paused){try{vid.pause();}catch(e){}}
-        renderMaintenanceScreen(pollMsg);
-      } else if(isOn&&isBypassed&&screenNow==='maintenance'){
-        // Bypass student recovered from maintenance screen
-        clearInterval(_maintPollInterval); _maintPollInterval=null;
-        _bootStarted=false; app.removeAttribute('data-screen');
-        bootApp({force:true});
-      } else if(!isOn&&screenNow==='maintenance'){
-        // Maintenance disabled — restore app
-        clearInterval(_maintPollInterval); _maintPollInterval=null;
-        _bootStarted=false; app.removeAttribute('data-screen');
-        bootApp({force:true});
+      var cfg=await maintFetchConfig(); // also refreshes the login-page notice
+      // Demo maintenance screen: reopen the app once maintenance is over.
+      if(app.getAttribute('data-screen')==='maintenance'){
+        if(!cfg.enabled){
+          clearInterval(_maintPollInterval); _maintPollInterval=null;
+          _bootStarted=false; app.removeAttribute('data-screen');
+          bootApp({force:true});
+        }
+        return;
       }
+      // Turned on while a student is signed in → sign them out unless allowed.
+      if(cfg.enabled&&currentSession&&!(await maintCheckMe())) maintKickOut();
+      if(!cfg.enabled) _maintAllowedMe=true;
     }catch(e){} // network error — stay on current screen
   },15000);
 }
@@ -241,21 +295,9 @@ window.addEventListener('pageshow',function(e){
     waitForSb(5000).then(function(ok){
       if(!ok) return;
       sbLoadVideos().catch(function(){});
-      Promise.all([
-        _sb.from('course_config').select('data').eq('id','maintenance_mode').maybeSingle(),
-        _sb.auth.getSession()
-      ]).then(function(results){
-        var mr=results[0]; var authRes=results[1];
-        var cfg=(mr.data&&mr.data.data)||{};
-        var isOn=!!cfg.enabled;
-        var bypassUid=cfg.bypass_auth_user_id||null;
-        var sess=authRes.data&&authRes.data.session;
-        var currentUid=sess&&sess.user?sess.user.id:null;
-        var isBypassed=!!(bypassUid&&currentUid&&currentUid===bypassUid);
-        if(isOn&&!isBypassed){
-          renderMaintenanceScreen(cfg.message||'');
-          startMaintenancePolling();
-        }
+      maintFetchConfig().then(function(cfg){
+        if(!cfg.enabled||!currentSession) return;
+        return maintCheckMe().then(function(ok){ if(!ok) maintKickOut(); });
       }).catch(function(){});
     });
   }

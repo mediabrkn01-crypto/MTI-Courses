@@ -60,6 +60,8 @@ window.addEventListener('popstate',function(e){
   _fromPop=false;
 });
 function render(screen,params){
+  // Maintenance turned on (seen by boot / polling) and this student isn't allowed in.
+  if(screen!=="login"&&typeof _maintenanceActive!=='undefined'&&_maintenanceActive&&currentSession&&!_maintAllowedMe&&typeof maintKickOut==='function'){ maintKickOut(); return; }
   if(screen==="login")        { renderLogin(); return; }
   if(screen==="dashboard"){
     if(typeof _sb!=="undefined"){

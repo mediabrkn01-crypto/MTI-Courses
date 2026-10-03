@@ -27,6 +27,10 @@ window.doStudentLogin=async()=>{
   const loginBtn=document.getElementById("login-btn-main");
   if(loginBtn){loginBtn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>Signing in...</span>';loginBtn.disabled=true;}
 
+  // Maintenance: read the current setting before signing in (cheap, readable by anyone).
+  if(typeof maintFetchConfig==='function') await maintFetchConfig();
+  var _maintResetBtn=function(){ if(loginBtn){loginBtn.textContent="Sign In";loginBtn.disabled=false;} };
+
   // ── Auth path 1: Supabase Auth (JWT-based, server-verified) ──────────────────
   var byEmail=null;
   var usedSupabaseAuth=false;
@@ -35,6 +39,14 @@ window.doStudentLogin=async()=>{
       var authResult=await _sb.auth.signInWithPassword({email,password:pass});
       if(!authResult.error&&authResult.data&&authResult.data.user){
         usedSupabaseAuth=true;
+        // Maintenance gate: only admins and the selected bypass account (matched by Supabase
+        // Auth user id, verified by the server) may continue. Everyone else is signed out.
+        if(_maintenanceActive&&typeof maintCheckMe==='function'&&!(await maintCheckMe())){
+          try{await _sb.auth.signOut();}catch(e){}
+          _maintResetBtn();
+          showMaintenanceModal();
+          return;
+        }
         // Load student profile by auth_user_id (not by password)
         var profRes=await _sb.from('students')
           .select('id,name,email,valid_until,access_list,created_at,completed_at,password_reset_required')
@@ -63,6 +75,13 @@ window.doStudentLogin=async()=>{
   // ── Auth path 2: Legacy password (students not yet migrated) ─────────────────
   // Removed once all students are migrated via scripts/migrate-students.js
   var _legStudentHasAuthId=false; // student exists in DB but has auth_user_id set (needs Forgot Password)
+  // During maintenance a failed sign-in can't be the bypass account (legacy accounts have
+  // no Auth user id either), so it gets the maintenance popup instead of other paths.
+  if(!byEmail&&!usedSupabaseAuth&&_maintenanceActive){
+    _maintResetBtn();
+    showMaintenanceModal();
+    return;
+  }
   if(!byEmail&&!usedSupabaseAuth&&typeof _sb!=="undefined"){
     try{
       var legRes=await _sb.from("students")
