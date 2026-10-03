@@ -13,14 +13,79 @@ async function sbSaveVideos(videos){
   }catch(e){console.warn('Supabase error:',e);}
 }
 
-async function sbLoadVideos(){
+// ── Course videos/thumbnails cache ──
+// The course_config 'videos' row holds every class's video link, text and thumbnail
+// (thumbnails are base64, ~4.5 MB in total). It is too big for localStorage, so it was
+// re-downloaded on every visit — up to three times per login — and the dashboard was
+// drawn before it arrived and never refreshed. Now:
+//  • one shared request at a time (no duplicates);
+//  • the row is cached in IndexedDB and shown instantly on the next visit;
+//  • a ~100-byte updated_at check skips the download when nothing changed
+//    (every app writer — sbSaveVideos, Classes & Videos, Images — sets updated_at);
+//  • when data arrives or changes, the open dashboard / course page re-renders.
+var _videoStamp=null, _vidLoadPromise=null;
+var _VidIDB={
+  _db:null,
+  open:function(){
+    var self=this;
+    if(self._db) return self._db;
+    self._db=new Promise(function(res,rej){
+      try{
+        var r=indexedDB.open('brokeneng-cache',1);
+        r.onupgradeneeded=function(){ r.result.createObjectStore('kv'); };
+        r.onsuccess=function(){ res(r.result); };
+        r.onerror=function(){ rej(r.error); };
+      }catch(e){ rej(e); }
+    });
+    return self._db;
+  },
+  get:function(key){
+    return this.open().then(function(db){ return new Promise(function(res){
+      try{ var q=db.transaction('kv','readonly').objectStore('kv').get(key); q.onsuccess=function(){res(q.result||null);}; q.onerror=function(){res(null);}; }catch(e){ res(null); }
+    }); }).catch(function(){ return null; });
+  },
+  set:function(key,val){
+    return this.open().then(function(db){ try{ db.transaction('kv','readwrite').objectStore('kv').put(val,key); }catch(e){} }).catch(function(){});
+  }
+};
+function _videosChanged(){
+  refreshLessonThumbs();
+  // Re-draw screens that show thumbnails/titles, keeping the scroll position.
   try{
-    const{data,error}=await _sb.from('course_config').select('data').eq('id','videos').single();
-    if(error||!data||!data.data) return;
-    _videoData=data.data;
-    try{localStorage.setItem('brokeneng_videos',JSON.stringify(data.data));}catch(e){}
-    refreshLessonThumbs();
-  }catch(e){console.warn('Supabase load videos error:',e);}
+    if(typeof currentSession==='undefined'||!currentSession||currentSession.role==='admin') return;
+    var scr=(history.state&&history.state.screen)||'';
+    var fn=scr==='dashboard'?window.renderDashboard:scr==='courses'?window.renderMyCourses:null;
+    if(typeof fn!=='function'||!document.getElementById('main-content')) return;
+    var y=window.scrollY;
+    fn();
+    window.scrollTo(0,y);
+  }catch(e){}
+}
+// Instant start from the cache (no network) — only if nothing newer is in memory yet.
+var _vidCacheReady=_VidIDB.get('videos').then(function(c){
+  if(c&&c.data&&!Object.keys(_videoData).length){
+    _videoData=c.data; _videoStamp=c.stamp||null;
+    _videosChanged();
+  }
+});
+async function sbLoadVideos(){
+  if(_vidLoadPromise) return _vidLoadPromise;
+  _vidLoadPromise=(async function(){
+    try{
+      await _vidCacheReady;
+      // Cheap freshness check first; download the full row only when it changed.
+      if(_videoStamp&&Object.keys(_videoData).length){
+        var st=await _sb.from('course_config').select('updated_at').eq('id','videos').maybeSingle();
+        if(!st.error&&st.data&&st.data.updated_at===_videoStamp) return;
+      }
+      const{data,error}=await _sb.from('course_config').select('data,updated_at').eq('id','videos').maybeSingle();
+      if(error||!data||!data.data) return;
+      _videoData=data.data; _videoStamp=data.updated_at||null;
+      _VidIDB.set('videos',{data:data.data,stamp:_videoStamp});
+      _videosChanged();
+    }catch(e){console.warn('Supabase load videos error:',e);}
+  })().finally(function(){ _vidLoadPromise=null; });
+  return _vidLoadPromise;
 }
 
 // Re-sync course data whenever the app comes back to foreground (long-open tabs / installed PWAs)
