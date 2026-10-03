@@ -76,10 +76,47 @@ var AdmProgress=(function(){
       total:t.lessons, quizTotal:t.quizzes,
       pct: t.lessons ? Math.min(100, Math.round(completed/t.lessons*100)) : 0,
       passed: ALL_LESSONS.filter(function(l){return (quiz[l.id]||0)>=70;}).length,
-      last:last, unlocked:unlocked
+      last:last, unlocked:unlocked,
+      // per-class state for the Manage page: lesson order → 'done' | 'open' | 'locked'
+      classState:function(order){ var l=ALL_LESSONS.find(function(x){return x.order===order;});
+        return l&&done.has(l.id)?'done':opened.has(order)?'open':'locked'; }
     };
   }
-  return {load:load, compute:compute, mergedIds:mergedIds, totals:totals, wvList:wvList};
+  // ── Admin class access ──
+  // The student app opens a class if it is Day 1, completed, or listed in one of the
+  // student's drip rows (course_config drip_<id>_<date>). Admin unlocks are written to a
+  // dedicated drip row dated 0000-00-00: the student app honours it like any other drip
+  // row, and the old date never blocks the daily phase release. Locking removes the class
+  // from every drip row, which returns it to the normal course order (completed classes
+  // always stay open).
+  var ADMIN_DRIP_DATE='0000-00-00';
+  async function setClassAccess(sid, students, orders, open){
+    var ids=mergedIds(sid, students);
+    if(open){
+      var key='drip_'+sid+'_'+ADMIN_DRIP_DATE;
+      var cur=await _sb.from('course_config').select('data').eq('id',key).limit(1);
+      if(cur.error) throw new Error(cur.error.message);
+      var set=new Set(((cur.data&&cur.data[0]&&cur.data[0].data)||[]).map(Number));
+      orders.forEach(function(o){set.add(o);});
+      var up=await _sb.from('course_config').upsert({id:key,data:[...set].sort(function(a,b){return a-b;})},{onConflict:'id'});
+      if(up.error) throw new Error(up.error.message);
+      return;
+    }
+    for(var i=0;i<ids.length;i++){
+      var rows=await _sb.from('course_config').select('id,data').like('id','drip_'+ids[i]+'_%');
+      if(rows.error) throw new Error(rows.error.message);
+      for(var j=0;j<(rows.data||[]).length;j++){
+        var r=rows.data[j], before=(Array.isArray(r.data)?r.data:[]).map(Number);
+        var after=before.filter(function(o){return orders.indexOf(o)<0;});
+        if(after.length===before.length) continue;
+        var res=after.length
+          ? await _sb.from('course_config').update({data:after}).eq('id',r.id)
+          : await _sb.from('course_config').delete().eq('id',r.id);
+        if(res.error) throw new Error(res.error.message);
+      }
+    }
+  }
+  return {load:load, compute:compute, mergedIds:mergedIds, totals:totals, wvList:wvList, setClassAccess:setClassAccess};
 })();
 
 function _admProgError(msg, retry){

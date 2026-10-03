@@ -159,7 +159,6 @@ async function renderAdminStudent(id){
   const students=loadStudents();
   const s=students[id];
   if(!s){navigate('admin');return;}
-  const access=new Set(s.accessList||[]);
   const locked=new Set(getLockedVideos(id));
   const quizLocked=new Set(getLockedQuizzes(id));
   const{validUntil,expired}=getValidity(s);
@@ -174,31 +173,34 @@ async function renderAdminStudent(id){
   }
 
   const totalN=ALL_LESSONS.length;
-  // Real unlocked count — same shared source as the Students list and Progress tab.
-  AdmProgress.load(AdmProgress.mergedIds(id, students)).then(function(d){
-    var el=document.getElementById('ms-unlocked'); if(!el||el.getAttribute('data-sid')!==id) return;
-    var n=AdmProgress.compute(id, students, d).unlocked;
-    el.innerHTML='<div style="display:flex;align-items:center;gap:10px"><div class="adm-meter'+(n>=totalN?' ok':'')+'" style="max-width:140px"><span style="width:'+Math.round(n/totalN*100)+'%"></span></div><span class="adm-num">'+n+'/'+totalN+'</span></div>';
-  },function(e){
-    var el=document.getElementById('ms-unlocked'); if(el&&el.getAttribute('data-sid')===id) el.innerHTML='<span class="adm-muted" title="'+escapeHtml(e.message||'')+'">Could not load</span>';
-  });
+  // Class access is read from the same server data the student app uses (AdmProgress).
+  var P=null, progErr=null;
+  try{ P=AdmProgress.compute(id, students, await AdmProgress.load(AdmProgress.mergedIds(id, students))); }
+  catch(e){ progErr=e; console.warn('Manage student: progress load failed',e); }
+  const stateOf=o=>P?P.classState(o):'unknown';
+  const unlockedN=P?P.unlocked:null;
   const classCard=l=>{
-    const granted=access.has(l.order);
+    const st=stateOf(l.order), open=st==='done'||st==='open';
     const vidLk=locked.has(l.order);
     const qLk=quizLocked.has(l.order);
     const hasQuiz=hasRealQuiz(l);
-    return `<div class="ms-card${granted?' on':''}">
+    const sw=st==='done'
+      ? `<span class="adm-badge ok nodot" style="font-size:10px" title="Completed classes always stay open">Completed</span>`
+      : st==='unknown'
+        ? ''
+        : `<button type="button" class="adm-track${open?' on':''}" role="switch" aria-checked="${open}" aria-label="Access to class ${l.order}" title="${open?'Lock class (back to normal course order)':'Unlock class now'}" onclick="toggleAccess('${id}',${l.order},this)"><span class="adm-thumb"></span></button>`;
+    return `<div class="ms-card${open?' on':''}">
       <div class="ms-top">
         <span class="adm-day">${l.order}</span>
-        <button type="button" class="adm-track${granted?' on':''}" role="switch" aria-checked="${granted}" aria-label="Access to class ${l.order}" title="${granted?'Lock class':'Unlock class'}" onclick="toggleAccess('${id}',${l.order})"><span class="adm-thumb"></span></button>
+        ${sw}
       </div>
       <p class="ms-title" title="${escapeAttr(l.title)}">${escapeHtml(l.title)}</p>
-      ${granted
+      ${open
         ? `<div class="ms-locks">
             <button type="button" class="ms-chip${vidLk?' lk':''}" onclick="toggleVideoLock('${id}',${l.order})" title="${vidLk?'Video is locked — click to allow':'Click to lock the video'}">${vidLk?'Video locked':'Video on'}</button>
             ${hasQuiz?`<button type="button" class="ms-chip${qLk?' lk':''}" onclick="toggleQuizLock('${id}',${l.order})" title="${qLk?'Quiz is locked — click to allow':'Click to lock the quiz'}">${qLk?'Quiz locked':'Quiz on'}</button>`:''}
           </div>`
-        : '<p class="ms-off">No access</p>'}
+        : `<p class="ms-off">${st==='unknown'?'—':'Locked'}</p>`}
     </div>`;
   };
 
@@ -225,7 +227,9 @@ async function renderAdminStudent(id){
       </div>
       <div class="ms-facts">
         <div><span class="adm-label">Validity</span>${admValidityCell(s)}</div>
-        <div><span class="adm-label">Classes unlocked</span><div id="ms-unlocked" data-sid="${escapeAttr(id)}"><span class="adm-skel"></span></div></div>
+        <div><span class="adm-label">Classes unlocked</span>${unlockedN==null
+          ? '<span class="adm-muted">Could not load</span>'
+          : `<div style="display:flex;align-items:center;gap:10px"><div class="adm-meter${unlockedN>=totalN?' ok':''}" style="max-width:140px"><span style="width:${Math.round(unlockedN/totalN*100)}%"></span></div><span class="adm-num">${unlockedN}/${totalN}</span></div>`}</div>
         <div><span class="adm-label">Restrictions</span>${locked.size||quizLocked.size
           ? (locked.size?`<span class="adm-badge warn nodot">${locked.size} video${locked.size>1?'s':''} locked</span> `:'')+(quizLocked.size?`<span class="adm-badge info nodot">${quizLocked.size} quiz${quizLocked.size>1?'zes':''} locked</span>`:'')
           : '<span class="adm-muted" style="font-size:13px">None</span>'}</div>
@@ -262,10 +266,10 @@ async function renderAdminStudent(id){
     </div>
 
     ${SECTIONS.map(section=>{
-      const on=section.lessons.filter(l=>access.has(l.order)).length;
+      const on=section.lessons.filter(l=>{const x=stateOf(l.order);return x==='done'||x==='open';}).length;
       return `<div class="adm-section">
         <div class="ms-sec-head">
-          ${admSectionLabel(section.title, on+'/'+section.lessons.length+' unlocked')}
+          ${admSectionLabel(section.title, P?on+'/'+section.lessons.length+' unlocked':null)}
           <div style="display:flex;gap:6px">
             <button class="adm-btn" onclick="revokeSection('${id}','${section.id}')">Lock all</button>
             <button class="adm-btn" onclick="grantSection('${id}','${section.id}')">Unlock all</button>
@@ -312,11 +316,20 @@ async function renderAdminStudent(id){
   window.extendValidity=(sid,days)=>{const st=loadStudents();const base=st[sid].validUntil?new Date(st[sid].validUntil):new Date();if(base<new Date())base.setTime(new Date().getTime());base.setDate(base.getDate()+Number(days));st[sid].validUntil=base.toISOString().slice(0,10);saveStudents(st);renderAdminStudent(sid);};
   window.setCustomValidity=(sid)=>{const val=document.getElementById('ext-date').value;if(!val)return;const st=loadStudents();st[sid].validUntil=val;saveStudents(st);renderAdminStudent(sid);};
   window.clearValidity=(sid)=>{const st=loadStudents();st[sid].validUntil=null;saveStudents(st);renderAdminStudent(sid);};
-  window.toggleAccess=(sid,classOrder)=>{const st=loadStudents();const list=new Set(st[sid].accessList||[]);list.has(classOrder)?list.delete(classOrder):list.add(classOrder);st[sid].accessList=[...list];saveStudents(st);renderAdminStudent(sid);};
+  // Class access changes go to the server rows the student app reads (see AdmProgress.setClassAccess).
+  async function _msAccess(sid, orders, open, btn){
+    var page=document.querySelector('.adm-page'); if(page) page.style.pointerEvents='none';
+    if(btn) btn.style.opacity='.5';
+    try{ await AdmProgress.setClassAccess(sid, loadStudents(), orders, open); }
+    catch(e){ alert('Could not change class access: '+(e.message||e)); }
+    if(page) page.style.pointerEvents='';
+    renderAdminStudent(sid);
+  }
+  window.toggleAccess=(sid,classOrder,btn)=>{ _msAccess(sid,[classOrder], !(btn&&btn.classList.contains('on')), btn); };
   window.toggleVideoLock=(sid,classOrder)=>{const lk=new Set(getLockedVideos(sid));lk.has(classOrder)?lk.delete(classOrder):lk.add(classOrder);saveLockedVideos(sid,[...lk]);renderAdminStudent(sid);};
   window.toggleQuizLock=(sid,classOrder)=>{const lk=new Set(getLockedQuizzes(sid));lk.has(classOrder)?lk.delete(classOrder):lk.add(classOrder);saveLockedQuizzes(sid,[...lk]);renderAdminStudent(sid);};
-  window.grantAll=(sid)=>{const st=loadStudents();st[sid].accessList=ALL_LESSONS.map(l=>l.order);saveStudents(st);renderAdminStudent(sid);};
-  window.revokeAll=(sid)=>{const st=loadStudents();st[sid].accessList=[];saveStudents(st);renderAdminStudent(sid);};
-  window.grantSection=(sid,secId)=>{const st=loadStudents();const orders=SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order);const list=new Set(st[sid].accessList||[]);orders.forEach(o=>list.add(o));st[sid].accessList=[...list];saveStudents(st);renderAdminStudent(sid);};
-  window.revokeSection=(sid,secId)=>{const st=loadStudents();const orders=SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order);const list=new Set(st[sid].accessList||[]);orders.forEach(o=>list.delete(o));st[sid].accessList=[...list];saveStudents(st);renderAdminStudent(sid);};
+  window.grantAll=(sid)=>{_msAccess(sid,ALL_LESSONS.map(l=>l.order),true);};
+  window.revokeAll=(sid)=>{if(confirm('Lock every class that is not completed? They will open again in normal course order.'))_msAccess(sid,ALL_LESSONS.map(l=>l.order),false);};
+  window.grantSection=(sid,secId)=>{_msAccess(sid,SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order),true);};
+  window.revokeSection=(sid,secId)=>{_msAccess(sid,SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order),false);};
 }
