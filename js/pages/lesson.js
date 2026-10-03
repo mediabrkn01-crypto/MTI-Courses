@@ -108,7 +108,7 @@ function renderLesson(lessonId){
       :lDone?'<span class="ls-st done">'+LI.check+'</span>'
       :!lUnlocked?'<span class="ls-st locked">'+LI.lock+'</span>':'';
     missionList+='<div class="mp-item ls-row '+state+(isCur?' mp-active':'')+'" '+(lOnclick?'onclick="'+lOnclick+'" role="button" tabindex="0"':'')+'>'
-      +'<div class="ls-thumb">'+(lThumb?'<img src="'+escapeAttr(lThumb)+'" alt="" loading="lazy" onerror="this.remove()"/>':'')+'<span class="ls-day">'+String(l.order).padStart(2,'0')+'</span></div>'
+      +'<div class="ls-thumb">'+(lThumb?'<img src="'+escapeAttr(lThumb)+'" alt=""'+thumbPosAttr(l.order)+' loading="lazy" onerror="this.remove()"/>':'')+'<span class="ls-day">'+String(l.order).padStart(2,'0')+'</span></div>'
       +'<div class="ls-txt"><div class="ls-k">Day '+l.order+(isCur?' · Playing':lDone?' · Done':!lUnlocked?' · Locked':'')+'</div>'
       +'<div class="ls-t">'+escapeHtml(getLessonTitle(l))+'</div></div>'
       +status

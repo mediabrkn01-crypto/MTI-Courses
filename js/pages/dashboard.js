@@ -327,7 +327,7 @@ function renderDashboard(){
       var _done=isCompleted(f.id);
       wvCards+='<div data-dash-wv-card="'+f.id+'" class="wvc'+(_done?' done':'')+(_wvUnlocked?'':' locked')+'" '+_click+'>'+
         '<div class="wvc-img">'+
-          (_thumb?'<img src="'+escapeAttr(_thumb)+'" alt="" decoding="async"'+(idx<5?'':' loading="lazy"')+' onerror="this.remove()"/>':f.icon)+
+          (_thumb?'<img src="'+escapeAttr(_thumb)+'" alt=""'+thumbPosAttr(100+idx+1)+' decoding="async"'+(idx<5?'':' loading="lazy"')+' onerror="this.remove()"/>':f.icon)+
           (!_wvUnlocked?'<div class="wvc-lock"><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span></div>':'')+
           '<div data-dash-wv-tick="'+f.id+'" class="wvc-tick" style="display:'+(_done?'flex':'none')+'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>'+
         '</div>'+
@@ -410,7 +410,7 @@ function renderDashboard(){
           '<div><div class="star-border-container" style="border-radius:10px;display:inline-block"><div class="border-gradient-bottom"></div><div class="border-gradient-top"></div><button id="cm-btn" type="button" class="star-border-inner" style="display:inline-flex;align-items:center;gap:10px;padding:13px 26px;background:var(--grad);border:1px solid #222;border-radius:10px;color:#fff;font-family:Montserrat,sans-serif;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 4px 20px rgba(255,45,120,.4);letter-spacing:.02em">'+(completedCount===0?'Start your journey →':'Continue mission →')+'</button></div></div>'+
         '</div>'+
         '<div class="dsh-mission-art'+(cmThumb?'':' empty')+'">'+
-          (cmThumb?'<img src="'+escapeAttr(cmThumb)+'" alt="" fetchpriority="high" decoding="async" onerror="this.remove()"/>':'')+
+          (cmThumb?'<img src="'+escapeAttr(cmThumb)+'" alt=""'+thumbPosAttr(nextLesson.order)+' fetchpriority="high" decoding="async" onerror="this.remove()"/>':'')+
           '<span class="dsh-play"><svg width="22" height="22" viewBox="0 0 24 24" fill="#ED1F51"><path d="M8 5v14l11-7z"/></svg></span>'+
         '</div>'+
       '</div>'

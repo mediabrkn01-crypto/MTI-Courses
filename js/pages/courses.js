@@ -156,7 +156,7 @@ function renderMyCourses(){
         :unlocked?'<span class="cr-btn ghost">Start</span>'
         :'<span class="cr-status locked">'+lockIc+'Locked</span>';
       return '<div class="cr-row '+state+'"'+(lonclick?' onclick="'+lonclick+'" role="button" tabindex="0" onkeydown="if(event.key===\'Enter\')'+lonclick.replace(/"/g,'&quot;')+'"':'')+'>'
-        +'<div class="cr-thumb">'+(thumb?'<img src="'+escapeAttr(thumb)+'" alt="" loading="lazy" onerror="this.remove()"/>':'')
+        +'<div class="cr-thumb">'+(thumb?'<img src="'+escapeAttr(thumb)+'" alt=""'+thumbPosAttr(l.order)+' loading="lazy" onerror="this.remove()"/>':'')
           +'<span class="cr-day">Day '+l.order+'</span>'
           +(!unlocked?'<span class="cr-lock">'+lockIc+'</span>':'')
         +'</div>'

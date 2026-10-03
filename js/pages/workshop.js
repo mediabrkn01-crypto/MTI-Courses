@@ -126,7 +126,7 @@ function renderWVPlayer(wvItem){
                 return '<video src="'+src+'" controls style="width:100%;aspect-ratio:16/9;background:#000"></video>';
               })()
             +'</div>'
-            :(thumb?'<div style="width:100%;aspect-ratio:16/9;background:#000;position:relative"><img src="'+thumb+'" style="width:100%;height:100%;object-fit:cover;opacity:.5"/><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="font-size:60px">'+wvItem.icon+'</span></div></div>':'<div style="width:100%;aspect-ratio:16/9;background:#111;display:flex;align-items:center;justify-content:center;font-size:60px">'+wvItem.icon+'</div>'))
+            :(thumb?'<div style="width:100%;aspect-ratio:16/9;background:#000;position:relative"><img src="'+thumb+'" style="'+thumbPosCss(100+wvIdx+1)+'width:100%;height:100%;object-fit:cover;opacity:.5"/><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><span style="font-size:60px">'+wvItem.icon+'</span></div></div>':'<div style="width:100%;aspect-ratio:16/9;background:#111;display:flex;align-items:center;justify-content:center;font-size:60px">'+wvItem.icon+'</div>'))
           +'<div style="padding:20px 24px">'
             +'<div style="font-size:10px;font-weight:700;font-family:JetBrains Mono,monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--g1);margin-bottom:6px">'+wvItem.cat+'</div>'
             +'<h1 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:22px;color:#fff;margin-bottom:8px">'+title+'</h1>'
@@ -178,7 +178,7 @@ function renderWordVault(){
       var onclick=locked?'':("navigate('lesson',{id:'"+f.id+"'})");
       return '<div data-wv-card="'+f.id+'" class="wvc wvg'+(done?' done':'')+(locked?' locked':'')+'"'+(onclick?' onclick="'+onclick+'" role="button" tabindex="0"':'')+'>'
         +'<div class="wvc-img">'
-          +(thumb?'<img src="'+escapeAttr(thumb)+'" alt="" loading="lazy" onerror="this.remove()"/>':f.icon)
+          +(thumb?'<img src="'+escapeAttr(thumb)+'" alt=""'+thumbPosAttr(100+idx+1)+' loading="lazy" onerror="this.remove()"/>':f.icon)
           +(locked?'<div class="wvc-lock"><span>'+WV_LOCK+'</span></div>':'')
           +'<div data-wv-tick="'+f.id+'" class="wvc-tick" style="display:'+(done?'flex':'none')+'"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>'
         +'</div>'

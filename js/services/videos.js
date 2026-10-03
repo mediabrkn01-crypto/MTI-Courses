@@ -125,9 +125,23 @@ function refreshLessonThumbs(){
 }
 
 // ─── ADMIN PANEL ─────────────────────────────────────────────────────────────
+// Admin-chosen focal point for a class/workshop image (Admin > Images). Stored as
+// videos[order].thumbPos = {x:0-100, y:0-100}; nothing stored → centre (CSS default).
+// Only changes how the image is framed (object-position) — never the image itself.
+function thumbPos(order){
+  var p=((loadVideos()[order])||{}).thumbPos;
+  if(!p) return null;
+  var x=Number(p.x), y=Number(p.y);
+  if(!isFinite(x)||!isFinite(y)) return null;
+  return {x:Math.max(0,Math.min(100,x)), y:Math.max(0,Math.min(100,y))};
+}
+function thumbPosCss(order){ var p=thumbPos(order); return p?'object-position:'+p.x+'% '+p.y+'%;':''; }
+function thumbPosAttr(order){ var c=thumbPosCss(order); return c?' style="'+c+'"':''; }
 function loadVideos(){if(Object.keys(_videoData).length>0)return _videoData;try{return JSON.parse(localStorage.getItem("brokeneng_videos")||"{}");}catch{return{};}}
 function saveVideos(v){
-  localStorage.setItem("brokeneng_videos",JSON.stringify(v));
+  // The row (with base64 thumbnails) can exceed localStorage's quota; that must not stop
+  // the server save below.
+  try{ localStorage.setItem("brokeneng_videos",JSON.stringify(v)); }catch(e){}
   if(typeof _sb!=="undefined") sbSaveVideos(v);
 }
 

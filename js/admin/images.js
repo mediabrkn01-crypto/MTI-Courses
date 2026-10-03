@@ -16,7 +16,7 @@ function _imgCard(order,tag,title,thumb,fallback){
     +'<div class="adm-img-prev'+(thumb?' zoom':'')+'" id="img-prev-'+order+'"'
       +(thumb?' role="button" tabindex="0" aria-label="Preview image" onclick="openImgPreview('+order+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openImgPreview('+order+')}"':'')+'>'
       +'<span class="adm-img-tag">'+tag+'</span>'
-      +(thumb?'<img src="'+escapeAttr(thumb)+'" alt="" loading="lazy" onerror="this.remove()"/>':fallback+'<span>No image yet</span>')
+      +(thumb?'<img src="'+escapeAttr(thumb)+'" alt=""'+thumbPosAttr(order)+' loading="lazy" onerror="this.remove()"/>':fallback+'<span>No image yet</span>')
     +'</div>'
     +'<div class="adm-img-body">'
       +'<p class="adm-name" title="'+escapeAttr(title)+'">'+escapeHtml(title)+'</p>'
@@ -28,6 +28,7 @@ function _imgCard(order,tag,title,thumb,fallback){
       +'<div class="adm-img-actions">'
         +'<label class="adm-btn" style="flex:1" id="img-up-'+order+'">'+ADM_ICON.upload+'Upload<input type="file" accept="image/*" style="display:none" onchange="handleImgUpload(event,'+order+')"/></label>'
         +'<button class="adm-btn" style="flex:1" onclick="toggleImgUrl('+order+')">'+ADM_ICON.link+'Paste URL</button>'
+        +(thumb?'<button class="adm-btn adm-icon-btn" aria-label="Adjust image position" title="Adjust position — choose which part shows on the course page" onclick="openImgPosition('+order+')"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>':'')
         +(thumb?'<button class="adm-btn adm-btn-danger adm-icon-btn" aria-label="Remove image" title="Remove image" onclick="clearImg('+order+')">'+ADM_ICON.trash+'</button>':'')
       +'</div>'
     +'</div>'
@@ -71,6 +72,94 @@ function closeImgPreview(instant){
   lb.classList.remove('open');
   setTimeout(function(){ lb.remove(); },200);
   if(window._imgLbReturn&&window._imgLbReturn.focus) try{window._imgLbReturn.focus();}catch(e){}
+}
+
+// ── Image position (focal point) editor ──
+// Saves videos[order].thumbPos = {x,y} (percent). Students' cards use it as
+// object-position with object-fit:cover, so the image itself is never cropped or resized.
+// The frame below is 16:9 — the same shape as the course page card.
+function openImgPosition(order){
+  var url=((loadVideos()[order])||{}).thumb||'';
+  var card=document.getElementById('img-card-'+order);
+  if(!url||!card) return;
+  var tag=card.querySelector('.adm-img-tag').textContent, title=card.querySelector('.adm-name').textContent;
+  var cur=thumbPos(order)||{x:50,y:50};
+  var st={x:cur.x,y:cur.y,ovX:0,ovY:0};
+  var old=document.getElementById('imgpos-modal'); if(old) old.remove();
+  var m=document.createElement('div'); m.id='imgpos-modal'; m.className='qe-overlay';
+  var arrow=function(d){return '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" viewBox="0 0 24 24"><path d="'+d+'"/></svg>';};
+  m.innerHTML='<div class="qe-panel ip-panel" role="dialog" aria-modal="true" aria-labelledby="ip-t">'
+    +'<div class="qe-head"><div style="min-width:0"><p class="cm-kicker">'+escapeHtml(tag)+' · Image position</p><h2 class="cm-title" id="ip-t">'+escapeHtml(title)+'</h2></div>'
+    +'<button type="button" class="qe-x" data-close aria-label="Close">×</button></div>'
+    +'<div class="qe-body" style="padding:18px 20px">'
+      +'<p class="adm-hint" style="margin:0 0 10px">Drag the image to choose what students see. The frame matches the course card shape; the image itself is not changed.</p>'
+      +'<div class="ip-frame" id="ip-frame"><img alt="" draggable="false"/><span class="ip-cross"></span></div>'
+      +'<div class="ip-ctrl">'
+        +'<div class="ip-row"><span class="adm-label" style="margin:0">Horizontal</span><button type="button" class="ip-step" data-ax="x" data-d="-5" aria-label="Left">'+arrow('M15 18l-6-6 6-6')+'</button><input type="range" id="ip-x" min="0" max="100" step="1"/><button type="button" class="ip-step" data-ax="x" data-d="5" aria-label="Right">'+arrow('M9 18l6-6-6-6')+'</button><span class="ip-val" id="ip-xv"></span></div>'
+        +'<div class="ip-row"><span class="adm-label" style="margin:0">Vertical</span><button type="button" class="ip-step" data-ax="y" data-d="-5" aria-label="Up">'+arrow('M18 15l-6-6-6 6')+'</button><input type="range" id="ip-y" min="0" max="100" step="1"/><button type="button" class="ip-step" data-ax="y" data-d="5" aria-label="Down">'+arrow('M6 9l6 6 6-6')+'</button><span class="ip-val" id="ip-yv"></span></div>'
+        +'<p class="adm-hint" id="ip-fit" style="margin:2px 0 0"></p>'
+        +'<div class="ip-presets">'+[['Center',50,50],['Top',null,0],['Bottom',null,100],['Left',0,null],['Right',100,null]].map(function(p){return '<button type="button" class="adm-chip" data-px="'+(p[1]==null?'':p[1])+'" data-py="'+(p[2]==null?'':p[2])+'">'+p[0]+'</button>';}).join('')+'</div>'
+      +'</div>'
+      +'<div class="ip-small"><span class="adm-label" style="margin:0 0 6px">On the course page</span><div class="ip-mini"><img alt=""/></div></div>'
+    +'</div>'
+    +'<div class="qe-foot" style="justify-content:flex-end"><span id="ip-msg" class="adm-hint" style="margin:0 auto 0 0"></span>'
+      +'<button type="button" class="adm-btn adm-btn-lg" data-close>Cancel</button>'
+      +'<button type="button" class="adm-btn adm-btn-primary adm-btn-lg" id="ip-save">Save position</button></div>'
+  +'</div>';
+  document.body.appendChild(m);
+  var frame=m.querySelector('#ip-frame'), img=frame.querySelector('img'), mini=m.querySelector('.ip-mini img');
+  var sx=m.querySelector('#ip-x'), sy=m.querySelector('#ip-y');
+  img.src=url; mini.src=url;
+  function apply(){
+    st.x=Math.round(Math.max(0,Math.min(100,st.x))); st.y=Math.round(Math.max(0,Math.min(100,st.y)));
+    var pos=st.x+'% '+st.y+'%';
+    img.style.objectPosition=pos; mini.style.objectPosition=pos;
+    sx.value=st.x; sy.value=st.y;
+    m.querySelector('#ip-xv').textContent=st.x+'%'; m.querySelector('#ip-yv').textContent=st.y+'%';
+  }
+  // How far the covered image overflows the frame on each axis (only that axis can move).
+  function measure(){
+    var nw=img.naturalWidth, nh=img.naturalHeight, fw=frame.clientWidth, fh=frame.clientHeight;
+    if(!nw||!nh||!fw||!fh) return;
+    var sc=Math.max(fw/nw, fh/nh);
+    st.ovX=Math.max(0,nw*sc-fw); st.ovY=Math.max(0,nh*sc-fh);
+    sx.disabled=st.ovX<1; sy.disabled=st.ovY<1;
+    m.querySelector('#ip-fit').textContent=st.ovX<1&&st.ovY<1?'This image fits the frame exactly — there is nothing to move.'
+      : st.ovX<1?'The image fills the full width, so only the vertical position changes what shows.'
+      : st.ovY<1?'The image fills the full height, so only the horizontal position changes what shows.':'';
+  }
+  img.onload=measure; if(img.complete) measure();
+  requestAnimationFrame(measure); window.addEventListener('resize',measure);
+  // Drag: moving the image right reveals more of its left side (lower x).
+  var drag=null;
+  frame.addEventListener('pointerdown',function(e){ measure(); drag={px:e.clientX,py:e.clientY,x:st.x,y:st.y}; frame.setPointerCapture(e.pointerId); frame.classList.add('drag'); });
+  frame.addEventListener('pointermove',function(e){
+    if(!drag) return;
+    if(st.ovX>=1) st.x=drag.x-(e.clientX-drag.px)/st.ovX*100;
+    if(st.ovY>=1) st.y=drag.y-(e.clientY-drag.py)/st.ovY*100;
+    apply();
+  });
+  var end=function(){ drag=null; frame.classList.remove('drag'); };
+  frame.addEventListener('pointerup',end); frame.addEventListener('pointercancel',end);
+  sx.oninput=function(){ st.x=+sx.value; apply(); }; sy.oninput=function(){ st.y=+sy.value; apply(); };
+  [].forEach.call(m.querySelectorAll('.ip-step'),function(b){ b.onclick=function(){ st[b.dataset.ax]+=+b.dataset.d; apply(); }; });
+  [].forEach.call(m.querySelectorAll('.ip-presets .adm-chip'),function(b){ b.onclick=function(){ if(b.dataset.px!=='') st.x=+b.dataset.px; if(b.dataset.py!=='') st.y=+b.dataset.py; apply(); }; });
+  var close=function(){ document.removeEventListener('keydown',esc); window.removeEventListener('resize',measure); document.body.style.overflow=''; m.remove(); };
+  var esc=function(e){ if(e.key==='Escape') close(); if(e.key==='ArrowLeft'&&e.target.tagName!=='INPUT'){st.x-=1;apply();} if(e.key==='ArrowRight'&&e.target.tagName!=='INPUT'){st.x+=1;apply();} if(e.key==='ArrowUp'&&e.target.tagName!=='INPUT'){e.preventDefault();st.y-=1;apply();} if(e.key==='ArrowDown'&&e.target.tagName!=='INPUT'){e.preventDefault();st.y+=1;apply();} };
+  [].forEach.call(m.querySelectorAll('[data-close]'),function(b){ b.onclick=close; });
+  m.addEventListener('click',function(e){ if(e.target===m) close(); });
+  document.addEventListener('keydown',esc);
+  document.body.style.overflow='hidden';
+  m.querySelector('#ip-save').onclick=function(){
+    var vids=loadVideos();
+    if(!vids[order]) vids[order]={};
+    // Centre is the default, so it is stored as "no position" — existing behaviour.
+    if(st.x===50&&st.y===50) delete vids[order].thumbPos; else vids[order].thumbPos={x:st.x,y:st.y};
+    saveVideos(vids);
+    var ci=document.querySelector('#img-prev-'+order+' img'); if(ci) ci.style.objectPosition=st.x+'% '+st.y+'%';
+    close();
+  };
+  apply();
 }
 
 function renderAdminImages(){

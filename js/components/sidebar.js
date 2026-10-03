@@ -75,7 +75,7 @@ function sidebarHtml(active){
       var vm=loadVideos()[al.order]||{};
       var thumb=vm.thumb||al.thumbnailUrl||"";
       return "<div class=\"sb-nowplaying\" style=\"margin:10px 12px;border-radius:12px;overflow:hidden;position:relative;height:90px;cursor:pointer;border:1px solid rgba(255,255,255,.1)\" onclick=\"navigate(\'lesson\',{id:\'"+al.id+"\'})\">"+
-        "<img src=\""+thumb+"\" style=\"width:100%;height:100%;object-fit:cover\" onerror=\"this.parentElement.style.display=\'none\'\"/>"+
+        "<img src=\""+thumb+"\" style=\""+thumbPosCss(al.order)+"width:100%;height:100%;object-fit:cover\" onerror=\"this.parentElement.style.display=\'none\'\"/>"+
         "<div style=\"position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,transparent 65%)\"></div>"+
         "<span class=\"sb-np-play\"><svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"#ED1F51\"><path d=\"M8 5v14l11-7z\"/></svg></span>"+
         "<div style=\"position:absolute;bottom:6px;left:8px;right:8px\">"+
