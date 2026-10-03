@@ -3,37 +3,60 @@
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function renderLogin(){
+  // Visual layout only — field ids, the form handler (doStudentLogin), Forgot password and
+  // the maintenance notice (#maint-banner) are unchanged.
+  var CK='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
   app.innerHTML=`
-  <div class="auth-wrap">
-    <div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
-    <main class="auth-card center" data-glow-init="1">
-      <div class="auth-logo"><img src="${getSymbolSrc()}" alt="Broken English" onerror="this.style.display='none'"/></div>
-      <h1 class="auth-title">Sign In</h1>
-      <p class="auth-sub">Enter your credentials to access your classes.</p>
-
-      <div id="maint-banner">${typeof maintBannerHtml==='function'?maintBannerHtml():''}</div>
-      <div id="login-err" class="auth-msg error" role="alert" style="display:none"></div>
-
-      <form id="login-form" novalidate onsubmit="event.preventDefault();doStudentLogin();">
-        <div class="auth-field">
-          <div class="auth-label-row"><label for="login-email" class="auth-label">Email or username</label></div>
-          <input id="login-email" class="auth-input" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@email.com"/>
+  <div class="auth-wrap auth-split">
+    <section class="as-brand" aria-hidden="true">
+      <div class="as-rings"></div>
+      <div class="as-brand-in">
+        <img class="as-logo" src="${getLogoSrc()}" alt="" onerror="this.style.display='none'"/>
+        <div class="as-copy">
+          <p class="as-eyebrow">Student academy</p>
+          <h2 class="as-head">Master your<br><span>pronunciation.</span></h2>
+          <p class="as-lines">Build confidence. Improve clarity. Speak naturally.</p>
+          <ul class="as-points">
+            <li><span>${CK}</span>20 guided missions across 5 phases</li>
+            <li><span>${CK}</span>Pronunciation Workshop for everyday words</li>
+            <li><span>${CK}</span>Learn at your own pace, on any device</li>
+          </ul>
         </div>
-        <div class="auth-field">
-          <div class="auth-label-row">
-            <label for="login-pass" class="auth-label">Password</label>
-            <button type="button" class="auth-link" onclick="showStudentForgotPassword()">Forgot password?</button>
-          </div>
-          <div class="auth-input-wrap">
-            <input id="login-pass" class="auth-input has-eye" type="password" autocomplete="current-password" placeholder="••••••••"/>
-            <button type="button" class="auth-eye" onclick="togglePw('login-pass',this)" aria-label="Show password"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
-          </div>
-        </div>
-        <button id="login-btn-main" type="submit" class="auth-btn">Sign In</button>
-      </form>
+        <p class="as-foot">academy.brokenenglish.in</p>
+      </div>
+    </section>
 
-      <p class="auth-foot">Having trouble? Contact <a href="mailto:mediabrkn01@gmail.com">mediabrkn01@gmail.com</a></p>
-    </main>
+    <section class="as-form">
+      <main class="auth-card as-card" data-glow-init="1">
+        <div class="as-card-logo"><img src="${getSymbolSrc()}" alt="Broken English" onerror="this.style.display='none'"/></div>
+        <h1 class="auth-title">Welcome back</h1>
+        <p class="auth-sub">Sign in to continue your learning journey.</p>
+
+        <div id="maint-banner">${typeof maintBannerHtml==='function'?maintBannerHtml():''}</div>
+        <div id="login-err" class="auth-msg error" role="alert" style="display:none"></div>
+
+        <form id="login-form" novalidate onsubmit="event.preventDefault();doStudentLogin();">
+          <div class="auth-field">
+            <div class="auth-label-row"><label for="login-email" class="auth-label">Email or username</label></div>
+            <input id="login-email" class="auth-input" type="text" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="you@email.com"/>
+          </div>
+          <div class="auth-field">
+            <div class="auth-label-row"><label for="login-pass" class="auth-label">Password</label></div>
+            <div class="auth-input-wrap">
+              <input id="login-pass" class="auth-input has-eye" type="password" autocomplete="current-password" placeholder="Enter your password"/>
+              <button type="button" class="auth-eye" onclick="togglePw('login-pass',this)" aria-label="Show password"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg></button>
+            </div>
+            <div class="as-forgot"><button type="button" class="auth-link" onclick="showStudentForgotPassword()">Forgot password?</button></div>
+          </div>
+          <button id="login-btn-main" type="submit" class="auth-btn">Sign In</button>
+        </form>
+
+        <div class="as-help">
+          <span>Having trouble?</span>
+          <a href="mailto:mediabrkn01@gmail.com">Contact support</a>
+        </div>
+      </main>
+    </section>
   </div>`;
 }
 

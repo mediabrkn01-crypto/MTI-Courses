@@ -101,3 +101,60 @@
 .maint-box h2{font-family:'Montserrat',sans-serif;font-weight:800;font-size:18px;color:#fff;margin:0 0 8px}
 .maint-box p{font-size:14px;line-height:1.6;color:var(--muted2);margin:0 0 18px}
 .maint-box .auth-btn{margin-top:0}
+
+/* ── Student login: split layout (admin login keeps the single card) ───────── */
+.auth-split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);align-items:stretch;padding:0;
+  background:radial-gradient(900px 600px at 0% 0%,rgba(237,31,81,.10),transparent 60%),radial-gradient(700px 500px at 100% 100%,rgba(249,115,22,.07),transparent 60%),var(--bg)}
+.auth-split .orb{display:none}
+.as-brand{position:relative;overflow:hidden;border-right:1px solid rgba(255,255,255,.06);
+  background:radial-gradient(120% 90% at 20% 15%,rgba(237,31,81,.22),transparent 55%),radial-gradient(90% 70% at 85% 95%,rgba(249,115,22,.16),transparent 60%),linear-gradient(160deg,#120b18 0%,#0a0912 55%,#07070d 100%)}
+.as-brand::after{content:'';position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.as-rings{position:absolute;right:-180px;top:50%;width:620px;height:620px;transform:translateY(-50%);border-radius:50%;pointer-events:none;
+  background:repeating-radial-gradient(circle,transparent 0 46px,rgba(255,255,255,.035) 46px 47px);
+  -webkit-mask-image:radial-gradient(circle,#000 30%,transparent 70%);mask-image:radial-gradient(circle,#000 30%,transparent 70%)}
+.as-brand-in{position:relative;z-index:1;height:100%;min-height:100vh;min-height:100dvh;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;padding:48px 56px}
+.as-logo{height:40px;width:auto;max-width:200px;object-fit:contain;object-position:left;display:block}
+.as-copy{max-width:460px}
+.as-eyebrow{font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:#fb7185;margin:0 0 16px}
+.as-head{font-family:'Montserrat',sans-serif;font-weight:800;font-size:clamp(34px,3.6vw,52px);line-height:1.06;letter-spacing:-.02em;color:#fff;margin:0 0 16px}
+.as-head span{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.as-lines{font-size:16px;line-height:1.6;color:rgba(255,255,255,.62);margin:0 0 28px}
+.as-points{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px}
+.as-points li{display:flex;align-items:center;gap:12px;font-size:14px;color:rgba(255,255,255,.78)}
+.as-points li span{width:26px;height:26px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fb923c;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25)}
+.as-foot{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;color:rgba(255,255,255,.3);margin:0}
+
+.as-form{display:flex;align-items:center;justify-content:center;padding:40px 24px;min-height:100vh;min-height:100dvh;box-sizing:border-box}
+.as-card{max-width:420px;padding:40px 38px 30px}
+.as-card-logo{width:52px;height:52px;border-radius:15px;margin-bottom:22px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12);box-shadow:0 8px 24px rgba(237,31,81,.18)}
+.as-card-logo img{height:28px;width:auto;object-fit:contain;mix-blend-mode:screen;display:block}
+.as-card .auth-title{font-size:28px}
+.as-card .auth-sub{margin-bottom:24px}
+.as-forgot{display:flex;justify-content:flex-end;margin-top:9px}
+.as-help{margin-top:22px;padding-top:18px;border-top:1px solid rgba(255,255,255,.07);display:flex;justify-content:center;gap:6px;font-size:13px;color:var(--muted2)}
+.as-help a{color:#fb7185;font-weight:700;text-decoration:none}
+.as-help a:hover{color:#fff;text-decoration:underline}
+
+/* States */
+.as-card .auth-input:focus{border-color:rgba(237,31,81,.65);box-shadow:0 0 0 4px rgba(237,31,81,.14)}
+.as-card:has(#login-err[style*="block"]) .auth-input{border-color:rgba(244,63,94,.55)}
+.as-card .auth-btn:disabled{opacity:.85;cursor:progress}
+.as-card .auth-msg{margin-bottom:18px}
+
+/* Tablet / mobile: single column, brand reduced to a slim header */
+@media(max-width:960px){
+  .auth-split{grid-template-columns:1fr}
+  .as-brand{border-right:none;border-bottom:1px solid rgba(255,255,255,.06)}
+  .as-brand-in{min-height:0;padding:22px 24px;flex-direction:row;align-items:center;gap:14px}
+  .as-logo{height:30px}
+  .as-copy,.as-rings{display:none}
+  .as-foot{margin-left:auto}
+  .as-form{min-height:0;padding:32px 18px 40px;align-items:flex-start}
+}
+@media(max-width:480px){
+  .as-foot{display:none}
+  .as-card{padding:30px 22px 24px;border-radius:20px}
+  .as-card .auth-title{font-size:24px}
+}

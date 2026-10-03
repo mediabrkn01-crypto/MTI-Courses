@@ -61,7 +61,7 @@ function maintBannerHtml(){
   if(!_maintenanceActive) return '';
   var extra=_maintCfg.message?'<span class="m2">'+escapeHtml(_maintCfg.message)+'</span>':'';
   return '<div class="auth-msg maint" role="status"><b>System maintenance</b>'
-    +'<span>The platform is currently under maintenance. Student access is temporarily unavailable.</span>'+extra+'</div>';
+    +'<span>The platform is currently being updated. Student access is temporarily unavailable.</span>'+extra+'</div>';
 }
 function maintRefreshBanner(){
   var el=document.getElementById('maint-banner');
