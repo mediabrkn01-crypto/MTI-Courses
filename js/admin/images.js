@@ -13,7 +13,9 @@ function _imgSourceLabel(url){
 function _imgCard(order,tag,title,thumb,fallback){
   var isData=thumb.indexOf('data:')===0;
   return '<div class="adm-img-card" id="img-card-'+order+'">'
-    +'<div class="adm-img-prev" id="img-prev-'+order+'"><span class="adm-img-tag">'+tag+'</span>'
+    +'<div class="adm-img-prev'+(thumb?' zoom':'')+'" id="img-prev-'+order+'"'
+      +(thumb?' role="button" tabindex="0" aria-label="Preview image" onclick="openImgPreview('+order+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openImgPreview('+order+')}"':'')+'>'
+      +'<span class="adm-img-tag">'+tag+'</span>'
       +(thumb?'<img src="'+escapeAttr(thumb)+'" alt="" loading="lazy" onerror="this.remove()"/>':fallback+'<span>No image yet</span>')
     +'</div>'
     +'<div class="adm-img-body">'
@@ -30,6 +32,45 @@ function _imgCard(order,tag,title,thumb,fallback){
       +'</div>'
     +'</div>'
   +'</div>';
+}
+
+// ── Image preview lightbox ──
+// Opened only by clicking a thumbnail; Upload / Paste URL / Delete are untouched.
+function openImgPreview(order){
+  var url=((loadVideos()[order])||{}).thumb||'';
+  var card=document.getElementById('img-card-'+order);
+  if(!url||!card) return;
+  var tag=card.querySelector('.adm-img-tag').textContent;
+  var title=card.querySelector('.adm-name').textContent;
+  closeImgPreview(true);
+  var lb=document.createElement('div');
+  lb.id='img-lightbox'; lb.className='img-lb';
+  lb.setAttribute('role','dialog'); lb.setAttribute('aria-modal','true'); lb.setAttribute('aria-label',tag+' — '+title);
+  lb.innerHTML='<div class="img-lb-box">'
+    +'<div class="img-lb-head"><div style="min-width:0"><span class="img-lb-code">'+escapeHtml(tag)+'</span>'
+    +'<p class="img-lb-title">'+escapeHtml(title)+'</p></div>'
+    +'<button type="button" class="img-lb-x" aria-label="Close preview" onclick="closeImgPreview()">'
+    +'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>'
+    +'<div class="img-lb-stage"><img alt="'+escapeAttr(tag+' — '+title)+'"/></div></div>';
+  lb.querySelector('img').src=url; // set as a property — never parsed as HTML
+  lb.addEventListener('click',function(e){ if(e.target===lb) closeImgPreview(); });
+  document.body.appendChild(lb);
+  window._imgLbScroll=document.body.style.overflow;
+  document.body.style.overflow='hidden';
+  document.addEventListener('keydown',_imgLbKey);
+  window._imgLbReturn=document.activeElement;
+  requestAnimationFrame(function(){ lb.classList.add('open'); lb.querySelector('.img-lb-x').focus(); });
+}
+function _imgLbKey(e){ if(e.key==='Escape') closeImgPreview(); }
+function closeImgPreview(instant){
+  var lb=document.getElementById('img-lightbox'); if(!lb) return;
+  document.removeEventListener('keydown',_imgLbKey);
+  document.body.style.overflow=window._imgLbScroll||'';
+  lb.id='';
+  if(instant){ lb.remove(); return; }
+  lb.classList.remove('open');
+  setTimeout(function(){ lb.remove(); },200);
+  if(window._imgLbReturn&&window._imgLbReturn.focus) try{window._imgLbReturn.focus();}catch(e){}
 }
 
 function renderAdminImages(){

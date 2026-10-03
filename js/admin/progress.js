@@ -253,6 +253,16 @@ function renderAdminProgress(){
   })();
 }
 
+// Lessons / Pronunciation Workshop tabs on the student detail page — client-side only.
+window.pdShowTab=function(which){
+  ['lessons','workshop'].forEach(function(k){
+    var t=document.getElementById('pd-tab-'+k), p=document.getElementById('pd-panel-'+k);
+    if(!t||!p) return;
+    var on=k===which;
+    t.classList.toggle('on',on); t.setAttribute('aria-selected',on?'true':'false'); p.hidden=!on;
+  });
+};
+
 // ── PER-STUDENT PROGRESS DETAIL ──────────────────────────────────────────────
 // Same data + same calculation as the list (AdmProgress), fetched for this student's
 // merged ids only. Shows a loading state first and an error state on failure — never
@@ -348,22 +358,50 @@ function renderAdminProgressStudent(id){
     }
     const wv = AdmProgress.wvList();
 
+    function panelHead(done, total, noun){
+      const p = total ? Math.round(done/total*100) : 0;
+      return `<div class="pd-sum"><span><b>${done}</b> of ${total} ${noun} completed</span>
+        <div class="adm-meter${done&&done>=total?' ok':''}" style="max-width:220px"><span style="width:${p}%"></span></div></div>`;
+    }
+
     app.innerHTML = page(admStats([
       ['Progress', s.pct, s.pct>=100?'ok':'', '%'],
       ['Lessons done', s.completed, '', '/'+s.total],
       ['Quizzes passed', s.passed, '', '/'+s.quizTotal]
     ]), s.pct, `
-    <div class="adm-card admin-table-wrap">
-      <table class="admin-table" style="min-width:400px">
-        <thead><tr>
-          <th style="width:48px"></th>
-          <th>Lesson</th>
-          <th class="center">Quiz</th>
-          <th class="center">Done</th>
-        </tr></thead>
-        <tbody>${ALL_LESSONS.map(lessonRow).join('')}
-        ${wv.length?'<tr><td colspan="4" style="padding-top:18px"><span class="adm-section-label" style="margin:0">Pronunciation Workshop</span></td></tr>'+wv.map(wvRow).join(''):''}</tbody>
-      </table>
-    </div>`);
+    <div class="pd-tabs" role="tablist" aria-label="Progress sections">
+      <button type="button" role="tab" id="pd-tab-lessons" class="pd-tab on" aria-selected="true" aria-controls="pd-panel-lessons" onclick="pdShowTab('lessons')">Lessons <span class="n">${s.coreDone}/${ALL_LESSONS.length}</span></button>
+      ${wv.length?`<button type="button" role="tab" id="pd-tab-workshop" class="pd-tab" aria-selected="false" aria-controls="pd-panel-workshop" onclick="pdShowTab('workshop')">Pronunciation Workshop <span class="n">${s.wvDone}/${wv.length}</span></button>`:''}
+    </div>
+
+    <div id="pd-panel-lessons" role="tabpanel" aria-labelledby="pd-tab-lessons">
+      ${panelHead(s.coreDone, ALL_LESSONS.length, 'lessons')}
+      <div class="adm-card admin-table-wrap">
+        <table class="admin-table" style="min-width:400px">
+          <thead><tr>
+            <th style="width:48px"></th>
+            <th>Lesson</th>
+            <th class="center">Quiz</th>
+            <th class="center">Done</th>
+          </tr></thead>
+          <tbody>${ALL_LESSONS.map(lessonRow).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+
+    ${wv.length?`<div id="pd-panel-workshop" role="tabpanel" aria-labelledby="pd-tab-workshop" hidden>
+      ${panelHead(s.wvDone, wv.length, 'workshop classes')}
+      <div class="adm-card admin-table-wrap">
+        <table class="admin-table" style="min-width:400px">
+          <thead><tr>
+            <th style="width:48px"></th>
+            <th>Workshop class</th>
+            <th class="center">Quiz</th>
+            <th class="center">Done</th>
+          </tr></thead>
+          <tbody>${wv.map(wvRow).join('')}</tbody>
+        </table>
+      </div>
+    </div>`:''}`);
   })();
 }
