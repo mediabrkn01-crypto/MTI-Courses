@@ -36,8 +36,8 @@ var GUIDE = {
         'Click Sign In.',
         'You will be taken to your Student Dashboard.'
       ],
-      images: [{ src: 'assets/guide/01-login.jpg', caption: 'Step 1 — Sign in using your email and password.' }],
-      tip: 'Forgot your password? Click "Forgot password?" on the sign-in page and we will email you a secure reset link.'
+      images: [{ src: 'assets/guide/01-login-v2.jpg', caption: 'Step 1 — Sign in using your email and password.' }],
+      tip: 'Forgot your password? Click "Forgot password?" just below the password box and we will email you a secure reset link.'
     },
     {
       title: 'Your Student Dashboard',
