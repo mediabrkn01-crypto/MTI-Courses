@@ -269,7 +269,7 @@ async function _pollAdminMaintenance(){
     var badge=document.getElementById('admin-maint-badge');
     if(badge){
       badge.style.display=_maintenanceActive?'inline-flex':'none';
-      badge.textContent=_maintenanceActive&&cfg.bypass_student_name?'🚧 MAINTENANCE ON | Bypass: '+cfg.bypass_student_name:'🚧 MAINTENANCE ON';
+      badge.textContent=_maintenanceActive&&cfg.bypass_student_name?'Maintenance on · Bypass: '+cfg.bypass_student_name:'Maintenance on';
     }
   }catch(e){}
 }

@@ -209,7 +209,7 @@ async function adminLoadMaintenanceStatus(){
     var badge=document.getElementById('admin-maint-badge');
     if(badge){
       badge.style.display=enabled?'inline-flex':'none';
-      badge.textContent=enabled?('🚧 MAINTENANCE ON'+(bypassName?' | Bypass: '+bypassName:'')):'';
+      badge.textContent=enabled?('Maintenance on'+(bypassName?' · Bypass: '+bypassName:'')):'';
     }
   }catch(e){
     if(statusRow) statusRow.textContent='Error loading status: '+e.message;

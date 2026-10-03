@@ -3,24 +3,35 @@
    Moved out of js/components/topbar.js and js/utils/formatting.js so the
    student app no longer ships admin UI code. */
 function adminTopBar(tab){
-  const tabs=[{id:'students',label:'Students'},{id:'progress',label:'Progress'},{id:'classes',label:'Classes & Videos'},{id:'quiz',label:'Quizzes'},{id:'images',label:'Images'},{id:'demo',label:'Demo Access'},{id:'settings',label:'Settings'}];
-  return`<div class="admin-top-bar">
-    <div style="display:flex;align-items:center;gap:12px">
-      <img src="${getLogoSrc()}" style="height:34px;max-width:160px;object-fit:contain;display:block" onerror="this.style.display='none'"/>
-      <div>
-        <div style="font-family:'Montserrat',sans-serif;font-weight:800;font-size:14px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent">${SITE_NAME}</div>
-        <div style="font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:.07em">VOICE OS</div>
-      </div>
-      <span class="pill pill-red" style="font-size:9px;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace">Admin</span>
-      <span id="admin-maint-badge" style="display:${_maintenanceActive?'inline-flex':'none'};align-items:center;gap:5px;background:rgba(255,100,0,.15);border:1px solid rgba(255,100,0,.4);border-radius:6px;padding:3px 9px;font-size:10px;font-family:JetBrains Mono,monospace;color:#f97316;font-weight:700">🚧 MAINTENANCE ON</span>
+  const I=function(d){return '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">'+d+'</svg>';};
+  const tabs=[
+    {id:'students',label:'Students',icon:I('<path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>')},
+    {id:'progress',label:'Progress',icon:I('<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>')},
+    {id:'classes',label:'Classes & Videos',icon:I('<rect x="2" y="5" width="15" height="14" rx="2"/><path d="M17 10l5-3v10l-5-3"/>')},
+    {id:'quiz',label:'Quizzes',icon:I('<path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/>')},
+    {id:'images',label:'Images',icon:I('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>')},
+    {id:'demo',label:'Demo Access',icon:I('<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/>')},
+    {id:'settings',label:'Settings',icon:I('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/>')}
+  ];
+  // On narrow screens the nav scrolls sideways — bring the current tab into view.
+  setTimeout(function(){
+    var nav=document.querySelector('.atb-nav'), on=nav&&nav.querySelector('.atb-tab.on');
+    if(on&&nav.scrollWidth>nav.clientWidth) nav.scrollLeft=on.offsetLeft-(nav.clientWidth-on.offsetWidth)/2;
+  },0);
+  return`<header class="admin-top-bar">
+    <div class="atb-brand">
+      <img src="${getLogoSrc()}" alt="${escapeAttr(SITE_NAME)}" class="atb-logo" onerror="this.style.display='none'"/>
+      <span class="atb-sep" aria-hidden="true"></span>
+      <span class="atb-role">Admin</span>
+      <span id="admin-maint-badge" class="atb-maint" style="display:${_maintenanceActive?'inline-flex':'none'}">Maintenance on</span>
     </div>
-    <div style="display:flex;gap:6px;flex-wrap:wrap">
-      ${tabs.map(t=>`<button onclick="navigate('admin',{tab:'${t.id}'})"
-        class="tab-glass${tab===t.id?' active':''}"
-        style="padding:7px 14px;font-size:12px;font-family:'Montserrat',sans-serif">${t.label}</button>`).join('')}
-    </div>
-    <button onclick="adminLogout()" style="font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;transition:color .18s;font-family:'JetBrains Mono',monospace" onmouseover="this.style.color='var(--g1)'" onmouseout="this.style.color='var(--muted)'">Sign out</button>
-  </div>`;
+    <nav class="atb-nav" aria-label="Admin sections">
+      ${tabs.map(t=>`<button type="button" onclick="navigate('admin',{tab:'${t.id}'})" class="atb-tab${tab===t.id?' on':''}"${tab===t.id?' aria-current="page"':''}>${t.icon}<span>${t.label}</span></button>`).join('')}
+    </nav>
+    <button type="button" onclick="adminLogout()" class="atb-out" title="Sign out">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Sign out</span>
+    </button>
+  </header>`;
 }
 
 function glassBtn(label,onclick,variant='ghost'){
