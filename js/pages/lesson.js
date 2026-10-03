@@ -150,7 +150,7 @@ function renderLesson(lessonId){
           +'<div class="ls-grid">'
             +'<div class="ls-card">'
               +'<div class="ls-card-h">Mission objectives</div>'
-              +'<ul class="ls-obj">'+bullets.map(function(b){return '<li><span>'+LI.check+'</span>'+b+'</li>';}).join('')+'</ul>'
+              +'<ul class="ls-obj">'+bullets.map(function(b){return '<li><span>'+LI.check+'</span>'+escapeHtml(b)+'</li>';}).join('')+'</ul>'
             +'</div>'
             +'<div class="ls-card ls-challenge">'
               +'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px">'

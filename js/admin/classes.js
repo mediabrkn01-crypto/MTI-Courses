@@ -47,111 +47,110 @@ function renderAdminClasses(){
       ['Total runtime', runtime>=60?Math.floor(runtime/60)+'h '+(runtime%60):runtime, '', runtime>=60?'m':' min']
     ])}
 
-    <!-- Lesson Panel Edit Modal -->
-    <div id="video-modal" style="display:none;position:fixed;inset:0;z-index:50;align-items:flex-start;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(10px);padding:16px;overflow-y:auto">
-      <div class="lg" style="width:100%;max-width:720px;margin:24px auto">
-        <!-- Header -->
-        <div style="padding:22px 24px 0;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-          <div>
-            <h2 style="font-size:18px;font-weight:700;color:#fff">Edit Class <span id="vm-class-label" style="color:var(--brand-2)"></span></h2>
-            <p style="font-size:12px;color:rgba(255,255,255,0.4);margin-top:3px">These appear in the lesson preview panel and on the lesson page.</p>
+    <!-- Edit Class dialog (moved to <body> on open so the sticky top bar can't cover it) -->
+    <div id="video-modal" class="qe-overlay" style="display:none" onclick="if(event.target===this)closeVideoModal()">
+      <div class="qe-panel cm-panel" role="dialog" aria-modal="true" aria-labelledby="vm-title">
+        <div class="qe-head">
+          <div style="min-width:0">
+            <p class="cm-kicker" id="vm-kicker">Day 1</p>
+            <h2 class="cm-title" id="vm-title">Edit class</h2>
           </div>
-          <button onclick="document.getElementById('video-modal').style.display='none'" style="width:32px;height:32px;border-radius:99px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
+          <button type="button" class="qe-x" onclick="closeVideoModal()" aria-label="Close">×</button>
         </div>
         <input id="vm-order" type="hidden"/>
+        <input id="vm-class-label" type="hidden"/>
 
-        <div style="display:flex;gap:20px;padding:0 24px 22px;flex-wrap:wrap">
-          <!-- LEFT: form fields -->
-          <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:13px">
-
-            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px">
-              <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin-bottom:10px">📋 Lesson Panel Info</p>
-
-              <div style="margin-bottom:11px">
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Panel Title</label>
-                <input id="vm-panelTitle" type="text" placeholder="e.g. Pronunciation Essentials" class="glass-input" oninput="updateVmPreview()"/>
+        <div class="qe-body cm-body">
+          <div class="cm-form">
+            <section class="cm-sec">
+              <h3 class="cm-sec-title">Lesson details</h3>
+              <div class="cm-field">
+                <label class="adm-label" for="vm-panelTitle">Title</label>
+                <input id="vm-panelTitle" type="text" class="adm-input" placeholder="e.g. Pronunciation Essentials" oninput="updateVmPreview()"/>
               </div>
-
-              <div style="margin-bottom:11px">
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Instructor Name</label>
-                <input id="vm-instructor" type="text" placeholder="e.g. Broken English Team" class="glass-input" oninput="updateVmPreview()"/>
+              <div class="cm-row">
+                <div class="cm-field">
+                  <label class="adm-label" for="vm-instructor">Instructor</label>
+                  <input id="vm-instructor" type="text" class="adm-input" placeholder="Broken English Team" oninput="updateVmPreview()"/>
+                </div>
+                <div class="cm-field" style="max-width:150px">
+                  <label class="adm-label" for="vm-dur">Duration</label>
+                  <input id="vm-dur" type="text" class="adm-input" placeholder="e.g. 14 min" oninput="updateVmPreview()"/>
+                </div>
               </div>
-
-              <div style="margin-bottom:11px">
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Duration</label>
-                <input id="vm-dur" type="text" placeholder="e.g. 18 min" class="glass-input" oninput="updateVmPreview()"/>
+              <div class="cm-field">
+                <label class="adm-label" for="vm-bullets">In this lesson <span class="cm-opt">one point per line</span></label>
+                <textarea id="vm-bullets" rows="4" class="adm-input" style="resize:vertical" placeholder="Pronunciation patterns&#10;Stress &amp; intonation&#10;Common mistakes&#10;Real-world examples" oninput="updateVmPreview()"></textarea>
               </div>
-
-              <div>
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Bullet Points <span style="color:rgba(255,255,255,0.3);font-weight:400;text-transform:none;font-size:9px">— one per line</span></label>
-                <textarea id="vm-bullets" rows="4" placeholder="Pronunciation patterns&#10;Stress & intonation&#10;Common mistakes&#10;Real-world examples" class="glass-input" style="resize:vertical" oninput="updateVmPreview()"></textarea>
+              <div class="cm-field" style="margin-bottom:0">
+                <label class="adm-label" for="vm-desc">Lesson page description</label>
+                <textarea id="vm-desc" rows="3" class="adm-input" style="resize:vertical" placeholder="Short description shown under the video on the lesson page"></textarea>
               </div>
-            </div>
+            </section>
 
-            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px">
-              <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin-bottom:10px">🎬 Video & Media</p>
-
-              <div style="margin-bottom:11px">
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Video URL (MP4)</label>
-                <input id="vm-src" type="text" placeholder="https://..." class="glass-input"/>
+            <section class="cm-sec">
+              <h3 class="cm-sec-title">Video</h3>
+              <div class="cm-field">
+                <div class="cm-label-row"><label class="adm-label" for="vm-src">Video link</label><span id="vm-src-kind"></span></div>
+                <div class="cm-inline">
+                  <input id="vm-src" type="url" class="adm-input" placeholder="https://player.mediadelivery.net/play/… or an .mp4 link" oninput="vmSrcCheck()"/>
+                  <a id="vm-src-open" class="adm-btn" target="_blank" rel="noopener" style="display:none">Open</a>
+                </div>
               </div>
-
-              <div style="margin-bottom:11px">
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Thumbnail / Panel Image URL</label>
-                <input id="vm-thumb" type="text" placeholder="https://i.imgur.com/..." class="glass-input" oninput="updateVmPreview()"/>
-                <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:4px">Upload to <a href="https://imgur.com" target="_blank" style="color:var(--brand-2)">imgur.com</a> → right-click image → Copy image address</p>
+              <div class="cm-field" style="margin-bottom:0">
+                <label class="adm-label">Thumbnail</label>
+                <input id="vm-thumb" type="hidden"/>
+                <div class="cm-thumb">
+                  <div id="vm-thumb-img" class="cm-thumb-img"></div>
+                  <div class="cm-thumb-side">
+                    <p id="vm-thumb-info" class="adm-hint" style="margin:0 0 8px">No thumbnail</p>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      <label class="adm-btn" style="cursor:pointer">${ADM_ICON.upload}Upload image<input type="file" accept="image/*" style="display:none" onchange="vmThumbFile(this)"/></label>
+                      <button type="button" class="adm-btn" onclick="vmThumbUrl()">Use a link</button>
+                      <button type="button" id="vm-thumb-clear" class="adm-btn adm-btn-danger" onclick="vmThumbSet('')" style="display:none">Remove</button>
+                    </div>
+                  </div>
+                </div>
+                <input id="vm-thumb-url" type="url" class="adm-input" placeholder="https://… image link" style="display:none;margin-top:8px" oninput="vmThumbSet(this.value.trim(),true)"/>
               </div>
+            </section>
 
-              <div>
-                <label style="display:block;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.45);margin-bottom:5px">Lesson Page Description</label>
-                <textarea id="vm-desc" rows="2" placeholder="Short description shown on the lesson page..." class="glass-input" style="resize:none"></textarea>
-              </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:12px 14px">
-              <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brand-2);margin-bottom:10px">⚡ Quiz Upload</p>
-              <p style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px">Upload a PDF, DOCX, or TXT file. Claude AI will extract the questions automatically.</p>
-              <div id="vm-quiz-status" style="display:none;font-size:12px;margin-bottom:10px;padding:8px 10px;border-radius:8px"></div>
-              <div id="vm-quiz-current" style="margin-bottom:10px"></div>
-              <label style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.07);border:1px dashed rgba(255,255,255,.2);border-radius:10px;padding:12px 14px;cursor:pointer;font-size:12px;color:rgba(255,255,255,.6);transition:border-color .2s" onmouseover="this.style.borderColor='rgba(255,45,120,.5)'" onmouseout="this.style.borderColor='rgba(255,255,255,.2)'">
-                <span style="font-size:18px">📄</span>
-                <span id="vm-quiz-filename">Choose PDF, DOCX, or TXT file...</span>
-                <input id="vm-quiz-file" type="file" accept=".pdf,.docx,.txt,.json" style="display:none" onchange="vmQuizFileSelected(this)"/>
+            <section class="cm-sec" id="vm-quiz-sec">
+              <div class="cm-label-row" style="margin-bottom:10px"><h3 class="cm-sec-title" style="margin:0">Mission challenge quiz</h3><span id="vm-quiz-current"></span></div>
+              <label class="cm-drop">
+                ${ADM_ICON.upload}
+                <span id="vm-quiz-filename">Choose a DOCX, TXT or JSON file</span>
+                <input id="vm-quiz-file" type="file" accept=".docx,.txt,.json" style="display:none" onchange="vmQuizFileSelected(this)"/>
               </label>
-              <div style="display:flex;gap:8px;margin-top:10px">
-                <button id="vm-quiz-upload-btn" onclick="vmUploadQuiz()" style="display:none;flex:1;background:var(--grad);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer;font-family:Montserrat,sans-serif">⚡ Process & Save Quiz</button>
-                <button id="vm-quiz-delete-btn" onclick="vmDeleteQuiz()" style="display:none;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:8px;color:#ef4444;font-size:12px;font-weight:700;padding:9px 14px;cursor:pointer">🗑 Remove Quiz</button>
+              <p class="adm-hint" style="margin:6px 0 0">Questions are read from the file and replace this class's current quiz.</p>
+              <div id="vm-quiz-status" class="cm-status" style="display:none"></div>
+              <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                <button type="button" id="vm-quiz-upload-btn" class="adm-btn adm-btn-primary" onclick="vmUploadQuiz()" style="display:none">Process &amp; save quiz</button>
+                <button type="button" id="vm-quiz-delete-btn" class="adm-btn adm-btn-danger" onclick="vmDeleteQuiz()" style="display:none">${ADM_ICON.trash}Remove uploaded quiz</button>
               </div>
-            </div>
+            </section>
           </div>
 
-          <!-- RIGHT: live preview -->
-          <div style="width:210px;flex-shrink:0">
-            <p style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,0.35);margin-bottom:10px">👁 Live Preview</p>
-            <div id="vm-preview" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);border-radius:16px;overflow:hidden">
-              <div style="height:110px;background:linear-gradient(135deg,#1a1a2e,#16213e);display:flex;align-items:center;justify-content:center">
-                <svg style="width:28px;height:28px;color:rgba(255,255,255,0.2)" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-              </div>
-              <div style="padding:12px">
-                <p id="pvw-title" style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px">—</p>
-                <p id="pvw-instructor" style="font-size:10px;color:var(--brand-2);margin-bottom:10px">Instructor: —</p>
-                <div style="background:rgba(255,255,255,0.07);border-radius:10px;padding:10px;margin-bottom:8px">
-                  <p style="font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,0.4);margin-bottom:6px">In This Lesson</p>
-                  <div id="pvw-bullets" style="display:flex;flex-direction:column;gap:4px"></div>
-                </div>
-                <div style="background:rgba(255,255,255,0.07);border-radius:10px;padding:10px;text-align:center">
-                  <p style="font-size:9px;color:rgba(255,255,255,0.4);margin-bottom:2px">Duration</p>
-                  <p id="pvw-dur" style="font-size:13px;font-weight:700;color:#fff">—</p>
-                </div>
+          <aside class="cm-side">
+            <p class="adm-label" style="margin-bottom:8px">Preview</p>
+            <div id="vm-preview" class="cm-pv">
+              <div class="cm-pv-img"><span class="cm-pv-play"><svg width="16" height="16" viewBox="0 0 24 24" fill="#ED1F51"><path d="M8 5v14l11-7z"/></svg></span></div>
+              <div class="cm-pv-body">
+                <p id="pvw-title" class="cm-pv-title">—</p>
+                <p id="pvw-instructor" class="cm-pv-by">—</p>
+                <p class="cm-pv-k" id="pvw-bullets-k">In this lesson</p>
+                <div id="pvw-bullets" class="cm-pv-list"></div>
+                <div class="cm-pv-dur"><span>Duration</span><b id="pvw-dur">—</b></div>
               </div>
             </div>
-            <p style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px;text-align:center">Updates as you type</p>
-          </div>
+            <p class="adm-hint" style="text-align:center">Updates as you type</p>
+          </aside>
         </div>
 
-        <div style="padding:0 24px 22px;display:flex;gap:10px">
-          <button onclick="saveVideo()" class="btn-primary" style="flex:1;padding:12px;font-size:14px">Save Changes</button>
-          <button onclick="document.getElementById('video-modal').style.display='none'" class="btn-ghost" style="flex:1;padding:12px;font-size:14px">Cancel</button>
+        <div class="qe-foot" style="justify-content:flex-end">
+          <span id="vm-save-msg" class="adm-hint" style="margin:0 auto 0 0"></span>
+          <button type="button" class="adm-btn adm-btn-lg" onclick="closeVideoModal()">Cancel</button>
+          <button type="button" id="vm-save-btn" class="adm-btn adm-btn-primary adm-btn-lg" onclick="saveVideo()">Save changes</button>
         </div>
       </div>
     </div>
@@ -169,8 +168,6 @@ function renderAdminClasses(){
             <tbody>
               ${section.lessons.map(l=>{
                 const v=videos[l.order]||{};
-                const count=students.filter(s=>(s.accessList||[]).includes(l.order)).length;
-                const pct=students.length?Math.round(count/students.length*100):0;
                 return`<tr>
                   <td><span class="adm-day">${l.order}</span></td>
                   <td><div style="display:flex;align-items:center;gap:12px;min-width:0">
@@ -179,7 +176,7 @@ function renderAdminClasses(){
                     <p class="adm-meta">${v.duration?escapeHtml(v.duration):'<span style="color:#fbbf24">Duration not set</span>'}</p></div>
                   </div></td>
                   <td>${v.src?'<span class="adm-badge ok">Uploaded</span>':'<span class="adm-badge warn">Missing</span>'}</td>
-                  <td><div style="display:flex;align-items:center;gap:10px"><div class="adm-meter${count&&count===students.length?' ok':''}"><span style="width:${pct}%"></span></div><span class="adm-num">${count}/${students.length}</span></div></td>
+                  <td class="cls-access" data-order="${l.order}"><span class="adm-skel"></span></td>
                   <td>${hasRealQuiz(l)?'<span class="adm-badge ok">Ready</span>':'<span class="adm-badge muted">None</span>'}</td>
                   <td class="right"><button class="adm-btn" onclick="openVideoModal(${l.order})">${ADM_ICON.edit}Edit</button></td>
                 </tr>`;
@@ -213,128 +210,164 @@ function renderAdminClasses(){
     </div>
   </div>`;
 
+  function _vmEl(id){return document.getElementById(id);}
+  function _vmEsc(e){ if(e.key==='Escape') closeVideoModal(); }
+  window.closeVideoModal=()=>{ var m=_vmEl('video-modal'); if(m) m.style.display='none'; document.removeEventListener('keydown',_vmEsc); };
+  // Students with access = students who can open the class in the student app (same
+  // AdmProgress rule as Students / Progress), not the legacy access_list field.
+  AdmProgress.load().then(function(d){
+    var all=loadStudents(), seen={}, list=Object.values(all).filter(function(x){var k=(x.email||x.id).toLowerCase().trim();if(seen[k])return false;return seen[k]=true;});
+    var calc=list.map(function(x){return AdmProgress.compute(x.id, all, d);});
+    [].forEach.call(document.querySelectorAll('.cls-access'),function(td){
+      var o=Number(td.getAttribute('data-order'));
+      var n=calc.filter(function(c){var st=c.classState(o);return st==='open'||st==='done';}).length, tot=list.length, pct=tot?Math.round(n/tot*100):0;
+      td.innerHTML='<div style="display:flex;align-items:center;gap:10px"><div class="adm-meter'+(n&&n===tot?' ok':'')+'"><span style="width:'+pct+'%"></span></div><span class="adm-num">'+n+'/'+tot+'</span></div>';
+    });
+  },function(e){
+    [].forEach.call(document.querySelectorAll('.cls-access'),function(td){ td.innerHTML='<span class="adm-muted" title="'+escapeHtml(e.message||'')+'">—</span>'; });
+  });
+
   window.openVideoModal=(order)=>{
+    var m=_vmEl('video-modal');
+    if(m&&m.parentElement!==document.body){ [].forEach.call(document.querySelectorAll('body > #video-modal'),function(x){x.remove();}); document.body.appendChild(m); }
     const v=loadVideos()[order]||{};
     const lesson=ALL_LESSONS.find(l=>l.order===order);
     // WV items have order 101-110
     const wvItem=(order>=101&&order<=110)?WV_DATA[order-101]:null;
-    document.getElementById('vm-order').value=order;
-    document.getElementById('vm-class-label').textContent=wvItem?('Pronunciation Workshop — '+wvItem.title):`Day ${order} — ${lesson?.title||''}`;
-    document.getElementById('vm-panelTitle').value=v.panelTitle||(wvItem?wvItem.title:lesson?lesson.title:'');
-    document.getElementById('vm-instructor').value=v.instructor||'';
-    document.getElementById('vm-src').value=v.src||'';
-    document.getElementById('vm-dur').value=v.duration||'';
-    document.getElementById('vm-bullets').value=v.bullets||'';
-    document.getElementById('vm-thumb').value=v.thumb||'';
-    document.getElementById('vm-desc').value=v.desc||'';
-    document.getElementById('video-modal').style.display='flex';
+    const name=wvItem?wvItem.title:(lesson?lesson.title:'');
+    _vmEl('vm-order').value=order;
+    _vmEl('vm-class-label').value=name;
+    _vmEl('vm-kicker').textContent=wvItem?'Pronunciation Workshop · W'+(order-100):'Day '+order;
+    _vmEl('vm-title').textContent=name||'Edit class';
+    _vmEl('vm-panelTitle').value=v.panelTitle||name;
+    _vmEl('vm-instructor').value=v.instructor||'';
+    _vmEl('vm-src').value=v.src||'';
+    _vmEl('vm-dur').value=v.duration||'';
+    _vmEl('vm-bullets').value=v.bullets||'';
+    _vmEl('vm-bullets').placeholder=(DAY_BULLETS[order]||['Pronunciation patterns','Stress & intonation','Common mistakes','Real-world examples']).join('\n');
+    _vmEl('vm-desc').value=v.desc||'';
+    _vmEl('vm-thumb-url').style.display='none'; _vmEl('vm-thumb-url').value='';
+    vmThumbSet(v.thumb||'');
+    vmSrcCheck();
+    _vmEl('vm-save-msg').textContent='';
+    var sb=_vmEl('vm-save-btn'); sb.disabled=false; sb.textContent='Save changes';
+
+    // Quiz (core classes only — workshop lessons have no quiz)
+    _vmEl('vm-quiz-sec').style.display=wvItem?'none':'';
+    _vmEl('vm-quiz-status').style.display='none';
+    _vmEl('vm-quiz-upload-btn').style.display='none';
+    _vmEl('vm-quiz-filename').textContent='Choose a DOCX, TXT or JSON file';
+    _vmEl('vm-quiz-file').value='';
+    var hasDynamic=!!_dynamicQuizCache[order], hasHard=!!QUIZ_BANK[order];
+    _vmEl('vm-quiz-current').innerHTML=hasDynamic
+      ? '<span class="adm-badge ok">Uploaded · '+_dynamicQuizCache[order].length+' questions</span>'
+      : hasHard ? '<span class="adm-badge warn">Built-in · '+QUIZ_BANK[order].length+' questions</span>'
+      : '<span class="adm-badge muted">No quiz</span>';
+    _vmEl('vm-quiz-delete-btn').style.display=hasDynamic?'':'none';
+
+    m.style.display='flex';
+    document.addEventListener('keydown',_vmEsc);
     updateVmPreview();
-    // Populate quiz status
-    var qStatus=document.getElementById('vm-quiz-status');
-    var qCurrent=document.getElementById('vm-quiz-current');
-    var qDelBtn=document.getElementById('vm-quiz-delete-btn');
-    var qFileBtn=document.getElementById('vm-quiz-upload-btn');
-    var qFilename=document.getElementById('vm-quiz-filename');
-    if(qStatus){qStatus.style.display='none';}
-    if(qFileBtn){qFileBtn.style.display='none';}
-    if(qFilename){qFilename.textContent='Choose PDF, DOCX, or TXT file...';}
-    if(document.getElementById('vm-quiz-file')) document.getElementById('vm-quiz-file').value='';
-    if(qCurrent){
-      var hasDynamic=!!_dynamicQuizCache[order];
-      var hasHardcoded=!!QUIZ_BANK[order];
-      if(hasDynamic){
-        qCurrent.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.6);padding:6px 0">Current: <b style="color:#4ade80">'+_dynamicQuizCache[order].length+' questions (dynamic ✓)</b></div>';
-        if(qDelBtn) qDelBtn.style.display='block';
-      } else if(hasHardcoded){
-        qCurrent.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);padding:6px 0">Current: <span style="color:rgba(255,200,80,.7)">hardcoded quiz ('+QUIZ_BANK[order].length+' questions)</span> — upload to override</div>';
-        if(qDelBtn) qDelBtn.style.display='none';
-      } else {
-        qCurrent.innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.3);padding:6px 0">No quiz yet — upload a file to add one</div>';
-        if(qDelBtn) qDelBtn.style.display='none';
-      }
-    }
+    setTimeout(function(){ _vmEl('vm-panelTitle').focus(); },30);
+  };
+  window.vmSrcCheck=()=>{
+    var u=_vmEl('vm-src').value.trim(), k=_vmEl('vm-src-kind'), o=_vmEl('vm-src-open');
+    var ok=/^https?:\/\//i.test(u);
+    k.innerHTML=!u?'<span class="adm-badge warn">Missing</span>'
+      : !ok?'<span class="adm-badge bad">Not a link</span>'
+      : /mediadelivery\.net|b-cdn\.net|bunny/i.test(u)?'<span class="adm-badge ok">Bunny Stream</span>'
+      : /\.mp4(\?|$)/i.test(u)?'<span class="adm-badge ok">MP4</span>'
+      : '<span class="adm-badge info">Link</span>';
+    o.style.display=ok?'':'none'; if(ok) o.href=u;
+  };
+  // Thumbnail: an uploaded image is stored as a compressed data URL (as before); a link is stored as-is.
+  window.vmThumbSet=(val,fromUrlBox)=>{
+    _vmEl('vm-thumb').value=val||'';
+    var img=_vmEl('vm-thumb-img'), info=_vmEl('vm-thumb-info');
+    img.style.backgroundImage=val?'url("'+String(val).replace(/["\\]/g,'')+'")':'';
+    img.classList.toggle('empty',!val);
+    info.textContent=!val?'No thumbnail'
+      : val.indexOf('data:')===0?'Uploaded image · '+Math.round(val.length*0.75/1024)+' KB'
+      : val.replace(/^https?:\/\//,'').slice(0,48)+(val.length>56?'…':'');
+    _vmEl('vm-thumb-clear').style.display=val?'':'none';
+    if(!fromUrlBox&&!val){ _vmEl('vm-thumb-url').value=''; }
+    updateVmPreview();
+  };
+  window.vmThumbUrl=()=>{
+    var box=_vmEl('vm-thumb-url'), cur=_vmEl('vm-thumb').value;
+    box.style.display=''; box.value=cur.indexOf('data:')===0?'':cur; box.focus();
+  };
+  window.vmThumbFile=(input)=>{
+    var f=input.files&&input.files[0]; input.value='';
+    if(!f) return;
+    if(!/^image\//.test(f.type)){ alert('Please choose an image file.'); return; }
+    var r=new FileReader();
+    r.onload=function(){
+      var im=new Image();
+      im.onload=function(){
+        var MAX=1280, sc=Math.min(1,MAX/Math.max(im.width,im.height));
+        var c=document.createElement('canvas'); c.width=Math.round(im.width*sc); c.height=Math.round(im.height*sc);
+        c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+        _vmEl('vm-thumb-url').style.display='none';
+        vmThumbSet(c.toDataURL('image/jpeg',0.82));
+      };
+      im.onerror=function(){ alert('Could not read that image.'); };
+      im.src=r.result;
+    };
+    r.readAsDataURL(f);
   };
   window.updateVmPreview=()=>{
-    const title=document.getElementById('vm-panelTitle').value||'Panel Title';
-    const instr=document.getElementById('vm-instructor').value||'Broken English Team';
-    const dur=document.getElementById('vm-dur').value||'18 min';
-    const bulletsRaw=document.getElementById('vm-bullets').value||'Pronunciation patterns\nStress & intonation\nCommon mistakes\nReal-world examples';
-    const thumb=document.getElementById('vm-thumb').value;
-    const bullets=bulletsRaw.split('\n').filter(b=>b.trim()).slice(0,5);
-    document.getElementById('pvw-title').textContent=title;
-    document.getElementById('pvw-instructor').textContent='Instructor: '+instr;
-    document.getElementById('pvw-dur').textContent=dur;
-    document.getElementById('pvw-bullets').innerHTML=bullets.map(b=>
-      `<div style="display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(255,255,255,0.7)">
-        <span style="width:4px;height:4px;border-radius:50%;background:var(--brand-2);flex-shrink:0"></span>${b}
-      </div>`).join('');
-    // Update preview thumbnail
-    const previewBg=document.querySelector('#vm-preview>div:first-child');
-    if(previewBg){
-      if(thumb){previewBg.style.backgroundImage=`url('${thumb}')`;previewBg.style.backgroundSize='cover';previewBg.style.backgroundPosition='center';}
-      else{previewBg.style.backgroundImage='';previewBg.style.background='linear-gradient(135deg,#1a1a2e,#16213e)';}
-    }
+    const title=_vmEl('vm-panelTitle').value.trim()||_vmEl('vm-class-label').value||'Lesson title';
+    const instr=_vmEl('vm-instructor').value.trim()||'Broken English Team';
+    const dur=_vmEl('vm-dur').value.trim()||'—';
+    const own=(_vmEl('vm-bullets').value||'').split('\n').map(b=>b.trim()).filter(Boolean);
+    // Same fallback as the lesson page (js/pages/lesson.js) when no points are entered.
+    const order=Number(_vmEl('vm-order').value);
+    const bullets=(own.length?own:(DAY_BULLETS[order]||['Pronunciation patterns','Stress & intonation','Common mistakes','Real-world examples'])).slice(0,5);
+    _vmEl('pvw-bullets-k').textContent=own.length?'In this lesson':'In this lesson · default';
+    const thumb=_vmEl('vm-thumb').value;
+    _vmEl('pvw-title').textContent=title;
+    _vmEl('pvw-instructor').textContent='Instructor: '+instr;
+    _vmEl('pvw-dur').textContent=dur;
+    _vmEl('pvw-bullets').innerHTML=bullets.length
+      ? bullets.map(b=>'<div><span></span>'+escapeHtml(b)+'</div>').join('')
+      : '';
+    const bg=document.querySelector('#vm-preview .cm-pv-img');
+    if(bg) bg.style.backgroundImage=thumb?'url("'+String(thumb).replace(/["\\]/g,'')+'")':'';
   };
-  window.saveVideo=()=>{
-    const order=Number(document.getElementById('vm-order').value);
+  window.saveVideo=async()=>{
+    const order=Number(_vmEl('vm-order').value);
+    const src=_vmEl('vm-src').value.trim(), msg=_vmEl('vm-save-msg'), btn=_vmEl('vm-save-btn');
+    msg.style.color=''; msg.textContent='';
+    if(src&&!/^https?:\/\//i.test(src)){ msg.style.color='#fb7185'; msg.textContent='The video link must start with https://'; _vmEl('vm-src').focus(); return; }
     const vids=loadVideos();
+    const title=_vmEl('vm-panelTitle').value.trim()||_vmEl('vm-class-label').value||'';
     vids[order]={
-      panelTitle: document.getElementById('vm-panelTitle').value.trim()||document.getElementById('vm-class-label').textContent.split('—')[1]?.trim()||'',
-      instructor: document.getElementById('vm-instructor').value.trim(),
-      src:        document.getElementById('vm-src').value.trim(),
-      duration:   document.getElementById('vm-dur').value.trim(),
-      bullets:    document.getElementById('vm-bullets').value.trim(),
-      thumb:      document.getElementById('vm-thumb').value.trim(),
-      desc:       document.getElementById('vm-desc').value.trim(),
+      ...(vids[order]||{}),
+      panelTitle: title,
+      instructor: _vmEl('vm-instructor').value.trim(),
+      src:        src,
+      duration:   _vmEl('vm-dur').value.trim(),
+      bullets:    _vmEl('vm-bullets').value.trim(),
+      thumb:      _vmEl('vm-thumb').value.trim(),
+      desc:       _vmEl('vm-desc').value.trim(),
       // keep legacy title field for lesson page compat
-      title:      document.getElementById('vm-panelTitle').value.trim(),
+      title:      _vmEl('vm-panelTitle').value.trim(),
     };
-    // Save to localStorage immediately
-    localStorage.setItem('brokeneng_videos', JSON.stringify(vids));
-
-    // Push to Supabase with visible feedback
-    const saveBtn = document.getElementById('vm-save-btn');
-    const origText = saveBtn ? saveBtn.textContent : '';
-    if(saveBtn){ saveBtn.textContent='Saving...'; saveBtn.disabled=true; }
-
-    async function doSave(){
-      try{
-        if(typeof _sb !== 'undefined'){
-          const{error} = await _sb.from('course_config').upsert({
-            id: 'videos',
-            data: vids,
-            updated_at: new Date().toISOString()
-          }, {onConflict:'id'});
-          if(error){
-            if(saveBtn){ saveBtn.textContent='✗ Error'; saveBtn.style.background='rgba(237,31,81,.6)'; }
-            setTimeout(function(){
-              if(saveBtn){ saveBtn.textContent=origText; saveBtn.style.background=''; saveBtn.disabled=false; }
-            }, 2000);
-            console.error('Supabase save error:', error.message);
-            alert('Supabase error: '+error.message+' - Make sure RLS is disabled on course_config table.');
-            return;
-          } else {
-            if(saveBtn){ saveBtn.textContent='✓ Saved!'; saveBtn.style.background='rgba(34,197,94,.7)'; }
-            setTimeout(function(){
-              if(saveBtn){ saveBtn.textContent=origText; saveBtn.style.background=''; saveBtn.disabled=false; }
-            }, 1500);
-            console.log('✓ Video saved to Supabase — students will see changes immediately');
-          }
-        } else {
-          // No Supabase — local only
-          if(saveBtn){ saveBtn.textContent='✓ Saved locally'; }
-          setTimeout(function(){
-            if(saveBtn){ saveBtn.textContent=origText; saveBtn.disabled=false; }
-          }, 1500);
-        }
-      } catch(e){
-        alert('Save failed: ' + e.message);
-        if(saveBtn){ saveBtn.textContent=origText; saveBtn.disabled=false; }
-        return;
-      }
-      document.getElementById('video-modal').style.display='none';
-      renderAdminClasses();
+    btn.disabled=true; btn.textContent='Saving…';
+    try{
+      if(typeof _sb==='undefined') throw new Error('Not connected to the server');
+      const{error}=await _sb.from('course_config').upsert({id:'videos',data:vids,updated_at:new Date().toISOString()},{onConflict:'id'});
+      if(error) throw new Error(error.message);
+    }catch(e){
+      console.error('Video save error:',e);
+      msg.style.color='#fb7185'; msg.textContent='Could not save: '+(e.message||e)+'. Nothing was changed for students.';
+      btn.disabled=false; btn.textContent='Save changes';
+      return;
     }
-    doSave();
+    // Server saved — update this browser's copy too.
+    try{ localStorage.setItem('brokeneng_videos', JSON.stringify(vids)); }catch(e){}
+    closeVideoModal();
+    renderAdminClasses();
   };
 }

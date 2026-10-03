@@ -6,7 +6,7 @@ window.vmQuizFileSelected=function(input){
   var file=input.files[0];
   if(!file) return;
   document.getElementById('vm-quiz-filename').textContent=file.name;
-  document.getElementById('vm-quiz-upload-btn').style.display='flex';
+  document.getElementById('vm-quiz-upload-btn').style.display='';
 };
 
 window.vmUploadQuiz=async function(){
@@ -42,7 +42,7 @@ window.vmUploadQuiz=async function(){
       }
     });
 
-    status.textContent='Sending to Claude AI to extract questions...';
+    status.textContent='Reading questions…';
 
     // Build messages for Claude
     // Parse questions locally from text (no external API needed)
@@ -58,18 +58,18 @@ window.vmUploadQuiz=async function(){
     status.style.background='rgba(34,197,94,.1)';
     status.style.color='#4ade80';
     status.textContent='✓ '+questions.length+' questions saved for Day '+order;
-    btn.disabled=false; btn.textContent='⚡ Process & Save Quiz';
-    document.getElementById('vm-quiz-filename').textContent='Choose PDF, DOCX, or TXT file...';
+    btn.disabled=false; btn.textContent='Process & save quiz';
+    document.getElementById('vm-quiz-filename').textContent='Choose a DOCX, TXT or JSON file';
     document.getElementById('vm-quiz-file').value='';
     btn.style.display='none';
-    document.getElementById('vm-quiz-delete-btn').style.display='block';
-    document.getElementById('vm-quiz-current').innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.5);padding:6px 0">Current: <b style="color:#4ade80">'+questions.length+' questions (dynamic)</b></div>';
+    document.getElementById('vm-quiz-delete-btn').style.display='';
+    document.getElementById('vm-quiz-current').innerHTML='<span class="adm-badge ok">Uploaded · '+questions.length+' questions</span>';
 
   }catch(e){
     status.style.background='rgba(239,68,68,.1)';
     status.style.color='#f87171';
     status.textContent='Error: '+e.message+'. Check file format and try again.';
-    btn.disabled=false; btn.textContent='⚡ Process & Save Quiz';
+    btn.disabled=false; btn.textContent='Process & save quiz';
   }
 };
 
@@ -83,7 +83,7 @@ window.vmDeleteQuiz=async function(){
   status.style.color='rgba(255,255,255,.6)';
   status.textContent='Dynamic quiz removed. Using hardcoded quiz.';
   document.getElementById('vm-quiz-delete-btn').style.display='none';
-  document.getElementById('vm-quiz-current').innerHTML='<div style="font-size:11px;color:rgba(255,255,255,.4);padding:6px 0">Current: <span style="color:rgba(255,255,255,.4)">using hardcoded quiz</span></div>';
+  document.getElementById('vm-quiz-current').innerHTML=QUIZ_BANK[order]?'<span class="adm-badge warn">Built-in · '+QUIZ_BANK[order].length+' questions</span>':'<span class="adm-badge muted">No quiz</span>';
 };
 
 
