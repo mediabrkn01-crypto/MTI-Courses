@@ -45,7 +45,7 @@ async function sbLoadELSettings(){
   // API key never downloaded to browser — only voice preference
   try{
     if(typeof _sb==='undefined')return;
-    var r=await _sb.from('course_config').select('data').eq('id','el_voice_pref').single();
+    var r=await _sb.from('course_config').select('data').eq('id','el_voice_pref').maybeSingle(); // row may not exist yet — maybeSingle avoids a 406
     if(!r.error&&r.data&&r.data.data&&r.data.data.voice){
       EL_VOICE=r.data.data.voice;
       localStorage.setItem('brokeneng_el_voice',EL_VOICE);

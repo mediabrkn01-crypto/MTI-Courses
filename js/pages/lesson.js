@@ -64,9 +64,9 @@ function renderLesson(lessonId){
   var bunnyUrl=getBunnyEmbedUrl(videoSrc);
   var videoHtml='';
   if(ytId){
-    videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="https://www.youtube-nocookie.com/embed/'+ytId+'?rel=0&modestbranding=1&controls=1&playsinline=1&color=white" allow="accelerometer;autoplay;encrypted-media;gyroscope;picture-in-picture;fullscreen" allowfullscreen referrerpolicy="strict-origin"></iframe>';
+    videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="https://www.youtube-nocookie.com/embed/'+ytId+'?rel=0&modestbranding=1&controls=1&playsinline=1&color=white" allow="accelerometer;autoplay;encrypted-media;gyroscope;picture-in-picture;fullscreen" referrerpolicy="strict-origin"></iframe>';
   } else if(bunnyUrl){
-    videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>';
+    videoHtml='<iframe style="position:absolute;inset:0;width:100%;height:100%;border:none" src="'+bunnyUrl+'" allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture; fullscreen"></iframe>';
   } else {
     videoHtml='<video id="video" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" controls controlsList="nodownload noremoteplayback noplaybackrate" disablepictureinpicture playsinline preload="metadata"><source id="video-source" src="'+videoSrc+'"/></video>'
       +'<div id="video-loading-overlay" style="position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:60">'
