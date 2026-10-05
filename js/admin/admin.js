@@ -153,7 +153,7 @@ function renderAdmin(tab){
             <span class="adm-label">Course access</span>
             <div class="sm-chips" id="sm-validity-chips" role="radiogroup" aria-label="Course access"></div>
             <div id="s-custom-date-wrap" style="display:none;margin-top:8px">
-              <input id="s-custom-date" type="date" class="adm-input" style="color-scheme:dark" aria-label="Access end date" oninput="smUpdateValidityPreview()"/>
+              ${admDatePicker('s-custom-date',{placeholder:'Choose the last day of access',oninput:'smUpdateValidityPreview()',label:'Access end date'})}
             </div>
             <p id="sm-validity-preview" class="sm-preview"></p>
           </div>
@@ -470,10 +470,10 @@ function renderAdmin(tab){
     bulkUpdateBar();
   };
   window.bulkClearSelection=function(){bulkToggleAll(false);};
-  window.bulkDeleteStudents=function(){
+  window.bulkDeleteStudents=async function(){
     var ids=[].slice.call(document.querySelectorAll('.bulk-chk:checked')).map(function(c){return c.getAttribute('data-sid');});
     if(!ids.length)return;
-    if(!confirm('Delete '+ids.length+' students permanently? This cannot be undone.'))return;
+    if(!(await uiConfirm('Delete '+ids.length+' student'+(ids.length>1?'s':'')+' permanently? This cannot be undone.',{title:'Delete students',danger:true,okText:'Delete'})))return;
     var s=loadStudents();
     ids.forEach(function(id){
       delete s[id];

@@ -13,7 +13,7 @@ window.vmUploadQuiz=async function(){
   var order=Number(document.getElementById('vm-order').value);
   if(!order) return;
   var file=document.getElementById('vm-quiz-file').files[0];
-  if(!file){alert('Please choose a file first.');return;}
+  if(!file){uiAlert('Please choose a file first.');return;}
   var status=document.getElementById('vm-quiz-status');
   var btn=document.getElementById('vm-quiz-upload-btn');
 
@@ -75,7 +75,7 @@ window.vmUploadQuiz=async function(){
 
 window.vmDeleteQuiz=async function(){
   var order=Number(document.getElementById('vm-order').value);
-  if(!order||!confirm('Remove dynamic quiz for Day '+order+'? The hardcoded quiz will be used instead.')) return;
+  if(!order||!(await uiConfirm('Remove the uploaded quiz for Day '+order+'? The built-in quiz will be used instead.',{title:'Remove quiz',danger:true,okText:'Remove'}))) return;
   await sbDeleteQuiz(order);
   var status=document.getElementById('vm-quiz-status');
   status.style.display='block';
@@ -198,7 +198,7 @@ window.adminQuizUploadDirect=async function(input,order){
 };
 
 window.adminQuizDelete=async function(order){
-  if(!confirm('Delete dynamic quiz for Day '+order+'? Hardcoded quiz will be used instead.')) return;
+  if(!(await uiConfirm('Delete the uploaded quiz for Day '+order+'? The built-in quiz will be used instead.',{title:'Delete quiz',danger:true,okText:'Delete'}))) return;
   await sbDeleteQuiz(order);
   renderAdminQuiz();
 };
@@ -206,7 +206,7 @@ window.adminQuizDelete=async function(order){
 window.adminQuizEditHardcoded=function(order){
   // Convert hardcoded quiz format (answer as index) to dynamic format (answer as string)
   var raw=QUIZ_BANK[order];
-  if(!raw||!raw.length){alert('No hardcoded quiz for Day '+order);return;}
+  if(!raw||!raw.length){uiAlert('No hardcoded quiz for Day '+order);return;}
   // Deep copy and normalise
   var qs=raw.map(function(q,i){
     var opts=Array.isArray(q.options)?q.options.slice():[];
@@ -220,7 +220,7 @@ window.adminQuizEditHardcoded=function(order){
 
 window.adminQuizPreview=function(order){
   var qs=_dynamicQuizCache[order]?JSON.parse(JSON.stringify(_dynamicQuizCache[order])):[];
-  if(!qs.length){alert('No dynamic quiz for Day '+order);return;}
+  if(!qs.length){uiAlert('No dynamic quiz for Day '+order);return;}
 
   var overlay=document.createElement('div');
   overlay.className='qe-overlay';

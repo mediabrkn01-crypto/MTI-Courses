@@ -80,3 +80,15 @@ body.demo-active .top-bar,body.demo-active .admin-top-bar{top:60px}
 .demo-abtn-revoke:hover{background:rgba(245,158,11,.2)}
 .demo-abtn-delete{background:rgba(237,31,81,.1);color:#ff6b8b;border-color:rgba(237,31,81,.28)}
 .demo-abtn-delete:hover{background:rgba(237,31,81,.18)}
+/* Branded alert / confirm (uiAlert / uiConfirm) */
+.ui-dlg{z-index:10060}
+.ui-dlg-box{max-width:400px}
+.ui-dlg-box p{white-space:pre-line}
+.ui-dlg-ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;border:1px solid}
+.ui-dlg-ic.t-info{color:#93c5fd;background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.3)}
+.ui-dlg-ic.t-danger{color:#fb7185;background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.32)}
+.ui-dlg-ic.t-ok{color:#4ade80;background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.3)}
+.ui-dlg-ic.t-error{color:#fb7185;background:rgba(244,63,94,.12);border-color:rgba(244,63,94,.32)}
+.ui-mbtn-primary{background:var(--grad);color:#fff;box-shadow:0 6px 18px rgba(237,31,81,.32)}
+.ui-mbtn-primary:hover{filter:brightness(1.08)}
+.demo-mbtn:focus-visible{outline:2px solid rgba(255,255,255,.7);outline-offset:2px}

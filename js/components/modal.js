@@ -96,3 +96,54 @@ function showDemoConfirm(opts){
   });
   setTimeout(function(){ var ok=ov.querySelector('[data-act=ok]'); if(ok) ok.focus(); }, 50);
 }
+
+// ── Branded replacements for the browser's alert() / confirm() ──────────────
+// The app never shows native browser popups. uiAlert / uiConfirm return Promises:
+//   await uiAlert('Saved');                       → resolves when closed
+//   if(await uiConfirm('Delete?',{danger:true}))  → true on confirm, false on cancel
+function _uiDialog(o){
+  return new Promise(function(resolve){
+    var ov=document.createElement('div');
+    ov.className='demo-modal-ov ui-dlg';
+    var tone=o.tone||(o.danger?'danger':'info');
+    var ic={info:'<path d="M12 8h.01M11 12h1v4h1"/><circle cx="12" cy="12" r="9"/>',
+            danger:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/>',
+            ok:'<path d="M20 6L9 17l-5-5"/>',
+            error:'<circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/>'}[tone]||'';
+    var box=document.createElement('div');
+    box.className='demo-modal ui-dlg-box'; box.setAttribute('role',o.confirm?'alertdialog':'dialog'); box.setAttribute('aria-modal','true');
+    box.innerHTML='<div class="ui-dlg-ic t-'+tone+'"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">'+ic+'</svg></div><h3></h3><p></p><div class="demo-modal-actions"></div>';
+    box.querySelector('h3').textContent=o.title||(o.confirm?'Are you sure?':'Notice');
+    box.querySelector('p').textContent=o.message||''; // plain text — never parsed as HTML
+    var acts=box.querySelector('.demo-modal-actions');
+    if(o.confirm){
+      var c=document.createElement('button'); c.className='demo-mbtn demo-mbtn-cancel'; c.dataset.act='cancel'; c.textContent=o.cancelText||'Cancel'; acts.appendChild(c);
+    }
+    var ok=document.createElement('button');
+    ok.className='demo-mbtn '+(o.danger?'demo-mbtn-danger':'ui-mbtn-primary'); ok.dataset.act='ok'; ok.textContent=o.okText||(o.confirm?'Confirm':'OK');
+    acts.appendChild(ok);
+    ov.appendChild(box);
+    var prevFocus=document.activeElement;
+    function close(v){
+      document.removeEventListener('keydown',onKey,true);
+      ov.classList.remove('show'); setTimeout(function(){ ov.remove(); },180);
+      try{ if(prevFocus&&prevFocus.focus) prevFocus.focus(); }catch(e){}
+      resolve(v);
+    }
+    function onKey(e){
+      if(e.key==='Escape'){ e.preventDefault(); e.stopPropagation(); close(false); }
+      if(e.key==='Enter'&&document.activeElement&&document.activeElement.dataset&&document.activeElement.dataset.act){ e.preventDefault(); close(document.activeElement.dataset.act==='ok'); }
+    }
+    document.addEventListener('keydown',onKey,true);
+    ov.addEventListener('click',function(e){
+      if(e.target===ov) return close(false);
+      var b=e.target.closest('[data-act]'); if(b) close(b.dataset.act==='ok');
+    });
+    document.body.appendChild(ov);
+    requestAnimationFrame(function(){ ov.classList.add('show'); (o.danger&&o.confirm?acts.firstChild:ok).focus(); });
+  });
+}
+function uiAlert(message,opts){ opts=opts||{}; return _uiDialog({message:String(message==null?'':message),title:opts.title,tone:opts.tone||'info',okText:opts.okText}); }
+function uiConfirm(message,opts){ opts=opts||{}; return _uiDialog({confirm:true,message:String(message==null?'':message),title:opts.title,danger:!!opts.danger,tone:opts.danger?'danger':(opts.tone||'info'),okText:opts.okText,cancelText:opts.cancelText}); }
+// Safety net: anything that still calls alert() gets the branded dialog instead.
+window.alert=function(m){ uiAlert(m); };

@@ -221,8 +221,8 @@ function renderAdminImages(){
     _applyImg(order,url);
   };
 
-  window.clearImg=function(order){
-    if(!confirm('Remove this image?')) return;
+  window.clearImg=async function(order){
+    if(!(await uiConfirm('Remove this image? Students will see the placeholder instead.',{title:'Remove image',danger:true,okText:'Remove'}))) return;
     _applyImg(order,'');
   };
 
@@ -244,10 +244,10 @@ function renderAdminImages(){
         c.getContext('2d').drawImage(img,0,0,w,h);
         _applyImg(order,c.toDataURL('image/jpeg',0.8));
       };
-      img.onerror=function(){alert('Could not read that image.');renderAdminImages();};
+      img.onerror=function(){uiAlert('Could not read that image.',{tone:'error'});renderAdminImages();};
       img.src=e.target.result;
     };
-    r.onerror=function(){alert('Could not read the file.');renderAdminImages();};
+    r.onerror=function(){uiAlert('Could not read the file.',{tone:'error'});renderAdminImages();};
     r.readAsDataURL(file);
   };
 }

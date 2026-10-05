@@ -56,8 +56,9 @@ function admSearch(id,placeholder,oninput){
     +'<input id="'+id+'" placeholder="'+placeholder+'" oninput="'+oninput+'" autocomplete="off"/></div>';
 }
 function admSortSelect(id,onchange){
-  return '<select id="'+id+'" onchange="'+onchange+'" class="adm-select"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="az">Name A → Z</option><option value="za">Name Z → A</option></select>';
+  return admDropdown(id,[['newest','Newest first'],['oldest','Oldest first'],['az','Name A → Z'],['za','Name Z → A']],'newest',onchange,{label:'Sort'});
 }
+
 function admSectionLabel(label,count){
   return '<p class="adm-section-label">'+label+(count!=null?'<span class="cnt">'+count+'</span>':'')+'</p>';
 }
@@ -134,3 +135,118 @@ document.addEventListener('click',function(e){
   if(!e.target.closest('.stu-actions')) closeStuMenus();
 });
 
+
+// ── Custom dropdown + date picker (no native <select> / browser date popup) ──
+// Both render a hidden <input id=…> that keeps the value, so existing code that reads
+// or sets  el.value  and inline oninput/onchange handlers keep working unchanged.
+//   admDropdown('stu-sort', [['newest','Newest first'],…], 'newest', 'applyStuFilters()')
+//   admDatePicker('ext-date', {placeholder:'Pick a date', oninput:'…', min:'2026-01-01'})
+function admDropdown(id,options,value,onchange,opts){
+  opts=opts||{};
+  var cur=options.find(function(o){return o[0]===value;})||options[0];
+  return '<div class="ui-dd'+(opts.cls?' '+opts.cls:'')+'" data-ui-dd="'+id+'">'
+    +'<input type="hidden" id="'+id+'" value="'+escapeAttr(cur[0])+'"'+(onchange?' onchange="'+onchange+'"':'')+' data-ui-opts="'+escapeAttr(JSON.stringify(options))+'"/>'
+    +'<button type="button" class="ui-dd-btn" aria-haspopup="listbox" aria-expanded="false"'+(opts.label?' aria-label="'+escapeAttr(opts.label)+'"':'')+'>'
+    +'<span class="ui-dd-val">'+escapeHtml(cur[1])+'</span>'
+    +'<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></div>';
+}
+function admDatePicker(id,opts){
+  opts=opts||{};
+  return '<div class="ui-date" data-ui-date="'+id+'">'
+    +'<input type="hidden" id="'+id+'" value=""'+(opts.oninput?' oninput="'+opts.oninput+'" onchange="'+opts.oninput+'"':'')+(opts.min?' data-min="'+opts.min+'"':'')+'/>'
+    +'<button type="button" class="ui-dd-btn" aria-haspopup="dialog" aria-expanded="false"'+(opts.label?' aria-label="'+escapeAttr(opts.label)+'"':'')+'>'
+    +'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>'
+    +'<span class="ui-dd-val ph" data-ph="'+escapeAttr(opts.placeholder||'Pick a date')+'">'+escapeHtml(opts.placeholder||'Pick a date')+'</span></button></div>';
+}
+(function(){
+  var MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var nativeVal=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  function fmtDate(v){ if(!/^\d{4}-\d{2}-\d{2}$/.test(v||'')) return ''; var d=new Date(v+'T00:00:00'); return d.toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}); }
+  function label(host){
+    var inp=host.querySelector('input[type=hidden]'), v=nativeVal.get.call(inp), out=host.querySelector('.ui-dd-val');
+    if(host.hasAttribute('data-ui-dd')){
+      var o=JSON.parse(inp.getAttribute('data-ui-opts')||'[]').find(function(x){return x[0]===v;});
+      out.textContent=o?o[1]:v;
+    }else{
+      var f=fmtDate(v); out.textContent=f||out.getAttribute('data-ph'); out.classList.toggle('ph',!f);
+    }
+  }
+  // Keep the visible label in sync when code sets  input.value = …
+  function wire(host){
+    if(host._uiWired) return; host._uiWired=true;
+    var inp=host.querySelector('input[type=hidden]');
+    Object.defineProperty(inp,'value',{configurable:true,get:function(){return nativeVal.get.call(inp);},set:function(v){nativeVal.set.call(inp,v);label(host);}});
+    label(host);
+  }
+  function set(host,v){
+    var inp=host.querySelector('input[type=hidden]');
+    inp.value=v;
+    inp.dispatchEvent(new Event('input',{bubbles:true}));
+    inp.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  new MutationObserver(function(){ [].forEach.call(document.querySelectorAll('[data-ui-dd],[data-ui-date]'),wire); })
+    .observe(document.documentElement,{childList:true,subtree:true});
+
+  var pop=null, popHost=null;
+  function close(){ if(pop){ pop.remove(); pop=null; } if(popHost){ var b=popHost.querySelector('.ui-dd-btn'); b.setAttribute('aria-expanded','false'); b.classList.remove('open'); popHost=null; } }
+  function place(btn){
+    var r=btn.getBoundingClientRect(), w=Math.max(r.width,pop.offsetWidth), left=Math.min(r.left,innerWidth-w-8);
+    var below=innerHeight-r.bottom, h=pop.offsetHeight;
+    pop.style.minWidth=r.width+'px'; pop.style.left=Math.max(8,left)+'px';
+    pop.style.top=(below<h+12&&r.top>h+12?r.top-h-6:r.bottom+6)+'px';
+  }
+  function openDd(host){
+    var inp=host.querySelector('input[type=hidden]'), v=inp.value, opts=JSON.parse(inp.getAttribute('data-ui-opts')||'[]');
+    pop=document.createElement('div'); pop.className='ui-pop'; pop.setAttribute('role','listbox');
+    pop.innerHTML=opts.map(function(o,i){ return '<button type="button" role="option" class="ui-opt'+(o[0]===v?' on':'')+'" data-i="'+i+'" aria-selected="'+(o[0]===v)+'"><span>'+escapeHtml(o[1])+'</span><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></button>'; }).join('');
+    pop.addEventListener('click',function(e){ var b=e.target.closest('.ui-opt'); if(!b) return; var h=popHost; close(); set(h,opts[+b.dataset.i][0]); h.querySelector('.ui-dd-btn').focus(); });
+    pop.addEventListener('keydown',function(e){
+      var items=[].slice.call(pop.querySelectorAll('.ui-opt')), i=items.indexOf(document.activeElement);
+      if(e.key==='ArrowDown'){ e.preventDefault(); (items[i+1]||items[0]).focus(); }
+      if(e.key==='ArrowUp'){ e.preventDefault(); (items[i-1]||items[items.length-1]).focus(); }
+    });
+    return pop.querySelector('.ui-opt.on')||pop.querySelector('.ui-opt');
+  }
+  function openDate(host){
+    var inp=host.querySelector('input[type=hidden]'), v=inp.value, min=inp.getAttribute('min')||inp.getAttribute('data-min')||'';
+    var base=/^\d{4}-\d{2}-\d{2}$/.test(v)?new Date(v+'T00:00:00'):new Date();
+    var view={y:base.getFullYear(),m:base.getMonth()};
+    pop=document.createElement('div'); pop.className='ui-pop ui-cal'; pop.setAttribute('role','dialog'); pop.setAttribute('aria-label','Choose a date');
+    function iso(y,m,d){ return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
+    function draw(){
+      var first=new Date(view.y,view.m,1).getDay(), days=new Date(view.y,view.m+1,0).getDate(), today=iso(new Date().getFullYear(),new Date().getMonth(),new Date().getDate());
+      var cells=''; for(var i=0;i<first;i++) cells+='<span></span>';
+      for(var d=1;d<=days;d++){ var k=iso(view.y,view.m,d), dis=min&&k<min;
+        cells+='<button type="button" class="ui-day'+(k===v?' on':'')+(k===today?' today':'')+'" data-d="'+k+'"'+(dis?' disabled':'')+'>'+d+'</button>'; }
+      pop.innerHTML='<div class="ui-cal-head"><button type="button" class="ui-cal-nav" data-nav="-1" aria-label="Previous month">‹</button><b>'+MONTHS[view.m]+' '+view.y+'</b><button type="button" class="ui-cal-nav" data-nav="1" aria-label="Next month">›</button></div>'
+        +'<div class="ui-cal-dow"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>'
+        +'<div class="ui-cal-grid">'+cells+'</div>'
+        +'<div class="ui-cal-foot"><button type="button" class="ui-cal-link" data-today>Today</button>'+(v?'<button type="button" class="ui-cal-link" data-clear>Clear</button>':'')+'</div>';
+    }
+    draw();
+    pop.addEventListener('click',function(e){
+      e.stopPropagation();
+      var n=e.target.closest('[data-nav]');
+      if(n){ view.m+=+n.dataset.nav; if(view.m<0){view.m=11;view.y--;} if(view.m>11){view.m=0;view.y++;} draw(); return; }
+      var d=e.target.closest('[data-d]'), h=popHost;
+      if(d&&!d.disabled){ close(); set(h,d.dataset.d); return; }
+      if(e.target.closest('[data-today]')){ var t=new Date(); var k=iso(t.getFullYear(),t.getMonth(),t.getDate()); if(!(min&&k<min)){ close(); set(h,k); } return; }
+      if(e.target.closest('[data-clear]')){ close(); set(h,''); }
+    });
+    return pop.querySelector('.ui-day.on')||pop.querySelector('.ui-day.today')||pop.querySelector('.ui-day:not([disabled])');
+  }
+  document.addEventListener('click',function(e){
+    var btn=e.target.closest('.ui-dd-btn'), host=btn&&btn.closest('[data-ui-dd],[data-ui-date]');
+    if(pop&&pop.contains(e.target)) return;
+    if(!host){ close(); return; }
+    if(popHost===host){ close(); return; }
+    close(); wire(host);
+    popHost=host; var first=host.hasAttribute('data-ui-dd')?openDd(host):openDate(host);
+    document.body.appendChild(pop); place(btn);
+    btn.setAttribute('aria-expanded','true'); btn.classList.add('open');
+    if(first) first.focus();
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&pop){ var h=popHost; close(); h.querySelector('.ui-dd-btn').focus(); } });
+  window.addEventListener('resize',close);
+  window.addEventListener('scroll',function(e){ if(pop&&!pop.contains(e.target)) close(); },true);
+})();

@@ -11,7 +11,7 @@ function _loadPdfJs(cb){
     window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     cb();
   };
-  sc.onerror=function(){alert('Could not load PDF reader. Check internet connection.');};
+  sc.onerror=function(){uiAlert('Could not load PDF reader. Check internet connection.',{tone:'error'});};
   document.head.appendChild(sc);
 }
 
@@ -43,7 +43,7 @@ window.handleStudentPDF=function(evt){
           });
           _pdfParseStudents(lines);
         });
-      }).catch(function(err){alert('Could not read PDF: '+err.message);});
+      }).catch(function(err){uiAlert('Could not read PDF: '+err.message,{tone:'error'});});
     };
     reader.readAsArrayBuffer(file);
   });
@@ -83,7 +83,7 @@ function _pdfParseStudents(lines){
     var dup=existing.find(function(s){return s.email&&s.email.toLowerCase()===email;});
     rows.push({name:name,email:email,dup:!!dup,include:!dup});
   });
-  if(!rows.length){alert('No student names found in this PDF. Make sure it has selectable text (not a scanned image).');return;}
+  if(!rows.length){uiAlert('No student names found in this PDF. Make sure it has selectable text (not a scanned image).',{tone:'error'});return;}
   _pdfImportRows=rows;
   _pdfShowPreview();
 }
@@ -245,7 +245,7 @@ async function renderAdminStudent(id){
           ${[['7','+1 week'],['30','+1 month'],['90','+3 months'],['365','+1 year']].map(([d,l])=>`<button class="adm-btn" onclick="extendValidity('${id}',${d})">${l}</button>`).join('')}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <input id="ext-date" type="date" class="adm-input" style="width:auto;padding:8px 12px;color-scheme:dark"/>
+          ${admDatePicker('ext-date',{placeholder:'Pick an end date',label:'New end date'})}
           <button class="adm-btn adm-btn-primary" onclick="setCustomValidity('${id}')">Set date</button>
           <button class="adm-btn" onclick="clearValidity('${id}')">Remove expiry</button>
         </div>
@@ -321,7 +321,7 @@ async function renderAdminStudent(id){
     var page=document.querySelector('.adm-page'); if(page) page.style.pointerEvents='none';
     if(btn) btn.style.opacity='.5';
     try{ await AdmProgress.setClassAccess(sid, loadStudents(), orders, open); }
-    catch(e){ alert('Could not change class access: '+(e.message||e)); }
+    catch(e){ uiAlert('Could not change class access: '+(e.message||e),{tone:'error'}); }
     if(page) page.style.pointerEvents='';
     renderAdminStudent(sid);
   }
@@ -329,7 +329,7 @@ async function renderAdminStudent(id){
   window.toggleVideoLock=(sid,classOrder)=>{const lk=new Set(getLockedVideos(sid));lk.has(classOrder)?lk.delete(classOrder):lk.add(classOrder);saveLockedVideos(sid,[...lk]);renderAdminStudent(sid);};
   window.toggleQuizLock=(sid,classOrder)=>{const lk=new Set(getLockedQuizzes(sid));lk.has(classOrder)?lk.delete(classOrder):lk.add(classOrder);saveLockedQuizzes(sid,[...lk]);renderAdminStudent(sid);};
   window.grantAll=(sid)=>{_msAccess(sid,ALL_LESSONS.map(l=>l.order),true);};
-  window.revokeAll=(sid)=>{if(confirm('Lock every class that is not completed? They will open again in normal course order.'))_msAccess(sid,ALL_LESSONS.map(l=>l.order),false);};
+  window.revokeAll=async(sid)=>{if(await uiConfirm('Lock every class that is not completed? They will open again in normal course order.',{title:'Lock all classes',danger:true,okText:'Lock all'}))_msAccess(sid,ALL_LESSONS.map(l=>l.order),false);};
   window.grantSection=(sid,secId)=>{_msAccess(sid,SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order),true);};
   window.revokeSection=(sid,secId)=>{_msAccess(sid,SECTIONS.find(s=>s.id===secId).lessons.map(l=>l.order),false);};
 }

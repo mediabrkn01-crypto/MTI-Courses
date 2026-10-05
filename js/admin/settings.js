@@ -23,7 +23,7 @@ window.checkSupabaseSync = async function(){
 function getAdminCredentials(){ return {email:'',password:''}; } // stub for any remaining references
 window.saveAdminCredentials=function(){
   // Admin password changes are now done via Supabase Auth (password reset flow)
-  alert('To change admin password, use "Admin Forgot Password" on the login screen.\nAdmin credentials are managed via Supabase Auth — not stored in this app.');
+  uiAlert('To change admin password, use "Admin Forgot Password" on the login screen.\nAdmin credentials are managed via Supabase Auth — not stored in this app.');
 };
 async function sbSaveAdminCred(){ /* removed */ }
 async function sbLoadAdminCred(){ /* removed — admin_cred row should be deleted from course_config */ }
@@ -40,90 +40,99 @@ function renderAdminSettings(){
     shield:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>',
     db:'<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>'
   };
-  function setCard(opts,body){
-    return '<div class="adm-card adm-card-pad"'+(opts.id?' id="'+opts.id+'"':'')+'>'
-      +'<div class="adm-set-head"><div class="adm-set-ico '+opts.tone+'">'+SI[opts.icon]+'</div>'
-      +'<div style="min-width:0"><h2 class="adm-card-title">'+opts.title+'</h2>'+(opts.desc?'<p class="adm-sub" style="margin-top:3px;font-size:12px">'+opts.desc+'</p>':'')+'</div></div>'
-      +body+'</div>';
-  }
   var okCheck='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:1px"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>';
+  var NAV=[['st-maint','wrench','Maintenance'],['st-live','live','Live sessions'],['st-voice','mic','Voice engine'],['st-course','clock','Course rules'],['st-data','db','Data & sync'],['st-security','shield','Security']];
+  // One settings section: title + description on the left, controls on the right.
+  function sec(id,icon,tone,title,desc,body){
+    return '<section class="st-sec" id="'+id+'"><div class="st-sec-head"><span class="adm-set-ico '+tone+'">'+SI[icon]+'</span>'
+      +'<div style="min-width:0"><h2 class="st-sec-title">'+title+'</h2><p class="st-sec-desc">'+desc+'</p></div></div>'
+      +'<div class="st-sec-body">'+body+'</div></section>';
+  }
+  function row(label,hint,control){
+    return '<div class="st-row"><div class="st-row-l"><p class="st-row-t">'+label+'</p>'+(hint?'<p class="st-row-h">'+hint+'</p>':'')+'</div><div class="st-row-c">'+control+'</div></div>';
+  }
 
   app.innerHTML=adminTopBar('settings')+`
   <div class="adm-page">
-    ${admHead('Settings','Global course configuration.')}
-    <div class="settings-grid">
+    ${admHead('Settings','Platform-wide configuration for students, classes and data.')}
+    <div class="st-layout">
+      <nav class="st-nav" aria-label="Settings sections">
+        ${NAV.map(function(n,i){return '<a href="#'+n[0]+'" class="st-nav-a'+(i===0?' on':'')+'" onclick="event.preventDefault();stGo(\''+n[0]+'\')">'+SI[n[1]]+'<span>'+n[2]+'</span></a>';}).join('')}
+      </nav>
+      <div class="st-main">
 
-    ${setCard({id:'maint-section',icon:'wrench',tone:'orange',title:'System maintenance',desc:'Blocks all students and demo users. One selected test account can still get in to verify production. Admin always has access.'},`
-      <div id="maint-status-row" style="margin-bottom:14px;font-size:12px;color:var(--muted)">Loading status...</div>
-      <div id="maint-active-info" style="display:none;margin-bottom:14px" class="adm-callout warn">
-        <div>
-          <div>Students blocked: <strong style="color:#fff">All students &amp; demo users</strong></div>
-          <div id="maint-active-bypass-info">Bypass account: <strong style="color:#4ade80" id="maint-active-bypass-name">—</strong></div>
+      ${sec('st-maint','wrench','orange','System maintenance','Blocks students and demo visitors while you update the platform. Admins and one chosen test account keep access.',
+        `<div id="maint-section" class="st-maint">
+          <div class="st-maint-top">
+            <div id="maint-status-row" class="st-maint-state"><span class="adm-skel"></span></div>
+            <button id="maint-toggle-btn" type="button" onclick="adminToggleMaintenance()" class="adm-btn adm-btn-lg" disabled>Loading…</button>
+          </div>
+          <p id="maint-action-status" class="st-action-msg"></p>
+          <div id="maint-active-info" style="display:none" class="st-bypass-on">
+            <span class="st-k">Maintenance bypass account</span>
+            <p id="maint-active-bypass-name" class="st-bypass-name">—</p>
+            <p class="st-row-h" style="margin:0">Only this student can access the platform during maintenance.</p>
+          </div>
         </div>
+        <div id="maint-bypass-section">
+          ${row('Test account bypass','Required before enabling. This student signs in with their normal password and keeps full access.',
+            `<div class="st-picker">
+              ${admSearch('maint-bypass-search','Search student by name or email…','adminSearchBypassStudent(this.value)')}
+              <div id="maint-bypass-results" class="st-results"></div>
+              <div id="maint-bypass-selected" class="st-selected"></div>
+            </div>`)}
+        </div>
+        ${row('Message shown to students','Optional. Appears under the maintenance notice on the login page.',
+          `<input id="maint-msg" type="text" class="adm-input" placeholder="We're updating the platform. Access will be restored shortly."/>`)}`)}
+
+      ${sec('st-live','live','blue','Live With Sreekanth','Upcoming live sessions. Students who complete all 30 classes can register.',
+        `<div id="live-sessions-list" class="st-sessions"></div>
+        <div class="st-add">
+          <p class="st-row-t" style="margin-bottom:10px">Add a session</p>
+          <div class="st-add-grid">
+            <input id="ls-title" type="text" class="adm-input" placeholder="Title — e.g. Live Class, Week 1"/>
+            <input id="ls-date" type="text" class="adm-input" placeholder="When — e.g. Sat, 10 Aug · 7:00 PM IST"/>
+            <input id="ls-link" type="url" class="adm-input" placeholder="Zoom / Google Meet link"/>
+          </div>
+          <p id="ls-err" class="st-action-msg" style="color:#fb7185"></p>
+          <button onclick="adminAddLiveSession()" class="adm-btn adm-btn-primary">${ADM_ICON.plus}Add session</button>
+        </div>`)}
+
+      ${sec('st-voice','mic','pink','ElevenLabs voice engine','The voice every student hears in pronunciation playback.',
+        `${row('Voice ID','Default: Rachel (21m00Tcm4TlvDq8ikWAM). Find IDs at elevenlabs.io/voice-library.',
+          `<input id="el-voice-id" type="text" class="adm-input st-mono" value="${escapeAttr(elVoice)}" placeholder="21m00Tcm4TlvDq8ikWAM"/>
+           <div class="st-btns"><button onclick="adminSaveELSettings()" class="adm-btn adm-btn-primary">Save voice</button><button onclick="adminTestEL()" class="adm-btn">Test voice</button><span id="el-status" class="st-inline-msg"></span></div>`)}
+        <div class="adm-callout ok">${okCheck}<span>The API key is stored server-side. To rotate it, change it in the ElevenLabs dashboard, then run <code>supabase secrets set ELEVENLABS_API_KEY=…</code></span></div>`)}
+
+      ${sec('st-course','clock','grey','Course rules','How the course opens up for students.',
+        row('Daily unlock limit','New classes a student can unlock per day. Set by the DAILY_DRIP constant in the code.',
+          `<div class="st-stat"><b>${DAILY_DRIP}</b><span>classes / day</span></div>`))}
+
+      ${sec('st-data','db','blue','Data & sync','Check the server connection, sync the video list, or back up everything.',
+        `${row('Server connection','Verifies the video list stored in Supabase.',
+          `<div class="st-btns"><button onclick="checkSupabaseSync()" class="adm-btn">Check connection</button><button onclick="forcePushVideos()" class="adm-btn">${ADM_ICON.upload}Push videos</button><button onclick="forcePullVideos()" class="adm-btn"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Pull videos</button></div>
+           <p id="sync-status" class="st-row-h" style="margin-top:10px"></p>`)}
+        ${row('Backup','Download students, videos and progress as a JSON file, or restore from one.',
+          `<div class="st-btns"><button onclick="exportData()" class="adm-btn">Export all data</button><button onclick="importDataPrompt()" class="adm-btn">Import data</button></div>
+           <input id="import-file" type="file" accept=".json" style="display:none" onchange="doImport(event)"/>`)}`)}
+
+      ${sec('st-security','shield','green','Security','How admin access is managed.',
+        `<div class="adm-callout ok">${okCheck}<span>Admin sign-in uses Supabase Auth — no passwords are stored in the browser.</span></div>
+        <p class="st-row-h" style="margin:12px 0 0">To change the admin password, use <strong style="color:#fff">Forgot password</strong> on the admin login screen, or update it in Supabase → Authentication → Users.</p>`)}
+
       </div>
-
-      <div id="maint-bypass-section" style="margin-bottom:16px;padding:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);border-radius:12px">
-        <label class="adm-label">Test account bypass</label>
-        <p class="adm-hint" style="margin:0 0 10px">This student keeps full access during maintenance. Required before enabling.</p>
-        <input id="maint-bypass-search" type="text" class="adm-input" placeholder="Search student by name or email…" oninput="adminSearchBypassStudent(this.value)" style="margin-bottom:8px"/>
-        <div id="maint-bypass-results" style="margin-bottom:8px"></div>
-        <div id="maint-bypass-selected" style="padding:10px 12px;background:rgba(255,255,255,.03);border:1px dashed rgba(255,255,255,.12);border-radius:10px;font-size:12px;color:var(--muted)">No test account selected — select one before enabling maintenance.</div>
-      </div>
-
-      <div style="margin-bottom:14px">
-        <label class="adm-label">Message shown to students <span style="text-transform:none;letter-spacing:0;color:var(--muted)">(optional)</span></label>
-        <input id="maint-msg" type="text" class="adm-input" placeholder="We're updating the platform. Access will be restored shortly."/>
-      </div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <button id="maint-toggle-btn" onclick="adminToggleMaintenance()" style="width:auto;padding:9px 20px;font-size:13px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;color:#fff;font-weight:700;cursor:pointer">Loading...</button>
-        <span id="maint-action-status" style="font-size:12px;color:var(--muted)"></span>
-      </div>`)}
-
-    ${setCard({icon:'sync',tone:'blue',title:'Supabase sync',desc:'Check the connection, or push/pull the video list between this browser and Supabase.'},`
-      <div id="sync-status" style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6">Click Check to verify connection...</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="checkSupabaseSync()" class="adm-btn adm-btn-primary">Check connection</button>
-        <button onclick="forcePushVideos()" class="adm-btn">${ADM_ICON.upload}Push videos</button>
-        <button onclick="forcePullVideos()" class="adm-btn"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="transform:rotate(180deg)"><path d="M12 16V4m0 0L8 8m4-4l4 4M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/></svg>Pull videos</button>
-      </div>`)}
-
-    ${setCard({icon:'shield',tone:'green',title:'Admin credentials',desc:'Admin sign-in is managed by Supabase Auth.'},`
-      <div class="adm-callout ok" style="margin-bottom:12px">${okCheck}<span>Credentials are managed server-side — no passwords are stored in the browser.</span></div>
-      <p class="adm-hint" style="margin:0">To change the admin password, use <strong style="color:#fff">Forgot password</strong> on the admin login screen, or update it in Supabase → Authentication → Users.</p>`)}
-
-    ${setCard({icon:'mic',tone:'pink',title:'ElevenLabs voice engine',desc:'Set once here — every student hears this voice model.'},`
-      <div class="adm-callout ok" style="margin-bottom:14px">${okCheck}<span>API key is stored server-side. Rotate it in the ElevenLabs dashboard, then run <code>supabase secrets set ELEVENLABS_API_KEY=...</code></span></div>
-      <label class="adm-label">Voice ID</label>
-      <input id="el-voice-id" type="text" class="adm-input" value="${escapeAttr(elVoice)}" placeholder="21m00Tcm4TlvDq8ikWAM" style="font-family:'JetBrains Mono',monospace"/>
-      <p class="adm-hint">Default: Rachel (21m00Tcm4TlvDq8ikWAM). Find voice IDs at elevenlabs.io/voice-library</p>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:14px">
-        <button onclick="adminSaveELSettings()" class="adm-btn adm-btn-primary">Save voice</button>
-        <button onclick="adminTestEL()" class="adm-btn">Test voice</button>
-        <span id="el-status" style="font-size:12px;color:var(--muted)"></span>
-      </div>`)}
-
-    ${setCard({icon:'live',tone:'blue',title:'Live With Sreekanth',desc:'Manage live session dates. Students who complete all 30 classes can register.'},`
-      <div id="live-sessions-list" style="margin-bottom:14px"></div>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
-        <input id="ls-title" type="text" class="adm-input" placeholder="Session title (e.g. Live Class — Week 1)"/>
-        <input id="ls-date" type="text" class="adm-input" placeholder="Date & time (e.g. Saturday, August 10 — 7:00 PM IST)"/>
-        <input id="ls-link" type="text" class="adm-input" placeholder="Zoom / Google Meet link"/>
-      </div>
-      <button onclick="adminAddLiveSession()" class="adm-btn adm-btn-primary">${ADM_ICON.plus}Add session</button>`)}
-
-    ${setCard({icon:'clock',tone:'grey',title:'Daily drip limit',desc:'How many new classes a student can unlock per day.'},`
-      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px"><span style="font-size:28px;font-weight:800;color:#fff;font-family:'Montserrat',sans-serif">${DAILY_DRIP}</span><span class="adm-muted" style="font-size:13px">classes / day</span></div>
-      <p class="adm-hint" style="margin:0">Change the <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:4px">DAILY_DRIP</code> constant in the source code to adjust.</p>`)}
-
-    ${setCard({icon:'db',tone:'grey',title:'Data management',desc:'Export students, videos and progress to a JSON backup, or restore from one.'},`
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button onclick="exportData()" class="adm-btn">Export all data</button>
-        <button onclick="importDataPrompt()" class="adm-btn">Import data</button>
-      </div>
-      <input id="import-file" type="file" accept=".json" style="display:none" onchange="doImport(event)"/>`)}
-
     </div>
   </div>`;
+
+  // Left nav: smooth-scroll to a section and highlight the one in view.
+  window.stGo=function(id){ var el=document.getElementById(id); if(el) window.scrollTo({top:el.getBoundingClientRect().top+window.scrollY-90,behavior:'smooth'}); };
+  try{
+    var _stObs=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ [].forEach.call(document.querySelectorAll('.st-nav-a'),function(a){ a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id); }); } });
+    },{rootMargin:'-90px 0px -60% 0px'});
+    [].forEach.call(document.querySelectorAll('.st-sec'),function(s){ _stObs.observe(s); });
+  }catch(e){}
+  _renderBypassSelected();
 
   window.exportData=()=>{
     const students=loadStudents();
@@ -144,8 +153,8 @@ function renderAdminSettings(){
         if(data.students)saveStudents(data.students);
         if(data.videos)saveVideos(data.videos);
         if(data.progress){Object.entries(data.progress).forEach(([sid,arr])=>{saveProgress(sid,new Set(arr));});}
-        alert('Import successful!');renderAdminSettings();
-      }catch{alert('Invalid JSON file.');}
+        uiAlert('Students, videos and progress were restored from the backup.',{title:'Import complete',tone:'ok'});renderAdminSettings();
+      }catch{uiAlert('Invalid JSON file.',{tone:'error'});}
     };
     r.readAsText(file);
   };
@@ -178,32 +187,27 @@ async function adminLoadMaintenanceStatus(){
     // Populate UI
     if(msgInput&&!msgInput.value) msgInput.value=msg;
 
-    // Status badge
+    // Status
     statusRow.innerHTML=enabled
-      ?'<span class="adm-badge bad live">Maintenance is on — students blocked</span>'
-      :'<span class="adm-badge ok">App is live</span>';
+      ?'<span class="st-dot on"></span><div><b>Maintenance is ON</b><span>Students and demo visitors are blocked.</span></div>'
+      :'<span class="st-dot"></span><div><b>App is live</b><span>Everyone can sign in normally.</span></div>';
     var maintCard=document.getElementById('maint-section');
     if(maintCard) maintCard.classList.toggle('maint-on',enabled);
 
-    // Active info panel
     if(activeInfo) activeInfo.style.display=enabled?'block':'none';
     var bypassNameEl=document.getElementById('maint-active-bypass-name');
-    if(bypassNameEl) bypassNameEl.textContent=bypassName?(bypassName+(bypassEmail?' ('+bypassEmail+')':'')):'None selected';
+    if(bypassNameEl) bypassNameEl.innerHTML=bypassName?('<b>'+escapeHtml(bypassName)+'</b>'+(bypassEmail?'<span>'+escapeHtml(bypassEmail)+'</span>':'')):'None selected';
 
-    // Bypass section — show/hide search depending on state
     if(bypassSection) bypassSection.style.display=enabled?'none':'block';
 
-    // If config has a bypass student, prefill _maintSelectedBypass
     if(bypassAuthUid&&bypassName&&!window._maintSelectedBypass){
       window._maintSelectedBypass={authUserId:bypassAuthUid,name:bypassName,email:bypassEmail||''};
       _renderBypassSelected();
     }
 
-    // Toggle button
-    btn.textContent=enabled?'Disable Maintenance':'Enable Maintenance';
-    btn.style.background=enabled?'rgba(34,197,94,.15)':'rgba(255,100,0,.2)';
-    btn.style.borderColor=enabled?'rgba(34,197,94,.4)':'rgba(255,100,0,.5)';
-    btn.style.color=enabled?'#4ade80':'#f97316';
+    btn.disabled=false;
+    btn.textContent=enabled?'Turn maintenance off':'Turn maintenance on';
+    btn.className='adm-btn adm-btn-lg '+(enabled?'st-btn-off':'st-btn-on');
 
     // Admin top-bar badge
     var badge=document.getElementById('admin-maint-badge');
@@ -220,46 +224,38 @@ function _renderBypassSelected(){
   var el=document.getElementById('maint-bypass-selected');
   if(!el) return;
   var bp=window._maintSelectedBypass;
-  if(!bp){
-    el.innerHTML='<span style="color:var(--muted)">No test account selected — select one before enabling maintenance.</span>';
-    return;
-  }
-  el.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px">'
-    +'<div><div style="color:#4ade80;font-weight:700;font-size:12px">✓ '+escapeHtml(bp.name)+'</div>'
-    +'<div style="color:var(--muted);font-size:11px">'+escapeHtml(bp.email)+'</div></div>'
-    +'<button onclick="adminClearBypassStudent()" style="padding:4px 10px;background:rgba(255,0,0,.1);border:1px solid rgba(255,0,0,.2);border-radius:6px;color:#f87171;font-size:11px;cursor:pointer">Remove</button>'
-    +'</div>';
+  if(!bp){ el.className='st-selected empty'; el.textContent='No test account selected yet.'; return; }
+  el.className='st-selected';
+  el.innerHTML='<span class="st-sel-av">'+escapeHtml((bp.name||'?').trim().charAt(0).toUpperCase())+'</span>'
+    +'<div style="min-width:0;flex:1"><b>'+escapeHtml(bp.name)+'</b><span>'+escapeHtml(bp.email)+'</span></div>'
+    +'<button type="button" class="adm-btn" onclick="adminClearBypassStudent()">Change</button>';
 }
 
+var _bypassResults=[];
 window.adminSearchBypassStudent=async function(query){
   var results=document.getElementById('maint-bypass-results');
   if(!results) return;
   if(!query||query.trim().length<2){results.innerHTML='';return;}
-  if(typeof _sb==='undefined'){results.innerHTML='<div style="font-size:12px;color:#f87171;padding:6px">Supabase not connected.</div>';return;}
+  if(typeof _sb==='undefined'){results.innerHTML='<p class="st-row-h" style="color:#fb7185">Supabase not connected.</p>';return;}
   try{
-    var q=query.trim();
+    var q=query.trim().replace(/[,()%]/g,' ');
     var r=await _sb.from('students').select('id,name,email,auth_user_id')
       .or('name.ilike.%'+q+'%,email.ilike.%'+q+'%').limit(6);
-    if(r.error||!r.data||!r.data.length){
-      results.innerHTML='<div style="font-size:12px;color:var(--muted);padding:6px 0">No students found.</div>';
-      return;
-    }
-    results.innerHTML=r.data.map(function(s){
-      var hasAuth=!!s.auth_user_id;
-      var uid=hasAuth?s.auth_user_id:'';
-      var name=escapeHtml(s.name||'');
-      var email=escapeHtml(s.email||'');
-      return '<div onclick="'+(hasAuth?'adminSelectBypassStudent(\''+uid+'\',\''+name+'\',\''+email+'\')':'alert(\'This student has no Supabase Auth account and cannot be used as a bypass account.\')')+'"'
-        +' style="cursor:'+(hasAuth?'pointer':'default')
-        +';padding:8px 10px;border-radius:6px;margin-bottom:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);font-size:12px'
-        +(hasAuth?'':';opacity:.5')+'">'
-        +'<strong style="color:#fff">'+name+'</strong> <span style="color:var(--muted)">'+email+'</span>'
-        +(hasAuth?'':'<span style="color:#f87171;font-size:10px;margin-left:6px">(no auth account)</span>')
-        +'</div>';
+    if(r.error||!r.data||!r.data.length){ results.innerHTML='<p class="st-row-h" style="padding:6px 2px">No students found.</p>'; return; }
+    _bypassResults=r.data;
+    results.innerHTML=r.data.map(function(s,i){
+      var ok=!!s.auth_user_id;
+      return '<button type="button" class="st-res'+(ok?'':' off')+'" onclick="adminPickBypass('+i+')"'+(ok?'':' title="No login account yet — set a password for this student first"')+'>'
+        +'<b>'+escapeHtml(s.name||'')+'</b><span>'+escapeHtml(s.email||'')+'</span>'+(ok?'':'<em>No login yet</em>')+'</button>';
     }).join('');
   }catch(e){
-    results.innerHTML='<div style="font-size:12px;color:#f87171;padding:6px">Error: '+e.message+'</div>';
+    results.innerHTML='<p class="st-row-h" style="color:#fb7185">Error: '+escapeHtml(e.message)+'</p>';
   }
+};
+window.adminPickBypass=function(i){
+  var s=_bypassResults[i]; if(!s) return;
+  if(!s.auth_user_id){ uiAlert('This student has no login account yet, so they cannot be the bypass account. Set a password for them first from Manage.',{title:'No login account'}); return; }
+  adminSelectBypassStudent(s.auth_user_id,s.name||'',s.email||'');
 };
 
 window.adminSelectBypassStudent=function(authUserId,name,email){
@@ -277,7 +273,7 @@ window.adminClearBypassStudent=function(){
 };
 
 async function adminToggleMaintenance(){
-  if(typeof _sb==='undefined'){alert('Supabase not connected.');return;}
+  if(typeof _sb==='undefined'){uiAlert('Supabase not connected.');return;}
   var statusEl=document.getElementById('maint-action-status');
   var msgInput=document.getElementById('maint-msg');
   if(statusEl) statusEl.textContent='';
@@ -343,7 +339,10 @@ function adminAddLiveSession(){
   var title=document.getElementById('ls-title').value.trim();
   var date=document.getElementById('ls-date').value.trim();
   var link=document.getElementById('ls-link').value.trim();
-  if(!title||!date){alert('Title and date required.');return;}
+  var err=document.getElementById('ls-err');
+  if(!title||!date){ if(err) err.textContent='Add a title and a date & time.'; (title?document.getElementById('ls-date'):document.getElementById('ls-title')).focus(); return; }
+  if(link&&!/^https?:\/\//i.test(link)){ if(err) err.textContent='The meeting link must start with https://'; document.getElementById('ls-link').focus(); return; }
+  if(err) err.textContent='';
   var sessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
   sessions.push({title:title,date:date,link:link});
   localStorage.setItem('brokeneng_live_sessions',JSON.stringify(sessions));
@@ -352,21 +351,22 @@ function adminAddLiveSession(){
   document.getElementById('ls-link').value='';
   refreshLiveSessionsList();
 }
-function adminRemoveLiveSession(idx){
+async function adminRemoveLiveSession(idx){
   var sessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
+  var s=sessions[idx]; if(!s) return;
+  if(!(await uiConfirm('Remove "'+s.title+'" ('+s.date+')?',{title:'Remove session',danger:true,okText:'Remove'}))) return;
   sessions.splice(idx,1);
   localStorage.setItem('brokeneng_live_sessions',JSON.stringify(sessions));
   refreshLiveSessionsList();
 }
 function refreshLiveSessionsList(){
-  var liveSessions=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
-  var liveSessionsHtml=liveSessions.map(function(s,i){
-    return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-      +'<div style="flex:1;background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 12px;font-size:12px;color:rgba(255,255,255,.7)">'
-      +'<strong style="color:#fff">'+s.title+'</strong> — '+s.date+(s.link?' — <a href="'+s.link+'" target="_blank" style="color:var(--g1)">'+s.link+'</a>':'')
-      +'</div>'
-      +'<button onclick="adminRemoveLiveSession('+i+')" style="background:rgba(255,0,0,.15);border:1px solid rgba(255,0,0,.25);border-radius:8px;color:#f87171;font-size:11px;padding:6px 10px;cursor:pointer;white-space:nowrap">Remove</button>'
-      +'</div>';
-  }).join('') || '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">No sessions yet.</div>';
-  document.getElementById('live-sessions-list').innerHTML=liveSessionsHtml;
+  var el=document.getElementById('live-sessions-list'); if(!el) return;
+  var list=JSON.parse(localStorage.getItem('brokeneng_live_sessions')||'[]');
+  el.innerHTML=list.length?list.map(function(s,i){
+    var safeLink=/^https?:\/\//i.test(s.link||'')?s.link:'';
+    return '<div class="st-session"><span class="st-session-ic">'+(i+1)+'</span><div style="min-width:0;flex:1">'
+      +'<b>'+escapeHtml(s.title)+'</b><span>'+escapeHtml(s.date)+'</span>'
+      +(safeLink?'<a href="'+escapeAttr(safeLink)+'" target="_blank" rel="noopener">'+escapeHtml(safeLink.replace(/^https?:\/\//,''))+'</a>':'')+'</div>'
+      +'<button type="button" class="adm-btn adm-btn-danger adm-icon-btn" onclick="adminRemoveLiveSession('+i+')" aria-label="Remove session" title="Remove">'+ADM_ICON.trash+'</button></div>';
+  }).join(''):'<div class="st-none">No sessions scheduled yet.</div>';
 }

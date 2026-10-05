@@ -225,13 +225,7 @@ function renderAdminProgress(){
             return '<button class="adm-chip'+(window._progStage===c[0]?' on':'')+'" onclick="window._progStage=\''+c[0]+'\';[].forEach.call(document.querySelectorAll(\'#prog-chips .adm-chip\'),function(b){b.classList.toggle(\'on\',b===this)},this);applyFilters()">'+c[1]+'<span class="n">'+counts[c[0]]+'</span></button>';
           }).join('')}
         </div>
-        <select id="prog-sort" onchange="applyFilters()" class="adm-select">
-          <option value="newest">Newest first</option>
-          <option value="progress">Most progress</option>
-          <option value="oldest">Oldest first</option>
-          <option value="az">Name A → Z</option>
-          <option value="za">Name Z → A</option>
-        </select>
+        ${admDropdown('prog-sort',[['newest','Newest first'],['progress','Most progress'],['oldest','Oldest first'],['az','Name A → Z'],['za','Name Z → A']],'newest','applyFilters()',{label:'Sort'})}
       </div>
       ${list.length===0
         ? `<div class="adm-card adm-empty">No students yet</div>`

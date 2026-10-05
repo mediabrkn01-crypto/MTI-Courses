@@ -77,10 +77,10 @@ window.handlePhotoUpload=function(evt,studentId){
       savePhoto(studentId,dataUrl);
       navigate('profile'); // re-render to show new photo
     };
-    img.onerror=function(){alert('Could not read that image. Try another one.');};
+    img.onerror=function(){uiAlert('Could not read that image. Try another one.',{tone:'error'});};
     img.src=e.target.result;
   };
-  reader.onerror=function(){alert('Could not read the file.');};
+  reader.onerror=function(){uiAlert('Could not read the file.',{tone:'error'});};
   reader.readAsDataURL(file);
 };
 

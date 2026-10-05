@@ -20,7 +20,7 @@ function safeUrl(u){
 function normalizeWhatsApp(raw){ return String(raw||'').replace(/[^0-9]/g,''); }
 function openCounsellorWhatsApp(){
   var num = normalizeWhatsApp(_demoCounsellor);
-  if(num.length < 8){ alert('Please contact our support team.'); return; }
+  if(num.length < 8){ uiAlert('Please contact our support team.'); return; }
   var url = 'https://wa.me/' + num + '?text=' + encodeURIComponent(DEMO_WA_MESSAGE);
   try{ window.open(url, '_blank', 'noopener'); }catch(e){ location.href = url; }
 }
