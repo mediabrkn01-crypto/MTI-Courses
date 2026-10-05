@@ -36,49 +36,87 @@ function _demoAuthErrMsg(resp){
   return 'Unable to reach Demo Access service. Please retry.';
 }
 
+var _demoDur = 15, _demoQuery = '';
+var _DEMO_PRESETS = [5,10,15,20,30,45,60];
+var _DEMO_IC = {
+  wa:'<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M17.47 14.38c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.64.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.6.13-.14.3-.35.45-.52.15-.18.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.61-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48 0 1.46 1.07 2.88 1.21 3.07.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.76-.72 2-1.41.25-.7.25-1.29.18-1.41-.08-.12-.27-.2-.57-.35M12.05 21.5h-.01a9.4 9.4 0 01-4.79-1.31l-.34-.2-3.56.93.95-3.47-.22-.36a9.38 9.38 0 01-1.44-5.01c0-5.19 4.23-9.41 9.42-9.41 2.51 0 4.88.98 6.65 2.76a9.35 9.35 0 012.75 6.66c0 5.19-4.23 9.41-9.42 9.41M20.06 3.98A11.27 11.27 0 0012.05.68C5.8.68.72 5.76.72 12a11.3 11.3 0 001.51 5.66L.62 23.5l5.98-1.57a11.3 11.3 0 005.41 1.38h.01c6.24 0 11.32-5.08 11.32-11.32 0-3.02-1.18-5.87-3.32-8.01"/></svg>',
+  link:'<svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1 1"/><path d="M14 11a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1-1"/></svg>',
+  copy:'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>',
+  open:'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3"/></svg>',
+  shield:'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+};
+function _demoDurChips(){
+  return _DEMO_PRESETS.map(function(m){
+    return '<button type="button" class="adm-chip'+(_demoDur===m?' on':'')+'" onclick="demoPickDur('+m+')">'+m+' min</button>';
+  }).join('');
+}
+window.demoPickDur=function(m){
+  m=Math.round(Number(m));
+  var c=document.getElementById('demo-dur-custom'), err=document.getElementById('demo-dur-err');
+  if(!(m>=1&&m<=80)){ if(err) err.style.display='block'; return; }
+  if(err) err.style.display='none';
+  _demoDur=m;
+  var chips=document.getElementById('demo-dur-chips'); if(chips) chips.innerHTML=_demoDurChips();
+  if(c&&Number(c.value)!==m) c.value=_DEMO_PRESETS.indexOf(m)<0?m:'';
+  var lab=document.getElementById('demo-dur-label'); if(lab) lab.textContent=m+(m===1?' minute':' minutes');
+};
+
 function renderDemoAdmin(){
+  _demoQuery='';
   app.innerHTML = adminTopBar('demo') + `
   <div class="adm-page">
-    ${admHead('Demo Access','Generate secure, one-time demo class invitations (1–80 min). The countdown starts only when the student first opens the link.')}
+    ${admHead('Demo Access','One-time demo class invitations. The timer starts only when the student first opens the link, and is enforced by the server.')}
 
     <div id="demo-stats"></div>
 
-    <div class="adm-card" style="margin-bottom:20px">
-      <div class="adm-card-head"><h2 class="adm-card-title">Generate demo link</h2></div>
-      <div class="adm-card-pad">
-        <div class="demo-gen-grid">
-          <div><label class="adm-label">Counsellor WhatsApp <span style="color:var(--g1)">*</span></label>
-            <input id="demo-counsellor" class="glass-input" placeholder="+91 98765 43210" inputmode="tel"/></div>
-          <div><label class="adm-label">Student name</label>
-            <input id="demo-name" class="glass-input" placeholder="Optional"/></div>
-          <div><label class="adm-label">Phone number</label>
-            <input id="demo-phone" class="glass-input" placeholder="Optional" inputmode="tel"/></div>
-          <div><label class="adm-label">Email</label>
-            <input id="demo-email" class="glass-input" placeholder="Optional" type="email"/></div>
-          <div><label class="adm-label">Demo duration</label>
-            <div id="demo-duration-dd"></div></div>
-          <div class="demo-gen-btn-cell"><button onclick="demoAdminCreate()" class="btn-primary" style="width:100%;padding:12px 20px">Generate secure demo link</button></div>
+    <div class="dm-grid">
+      <div class="adm-card dm-form">
+        <div class="adm-card-head"><h2 class="adm-card-title">Generate demo link</h2></div>
+        <div class="adm-card-pad">
+          <div class="dm-field">
+            <label class="adm-label" for="demo-counsellor">Counsellor WhatsApp <span style="color:var(--g1)">*</span></label>
+            <div class="dm-prefix"><span class="dm-wa">${_DEMO_IC.wa}</span><input id="demo-counsellor" class="adm-input" placeholder="+91 98765 43210" inputmode="tel" autocomplete="off"/></div>
+            <p class="adm-hint">The student sees this number on the demo page to contact you.</p>
+          </div>
+
+          <p class="dm-sec">Student details <span>optional</span></p>
+          <div class="dm-field"><label class="adm-label" for="demo-name">Name</label><input id="demo-name" class="adm-input" placeholder="e.g. Roshan" autocomplete="off"/></div>
+          <div class="dm-two">
+            <div class="dm-field"><label class="adm-label" for="demo-phone">Phone</label><input id="demo-phone" class="adm-input" placeholder="+91…" inputmode="tel" autocomplete="off"/></div>
+            <div class="dm-field"><label class="adm-label" for="demo-email">Email</label><input id="demo-email" class="adm-input" placeholder="name@email.com" type="email" autocomplete="off"/></div>
+          </div>
+
+          <p class="dm-sec">Demo length <span id="demo-dur-label">${_demoDur} minutes</span></p>
+          <div class="dm-dur">
+            <div class="adm-chips" id="demo-dur-chips">${_demoDurChips()}</div>
+            <div class="dm-custom"><input id="demo-dur-custom" class="adm-input" type="number" min="1" max="80" placeholder="Custom" oninput="if(this.value)demoPickDur(this.value)" aria-label="Custom minutes (1–80)"/><span>min</span></div>
+          </div>
+          <p id="demo-dur-err" class="adm-hint" style="display:none;color:#fb7185">Choose between 1 and 80 minutes.</p>
+
+          <button type="button" id="demo-gen-btn" onclick="demoAdminCreate()" class="adm-btn adm-btn-primary adm-btn-lg dm-go">${_DEMO_IC.shield}Generate secure demo link</button>
         </div>
-        <div id="demo-gen-result" style="display:none;margin-top:16px"></div>
+      </div>
+
+      <div class="adm-card dm-out">
+        <div class="adm-card-head"><h2 class="adm-card-title">Latest link</h2></div>
+        <div class="adm-card-pad" id="demo-gen-result">
+          <div class="dm-empty"><span>${_DEMO_IC.link}</span><p>Your new demo link appears here, ready to copy or send.</p></div>
+        </div>
       </div>
     </div>
 
     <div class="adm-card">
-      <div class="adm-card-head">
+      <div class="adm-card-head dm-list-head">
         <h2 class="adm-card-title">Demo links</h2>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <div class="adm-chips" id="demo-chips"></div>
+        <div class="dm-tools">
+          ${admSearch('demo-search','Search name, phone or number…','_demoQuery=this.value.trim().toLowerCase();_demoAdminRenderTable()')}
           <button onclick="demoAdminRefresh()" class="adm-btn">${ADM_ICON.refresh}Refresh</button>
         </div>
       </div>
-      <div id="demo-links-wrap" style="overflow-x:auto"><p class="adm-empty">Loading…</p></div>
+      <div class="dm-chiprow"><div class="adm-chips" id="demo-chips"></div></div>
+      <div id="demo-links-wrap"><p class="adm-empty">Loading…</p></div>
     </div>
   </div>`;
-  // Branded custom duration dropdown (1–80 min, default 15) — replaces the native <select>.
-  if(_demoDurationSelect && _demoDurationSelect.destroy) _demoDurationSelect.destroy();
-  var _durOpts = [];
-  for(var _m=1;_m<=80;_m++){ _durOpts.push({value:_m, label:_m+(_m===1?' Minute':' Minutes')}); }
-  _demoDurationSelect = createBxSelect('demo-duration-dd', _durOpts, 15);
   demoAdminRefresh();
   if(_demoAdminTick) clearInterval(_demoAdminTick);
   _demoAdminTick = setInterval(function(){
@@ -140,60 +178,64 @@ function _demoAdminRenderStats(parts){
   }).join('');
   if(chipsEl && chipsEl.innerHTML!==chipsHtml) chipsEl.innerHTML=chipsHtml;
 }
+function _demoInitials(n){ var p=String(n||'').trim().split(/\s+/).filter(Boolean); return p.length?(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase():'D'; }
+function _demoTimeCell(r,p){
+  if(p.status==='active'){
+    var rem=_demoAdminRemaining(r)||0, tot=(r.duration_minutes||15)*60000, pct=Math.max(0,Math.min(100,rem/tot*100));
+    return '<div class="dm-time"><span class="adm-num">'+p.remTxt+'</span><div class="adm-meter'+(pct<20?' low':'')+'"><span style="width:'+pct.toFixed(1)+'%"></span></div></div>';
+  }
+  return '<span class="adm-muted">'+(p.status==='not_started'?'Starts on open':'—')+'</span>';
+}
 function _demoAdminRenderTable(){
   var wrap = document.getElementById('demo-links-wrap');
   if(!wrap) return;
   var all = _demoAdminRows.map(function(r){ return {r:r, p:_demoRowParts(r)}; });
   _demoAdminRenderStats(all.map(function(x){return x.p;}));
-  if(!_demoAdminRows.length){ wrap.innerHTML='<p class="adm-empty">No demo links yet. Generate one above.</p>'; return; }
-  var shown = all.filter(function(x){ return _demoFilter==='all' || x.p.status===_demoFilter; });
-  if(!shown.length){ wrap.innerHTML='<p class="adm-empty">No links in this view.</p>'; return; }
+  if(!_demoAdminRows.length){ wrap.innerHTML='<div class="dm-none">'+_DEMO_IC.link+'<p>No demo links yet</p><span>Generate one above — it will show up here with its live status.</span></div>'; return; }
+  var q=_demoQuery;
+  var shown = all.filter(function(x){
+    if(_demoFilter!=='all' && x.p.status!==_demoFilter) return false;
+    if(!q) return true;
+    var r=x.r; return [r.student_name,r.student_phone,r.student_email,r.counsellor_whatsapp].some(function(v){return String(v||'').toLowerCase().indexOf(q)>=0;});
+  });
+  if(!shown.length){ wrap.innerHTML='<p class="adm-empty">'+(q?'No links match “'+escapeHtml(q)+'”.':'No links in this view.')+'</p>'; return; }
+  var who=function(r,p){
+    return '<div class="dm-who"><span class="dm-av s-'+p.status+'">'+escapeHtml(_demoInitials(r.student_name))+'</span><div style="min-width:0">'
+      +'<p class="adm-name">'+escapeHtml(r.student_name||'Unnamed demo')+'</p>'
+      +'<p class="adm-meta">'+p.durTxt+(r.student_phone?' · '+escapeHtml(r.student_phone):'')+'</p></div></div>';
+  };
+  var couns=function(p){ return p.counsNum
+      ? '<a href="https://wa.me/'+p.counsNum+'" target="_blank" rel="noopener" class="dm-wa-link">'+_DEMO_IC.wa+'+'+p.counsNum+'</a>'
+      : '<span class="adm-muted">—</span>'; };
+  var opened=function(r){ return r.activated_at
+      ? '<span class="dm-when">'+_demoFmtTime(r.activated_at)+'</span><p class="adm-meta">ends '+_demoFmtTime(r.expires_at)+'</p>'
+      : '<span class="adm-muted">Not opened yet</span>'+(r.created_at?'<p class="adm-meta">created '+_demoFmtTime(r.created_at)+'</p>':''); };
   var rows = shown.map(function(x){
-    var r = x.r, p = x.p;
-    var who = '<p class="adm-name">'+escapeHtml(r.student_name||'Unnamed demo')+'</p>'+
-              '<p class="adm-meta">'+p.durTxt+(r.student_phone?' · '+escapeHtml(r.student_phone):'')+'</p>';
-    var couns = p.counsNum
-      ? '<a href="https://wa.me/'+p.counsNum+'" target="_blank" rel="noopener" class="adm-num" style="color:#86efac;text-decoration:none">+'+p.counsNum+'</a>'
-      : '<span class="adm-muted">—</span>';
-    var remCell = (p.status==='active') ? '<span class="adm-num" style="color:#fff;font-size:13px">'+p.remTxt+'</span>' : '<span class="adm-muted">—</span>';
-    var dim = (p.status==='expired'||p.status==='revoked') ? ' style="opacity:.62"' : '';
-    return '<tr'+dim+'>'+
-      '<td>'+who+'</td>'+
-      '<td>'+_demoStatusPill(p.status)+'</td>'+
-      '<td>'+remCell+'</td>'+
-      '<td style="white-space:nowrap">'+couns+'</td>'+
-      '<td style="white-space:nowrap">'+(r.activated_at
-        ? '<span style="color:rgba(255,255,255,.8);font-size:13px">'+_demoFmtTime(r.activated_at)+'</span><p class="adm-meta">ends '+_demoFmtTime(r.expires_at)+'</p>'
-        : '<span class="adm-muted">Not opened yet</span>')+'</td>'+
-      '<td class="right" style="white-space:nowrap">'+p.actions+'</td>'+
-    '</tr>';
+    var r=x.r, p=x.p, dim=(p.status==='expired'||p.status==='revoked')?' class="dm-dim"':'';
+    return '<tr'+dim+'><td>'+who(r,p)+'</td><td>'+_demoStatusPill(p.status)+'</td><td>'+_demoTimeCell(r,p)+'</td>'
+      +'<td style="white-space:nowrap">'+couns(p)+'</td><td style="white-space:nowrap">'+opened(r)+'</td>'
+      +'<td class="right" style="white-space:nowrap">'+p.actions+'</td></tr>';
   }).join('');
-  // Mobile card layout (shown < 720px via the wrapper's own overflow; here we provide both)
   var cards = shown.map(function(x){
-    var r = x.r, p = x.p;
-    return '<div style="border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:14px 16px;background:rgba(255,255,255,.02)">'+
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px">'+
-        '<div><div style="font-weight:700;color:#fff;font-size:14px">'+escapeHtml(r.student_name||'Unnamed demo')+'</div>'+
-             '<div style="font-size:11px;color:var(--muted);margin-top:2px">'+p.durTxt+'</div></div>'+
-        _demoStatusPill(p.status)+'</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;font-size:12px">'+
-        '<div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Counsellor</div>'+(p.counsNum?'<a href="https://wa.me/'+p.counsNum+'" target="_blank" rel="noopener" style="color:rgba(74,222,128,.9);text-decoration:none">+'+p.counsNum+'</a>':'<span style="color:var(--muted)">—</span>')+'</div>'+
-        '<div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Remaining</div><span style="color:#fff">'+p.remTxt+'</span></div>'+
-        '<div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Started</div><span style="color:rgba(255,255,255,.75)">'+_demoFmtTime(r.activated_at)+'</span></div>'+
-        '<div><div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Expires</div><span style="color:rgba(255,255,255,.75)">'+_demoFmtTime(r.expires_at)+'</span></div>'+
-      '</div>'+
-      '<div style="margin-top:12px;display:flex;justify-content:flex-end">'+p.actions+'</div>'+
-    '</div>';
+    var r=x.r, p=x.p;
+    return '<div class="dm-card'+((p.status==='expired'||p.status==='revoked')?' dm-dim':'')+'">'
+      +'<div class="dm-card-top">'+who(r,p)+_demoStatusPill(p.status)+'</div>'
+      +'<div class="dm-card-grid">'
+        +'<div><i class="dm-k">Time left</i>'+_demoTimeCell(r,p)+'</div>'
+        +'<div><i class="dm-k">Counsellor</i>'+couns(p)+'</div>'
+        +'<div style="grid-column:1/-1"><i class="dm-k">Opened</i>'+opened(r)+'</div>'
+      +'</div>'
+      +'<div class="dm-card-act">'+p.actions+'</div></div>';
   }).join('');
   wrap.innerHTML =
     '<div class="demo-tbl-desktop" style="overflow-x:auto"><table class="admin-table" style="min-width:760px">'+
-      '<thead><tr><th>Student</th><th>Status</th><th style="white-space:nowrap">Time left</th><th>Counsellor</th><th>Opened</th><th class="right"></th></tr></thead>'+
+      '<thead><tr><th>Student</th><th>Status</th><th style="width:150px">Time left</th><th>Counsellor</th><th>Opened</th><th class="right"></th></tr></thead>'+
       '<tbody>'+rows+'</tbody></table></div>'+
-    '<div class="demo-tbl-cards" style="display:none;flex-direction:column;gap:12px;padding:14px">'+cards+'</div>';
+    '<div class="demo-tbl-cards dm-cards" style="display:none">'+cards+'</div>';
 }
 
 window.demoAdminCreate = async function(){
-  var btn = event && event.target ? event.target : null;
+  var btn = document.getElementById('demo-gen-btn');
   // Validate counsellor WhatsApp (required) + duration (1–80) BEFORE any network call.
   var counsellorRaw = (document.getElementById('demo-counsellor').value||'').trim();
   var counsellorNum = normalizeWhatsApp(counsellorRaw);
@@ -201,9 +243,9 @@ window.demoAdminCreate = async function(){
     demoToast('Enter a valid Counsellor WhatsApp number (e.g. +91 98765 43210)','error');
     document.getElementById('demo-counsellor').focus(); return;
   }
-  var durMin = _demoDurationSelect ? _demoDurationSelect.value() : 15;
+  var durMin = _demoDur;
   if(!(durMin>=1 && durMin<=80)){ demoToast('Demo duration must be between 1 and 80 minutes','error'); return; }
-  if(btn){ btn.disabled=true; btn.textContent='Generating…'; }
+  if(btn){ btn.disabled=true; btn.innerHTML='<span class="auth-spin"></span>Generating…'; }
   try{
     var token = await _demoAdminToken();
     if(!token){ demoToast('Admin session expired. Please sign in again.','error'); return; }
@@ -220,22 +262,23 @@ window.demoAdminCreate = async function(){
     }
     var url = _demoLinkUrl(resp.token);
     var box = document.getElementById('demo-gen-result');
-    box.style.display='block';
+    var nm=(document.getElementById('demo-name').value||'').trim();
+    var ph=normalizeWhatsApp((document.getElementById('demo-phone').value||'').trim());
+    var msg='Hi'+(nm?' '+nm:'')+'! Here is your Broken English demo class ('+durMin+' min). The timer starts when you open it: '+url;
+    var waHref='https://wa.me/'+(ph.length>=10?ph:'')+'?text='+encodeURIComponent(msg);
+    var esc=url.replace(/'/g,"\\'");
     box.innerHTML =
-      '<div style="border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:14px;background:rgba(255,255,255,.04)">'+
-        '<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Demo Link</div>'+
-        '<div id="demo-gen-url" style="font-family:\'JetBrains Mono\',monospace;font-size:12px;color:#fff;word-break:break-all;background:rgba(0,0,0,.3);padding:10px;border-radius:8px">'+url+'</div>'+
-        '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">'+
-          '<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Status</div><div>'+_demoStatusPill('not_started')+'</div></div>'+
-          '<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Duration</div><div style="color:#fff;font-size:13px;padding-top:2px">'+durMin+(durMin===1?' Minute':' Minutes')+'</div></div>'+
-          '<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Counsellor</div><div style="color:#fff;font-size:13px;padding-top:2px">+'+counsellorNum+'</div></div>'+
-          '<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Created</div><div style="color:#fff;font-size:13px;padding-top:2px">'+_demoFmtTime(resp.link&&resp.link.created_at)+'</div></div>'+
-        '</div>'+
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'+
-          '<button onclick="demoAdminCopy(\''+url.replace(/'/g,"\\'")+'\')" class="btn-primary" style="width:auto;padding:7px 14px;font-size:12px">Copy Link</button>'+
-          '<button onclick="window.open(\''+url.replace(/'/g,"\\'")+'\',\'_blank\')" class="btn-ghost" style="width:auto;padding:7px 14px;font-size:12px">Open Link</button>'+
-        '</div>'+
-      '</div>';
+      '<div class="dm-new">'
+        +'<div class="dm-new-top"><span class="dm-new-ic">'+_DEMO_IC.link+'</span><div style="min-width:0"><p class="adm-name">'+escapeHtml(nm||'Unnamed demo')+'</p><p class="adm-meta">Created '+_demoFmtTime(resp.link&&resp.link.created_at)+'</p></div>'+_demoStatusPill('not_started')+'</div>'
+        +'<div class="dm-url" id="demo-gen-url">'+escapeHtml(url)+'</div>'
+        +'<div class="dm-facts"><div><span>Length</span><b>'+durMin+(durMin===1?' minute':' minutes')+'</b></div><div><i class="dm-k">Counsellor</i><b>+'+counsellorNum+'</b></div><div><span>Timer</span><b>On first open</b></div></div>'
+        +'<div class="dm-actions">'
+          +'<button onclick="demoAdminCopy(\''+esc+'\');this.classList.add(\'done\');this.lastChild.textContent=\'Copied\'" class="adm-btn adm-btn-primary">'+_DEMO_IC.copy+'<span>Copy link</span></button>'
+          +'<a href="'+escapeAttr(waHref)+'" target="_blank" rel="noopener" class="adm-btn dm-wa-btn">'+_DEMO_IC.wa+'Send on WhatsApp</a>'
+          +'<button onclick="window.open(\''+esc+'\',\'_blank\')" class="adm-btn" title="Opening it yourself starts the timer">'+_DEMO_IC.open+'Open</button>'
+        +'</div>'
+        +'<p class="adm-hint" style="margin:10px 0 0">Opening the link yourself starts its timer — use Copy or WhatsApp to send it.</p>'
+      +'</div>';
     document.getElementById('demo-name').value='';
     document.getElementById('demo-phone').value='';
     document.getElementById('demo-email').value='';
@@ -243,7 +286,7 @@ window.demoAdminCreate = async function(){
     demoToast('Demo link created');
     demoAdminRefresh();
   }catch(e){ demoToast('Could not generate link','error'); }
-  finally{ if(btn){ btn.disabled=false; btn.textContent='Generate Secure Demo Link'; } }
+  finally{ if(btn){ btn.disabled=false; btn.innerHTML=_DEMO_IC.shield+'Generate secure demo link'; } }
 };
 
 window.demoAdminCopy = function(url){
