@@ -184,6 +184,9 @@ async function sbLoadProgress(studentId){
         }
       });
     }catch(e){}
+    if(!_dripCache[studentId]) _dripCache[studentId]={}; // even if the drip query failed — never block unlocks forever
+    // Drip rows are now known — redraw unlock-dependent views on screen.
+    if(typeof refreshUnlockViews==='function') setTimeout(refreshUnlockViews,0);
     // Guarantee cache entries exist for this studentId (prevents undefined reads)
     if(!_progressCache[studentId]) _progressCache[studentId]=new Set();
     if(!_quizAttemptedCache[studentId]) _quizAttemptedCache[studentId]=new Set();

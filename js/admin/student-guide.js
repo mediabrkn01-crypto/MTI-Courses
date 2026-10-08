@@ -66,7 +66,7 @@ var GUIDE = {
         { src: 'assets/guide/03-course.jpg', caption: 'The Course — Completed, Up next and Locked classes.' },
         { src: 'assets/guide/04-lesson.jpg', caption: 'A class page: the video, mission objectives and the Mission challenge.' }
       ],
-      tip: 'After you finish a class, its Mission challenge (a short quiz) unlocks. Score 70% or more to pass. Try the challenge to open the next class. Classes open one after another, and each new phase of 4 classes opens on a new day.'
+      tip: 'After you finish a class, its Mission challenge (a short quiz) unlocks — score 70% or more to pass. The next class opens as soon as you complete the current one, up to 4 classes per day.'
     },
     {
       title: 'Pronunciation Workshop',

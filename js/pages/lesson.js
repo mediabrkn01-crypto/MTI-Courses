@@ -92,29 +92,41 @@ function renderLesson(lessonId){
     right:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>'
   };
   var sectionDone=section.lessons.filter(function(l){return isCompleted(l.id);}).length;
-  var missionList='';
-  section.lessons.forEach(function(l){
-    var lDone=isCompleted(l.id);
-    var lUnlocked=isUnlocked(l);
-    var isCur=l.id===lesson.id;
-    var lThumb=(loadVideos()[l.order]||{}).thumb||'';
-    var _prev2=ALL_LESSONS[ALL_LESSONS.indexOf(l)-1];
-    var _needsQuiz=_prev2&&hasRealQuiz(_prev2)&&isCompleted(_prev2.id)&&!hasAttemptedQuiz(_prev2.order);
-    var lOnclick=lUnlocked
-      ?"navigate('lesson',{id:'"+l.id+"'})"
-      :(_needsQuiz?"showQuizGateMsg('Day "+l.order+"')":'');
-    var state=isCur?'cur':lDone?'done':lUnlocked?'open':'locked';
-    var status=isCur?'<span class="ls-st cur">'+LI.play+'</span>'
-      :lDone?'<span class="ls-st done">'+LI.check+'</span>'
-      :!lUnlocked?'<span class="ls-st locked">'+LI.lock+'</span>':'';
-    missionList+='<div class="mp-item ls-row '+state+(isCur?' mp-active':'')+'" '+(lOnclick?'onclick="'+lOnclick+'" role="button" tabindex="0"':'')+'>'
-      +'<div class="ls-thumb">'+(lThumb?'<img src="'+escapeAttr(lThumb)+'" alt=""'+thumbPosAttr(l.order)+' loading="lazy" onerror="this.remove()"/>':'')+'<span class="ls-day">'+String(l.order).padStart(2,'0')+'</span></div>'
-      +'<div class="ls-txt"><div class="ls-k">Day '+l.order+(isCur?' · Playing':lDone?' · Done':!lUnlocked?' · Locked':'')+'</div>'
-      +'<div class="ls-t">'+escapeHtml(getLessonTitle(l))+'</div></div>'
-      +status
-    +'</div>';
-  });
+  // Mission list — rebuilt by _lsRefresh() after a completion, so a newly opened class
+  // appears without leaving the page.
+  function buildMissionList(){
+    var html='';
+    section.lessons.forEach(function(l){
+      var lDone=isCompleted(l.id);
+      var lUnlocked=isUnlocked(l);
+      var isCur=l.id===lesson.id;
+      var lThumb=(loadVideos()[l.order]||{}).thumb||'';
+      var lOnclick=lUnlocked?"navigate('lesson',{id:'"+l.id+"'})":'';
+      var state=isCur?'cur':lDone?'done':lUnlocked?'open':'locked';
+      var status=isCur?'<span class="ls-st cur">'+LI.play+'</span>'
+        :lDone?'<span class="ls-st done">'+LI.check+'</span>'
+        :!lUnlocked?'<span class="ls-st locked">'+LI.lock+'</span>':'';
+      html+='<div class="mp-item ls-row '+state+(isCur?' mp-active':'')+'" '+(lOnclick?'onclick="'+lOnclick+'" role="button" tabindex="0"':'')+'>'
+        +'<div class="ls-thumb">'+(lThumb?'<img src="'+escapeAttr(lThumb)+'" alt=""'+thumbPosAttr(l.order)+' loading="lazy" onerror="this.remove()"/>':'')+'<span class="ls-day">'+String(l.order).padStart(2,'0')+'</span></div>'
+        +'<div class="ls-txt"><div class="ls-k">Day '+l.order+(isCur?' · Playing':lDone?' · Done':!lUnlocked?' · Locked':'')+'</div>'
+        +'<div class="ls-t">'+escapeHtml(getLessonTitle(l))+'</div></div>'
+        +status
+      +'</div>';
+    });
+    return html;
+  }
+  var missionList=buildMissionList();
 
+  function buildPager(){
+    function pg(l,dir){
+      if(!l) return '<span></span>';
+      var ok=isUnlocked(l);
+      return '<button type="button" class="ls-pg '+dir+(ok?'':' locked')+'"'+(ok?' onclick="navigate(\'lesson\',{id:\''+l.id+'\'})"':' disabled')+'>'
+        +'<span class="ls-pg-k">'+(dir==='prev'?'← Previous · Day '+l.order:'Next · Day '+l.order+' →')+(ok?'':' · Locked')+'</span>'
+        +'<span class="ls-pg-t">'+escapeHtml(getLessonTitle(l))+'</span></button>';
+    }
+    return '<div class="ls-pager">'+pg(prevL,'prev')+pg(nextL,'next')+'</div>';
+  }
   var navBtn=function(l,dir){
     if(!l||!isUnlocked(l)) return '<button type="button" class="ls-nav" disabled aria-label="'+dir+'">'+(dir==='Previous'?LI.left:LI.right)+'</button>';
     return '<button type="button" class="ls-nav" aria-label="'+dir+' lesson" title="'+dir+': Day '+l.order+'" onclick="navigate(\'lesson\',{id:\''+l.id+'\'})">'+(dir==='Previous'?LI.left:LI.right)+'</button>';
@@ -126,9 +138,9 @@ function renderLesson(lessonId){
       +'<button type="button" class="ls-back" onclick="navigate(\'dashboard\')">'+LI.left+'<span>Back</span></button>'
       +'<div class="ls-crumb"><span class="ls-crumb-k">Day '+lesson.order+' of '+section.lessons.length+'</span><span class="ls-crumb-t">'+escapeHtml(getLessonTitle(lesson))+'</span></div>'
       +'<div class="ls-actions">'
-        +navBtn(prevL,'Previous')
+        +'<span id="ls-nav-prev">'+navBtn(prevL,'Previous')+'</span>'
         +'<button type="button" id="mark-complete-btn" style="'+(completed?'background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25)':'background:var(--grad);color:#fff;border:1px solid transparent;box-shadow:0 4px 14px rgba(255,45,120,.3);cursor:pointer')+';padding:8px 14px;border-radius:9px;font-size:12px;font-weight:700;font-family:Montserrat,sans-serif;white-space:nowrap">'+(completed?'Completed ✓':'Mark Complete ✓')+'</button>'
-        +navBtn(nextL,'Next')
+        +'<span id="ls-nav-next">'+navBtn(nextL,'Next')+'</span>'
       +'</div>'
     +'</div>'
     +'<div class="lesson-body-split" style="display:flex;flex:1;min-height:0;overflow:hidden">'
@@ -164,16 +176,7 @@ function renderLesson(lessonId){
                 :'<p style="font-size:12px;color:var(--muted);margin:0">No quiz for this mission.</p>')
             +'</div>'
           +'</div>'
-          +(function(){
-            function pg(l,dir){
-              if(!l) return '<span></span>';
-              var ok=isUnlocked(l);
-              return '<button type="button" class="ls-pg '+dir+(ok?'':' locked')+'"'+(ok?' onclick="navigate(\'lesson\',{id:\''+l.id+'\'})"':' disabled')+'>'
-                +'<span class="ls-pg-k">'+(dir==='prev'?'← Previous · Day '+l.order:'Next · Day '+l.order+' →')+(ok?'':' · Locked')+'</span>'
-                +'<span class="ls-pg-t">'+escapeHtml(getLessonTitle(l))+'</span></button>';
-            }
-            return '<div class="ls-pager">'+pg(prevL,'prev')+pg(nextL,'next')+'</div>';
-          })()
+          +buildPager()
         +'</div>'
       +'</div>'
       +'<aside id="mp-right\" class="mp-right-panel ls-side">'
@@ -185,6 +188,19 @@ function renderLesson(lessonId){
       +'</aside>'
     +'</div>'
     +'</div>';
+  // Called after Mark Complete / auto-complete (and when progress finishes loading):
+  // re-evaluates unlocks and redraws the mission list, done count and Previous/Next —
+  // the video player is left untouched.
+  window._lsRefresh=function(){
+    if(!document.getElementById('player-wrapper')) return;
+    var list=document.querySelector('#mp-right .ls-list'); if(list){ var st=document.getElementById('mp-right').scrollTop; list.innerHTML=buildMissionList(); document.getElementById('mp-right').scrollTop=st; }
+    var dn=section.lessons.filter(function(l){return isCompleted(l.id);}).length;
+    var n=document.querySelector('#mp-right .ls-side-n'); if(n) n.textContent=dn+'/'+section.lessons.length+' done';
+    var bar=document.querySelector('#mp-right .dsh-bar>span'); if(bar) bar.style.width=Math.round(dn/section.lessons.length*100)+'%';
+    var pager=document.querySelector('.ls-pager'); if(pager) pager.outerHTML=buildPager();
+    var np=document.getElementById('ls-nav-prev'); if(np) np.innerHTML=navBtn(prevL,'Previous');
+    var nn=document.getElementById('ls-nav-next'); if(nn) nn.innerHTML=navBtn(nextL,'Next');
+  };
   requestAnimationFrame(function(){
     var cur=document.querySelector('#mp-right .ls-row.cur');
     var list=document.querySelector('#mp-right');
@@ -255,6 +271,7 @@ function setupPlayer(lesson,student){try{
     if(autoCompleted||isCompleted(lesson.id)) return;
     autoCompleted=true;
     markLessonComplete(lesson.id);
+    if(typeof window._lsRefresh==='function') window._lsRefresh(); // next class opens right away
     if(markBtn2){
       markBtn2.disabled=true;
       markBtn2.textContent='Completed ✓';
@@ -574,21 +591,7 @@ function setupPlayer(lesson,student){try{
     markBtn.className="shrink-0 flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold bg-green-50 text-green-600 border border-green-200 cursor-default transition";
     renderQuizCta(lesson, true);
 
-    // Update right panel to show newly unlocked lesson
-    const newStudent=loadStudents()[currentSession.studentId];
-    const newUnlocked=newStudent?getUnlockedSet(newStudent):null;
-    if(newUnlocked){
-      // Refresh the mission list panel
-      const nextLesson=ALL_LESSONS.find(l=>newUnlocked.has(l.order)&&!isCompleted(l.id));
-      // Update right panel items
-      document.querySelectorAll('[data-lesson-order]').forEach(function(el){
-        const order=parseInt(el.dataset.lessonOrder);
-        if(newUnlocked.has(order)){
-          el.style.opacity='1';
-          el.style.cursor='pointer';
-        }
-      });
-    }
+    if(typeof window._lsRefresh==='function') window._lsRefresh(); // next class opens right away
 
     // Quiz unlocked — student clicks Start Quiz button to open
     renderQuizCta(lesson, true);

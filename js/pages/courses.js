@@ -3,95 +3,84 @@
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 // 3-per-day drip unlock logic:
+// Unlock rule — sequential, at most DAILY_UNLOCK_LIMIT (4) classes per calendar day:
+//  • Day 1 is always open; completed classes always stay open.
+//  • The next class opens as soon as the previous one is completed (Mark Complete or
+//    finishing the video) — no refresh needed.
+//  • Per day a student gets at most 4 classes. The class they were already on when the
+//    day started counts as one of the 4 (D05 open → D05, D06, D07, D08 = 4).
+//  • Each class opened today is recorded as a drip row (course_config drip_<id>_<date>)
+//    so the count survives reloads/devices; admin unlocks (date 0000-00-00) are extra.
+// (Replaces the old fixed 4-class blocks that could only start the day after the previous
+//  block ended — a student who did 2 classes on day 1 then only got 2 on day 2.)
+function _localDateKey(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function getUnlockedSet(student){
   const progress = loadProgress(student.id);
   const done = new Set(ALL_LESSONS.filter(l=>progress.has(l.id)).map(l=>l.order));
-  const attempted = getAttemptedQuizzes(student.id);
-  const hasAnyQuizData=(attempted.size>0||(_quizPassedCache[student.id]&&_quizPassedCache[student.id].size>0));
-  const todayStr=new Date().toISOString().slice(0,10);
-  const PHASE=4; // lessons per phase
+  const todayStr=_localDateKey();
+  const LIMIT=(typeof DAILY_UNLOCK_LIMIT!=='undefined'&&DAILY_UNLOCK_LIMIT>0)?DAILY_UNLOCK_LIMIT:4;
+  const drip=_dripCache[student.id]||{};
 
   const allUnlocked = new Set([1]); // Day 1 always unlocked
+  var openedToday = new Set();
+  Object.keys(drip).forEach(function(d){
+    var set=drip[d]; if(!(set instanceof Set)) return;
+    set.forEach(function(o){ allUnlocked.add(o); if(d===todayStr) openedToday.add(o); });
+  });
+  done.forEach(function(o){ allUnlocked.add(o); });
 
-  // Restore all previously drip-unlocked lessons from Supabase cache
-  if(_dripCache[student.id]){
-    Object.values(_dripCache[student.id]).forEach(function(daySet){
-      daySet.forEach(function(o){allUnlocked.add(o);});
-    });
-  }
-
-  // Determine which phase the student is currently in based on completed lessons
-  // Phase 1 = lessons 1-4, Phase 2 = lessons 5-8, etc.
-  for(let i=1;i<ALL_LESSONS.length;i++){
-    const lesson=ALL_LESSONS[i];
-    const prev=ALL_LESSONS[i-1];
-
-    // Already unlocked (from drip cache or explicit access) — keep going
-    if(allUnlocked.has(lesson.order)){continue;}
-
-    // Already completed on another device — restore access
-    if(done.has(lesson.order)){allUnlocked.add(lesson.order);continue;}
-
-    // Previous lesson must be completed
-    if(!done.has(prev.order)) break;
-
-    // Quiz gate: previous lesson's quiz must be attempted (if quiz tracking active)
-    if(hasRealQuiz(prev)&&!attempted.has(prev.order)&&hasAnyQuizData) break;
-
-    // Phase boundary check: if this lesson starts a new phase (position % PHASE === 0),
-    // only unlock if today is a new day since the previous phase was completed
-    var lessonIdx=i; // 0-based index in ALL_LESSONS
-    if(lessonIdx % PHASE === 0){
-      // This is the first lesson of a new phase
-      // Find when the previous phase was completed (last completed lesson of prev phase)
-      // Check if we have a drip entry for this phase starting today
-      var phaseKey='phase_'+(Math.floor(lessonIdx/PHASE)+1);
-      var phaseDripDate=null;
-      if(_dripCache[student.id]){
-        Object.keys(_dripCache[student.id]).forEach(function(d){
-          var ds=_dripCache[student.id][d];
-          if(ds instanceof Set&&ds.has(lesson.order)) phaseDripDate=d;
-        });
-      }
-      if(phaseDripDate){
-        // Already drip-unlocked on a previous day — restore all 4
-        allUnlocked.add(lesson.order);
-        continue;
-      }
-      // Check if today is allowed to unlock this phase
-      // Find the date the previous phase block was last active
-      var prevPhaseLastLesson=ALL_LESSONS[lessonIdx-1];
-      var prevPhaseDripDate=null;
-      if(_dripCache[student.id]){
-        Object.keys(_dripCache[student.id]).forEach(function(d){
-          var ds=_dripCache[student.id][d];
-          if(ds instanceof Set&&ds.has(prevPhaseLastLesson.order)) prevPhaseDripDate=d;
-        });
-      }
-      // Allow if: no prior drip history (Day 1 student) OR prior phase was on a different day
-      var allowNewPhase=!prevPhaseDripDate||(prevPhaseDripDate<todayStr);
-      if(!allowNewPhase) break; // same day as previous phase — wait until tomorrow
-    }
-
-    // Unlock this lesson and track the drip
-    allUnlocked.add(lesson.order);
-    if(!_dripCache[student.id]) _dripCache[student.id]={};
+  // Persist only once this device has loaded the student's drip rows from the server
+  // (sbLoadProgress creates _dripCache[id]); before that, a partial cache could overwrite
+  // today's row. Until then unlocks are computed but not saved.
+  var dripLoaded=!!_dripCache[student.id];
+  function recordToday(order){
+    openedToday.add(order);
+    if(!dripLoaded) return;
     if(!_dripCache[student.id][todayStr]) _dripCache[student.id][todayStr]=new Set();
-    _dripCache[student.id][todayStr].add(lesson.order);
+    _dripCache[student.id][todayStr].add(order);
     if(typeof sbSaveDripUnlock==='function'){
       sbSaveDripUnlock(student.id,todayStr,_dripCache[student.id][todayStr]).catch(function(){});
     }
     try{localStorage.setItem('brokeneng_drip_'+student.id+'_'+todayStr,JSON.stringify([..._dripCache[student.id][todayStr]]));}catch(e){}
+  }
+  // The class the student is on when the day starts (open, not completed, opened on an
+  // earlier day — e.g. D01 on the first day) counts as one of today's classes. It is
+  // recorded in today's row the first time we see it, so completing it later in the day
+  // does not free up an extra slot.
+  if(!openedToday.size){
+    var carried=ALL_LESSONS.find(function(l){ return allUnlocked.has(l.order)&&!done.has(l.order); });
+    if(carried) recordToday(carried.order);
+  }
+  var usedToday = openedToday.size;
+  // Not loaded yet: show only what is certain (Day 1, completed, recorded unlocks).
+  // refreshUnlockViews() redraws once sbLoadProgress has the drip rows.
+  if(!dripLoaded) return allUnlocked;
 
-    // At phase boundary, unlock remaining 3 lessons of this phase in the same pass
-    if(lessonIdx % PHASE === 0){
-      // Continue looping — the next 3 will be unlocked by normal sequential flow
-    }
+  for(let i=1;i<ALL_LESSONS.length;i++){
+    const lesson=ALL_LESSONS[i], prev=ALL_LESSONS[i-1];
+    if(allUnlocked.has(lesson.order)) continue;   // already open (drip / completed / admin)
+    if(!done.has(prev.order)) break;              // sequential: previous must be completed
+    if(usedToday>=LIMIT) break;                   // daily maximum reached — next class tomorrow
+
+    allUnlocked.add(lesson.order);
+    recordToday(lesson.order);
+    usedToday++;
   }
 
   return allUnlocked;
 }
 
+// Redraw whatever on screen depends on unlock state (after progress/drip load or a
+// completion) without reloading the video player.
+function refreshUnlockViews(){
+  try{
+    var scr=(history.state&&history.state.screen)||'';
+    if(scr==='lesson'&&typeof window._lsRefresh==='function'){ window._lsRefresh(); return; }
+    if((scr==='dashboard'||scr==='courses')&&document.getElementById('main-content')){
+      var y=window.scrollY; (scr==='dashboard'?renderDashboard:renderMyCourses)(); window.scrollTo(0,y);
+    }
+  }catch(e){}
+}
 function isUnlocked(lesson){
   if(isDemoSession())return (typeof canDemoLesson==='function')?canDemoLesson(lesson):true;
   if(currentSession?.role==="student"){
