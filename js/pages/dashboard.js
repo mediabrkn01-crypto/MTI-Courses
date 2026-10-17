@@ -81,13 +81,15 @@ function renderProfile(){
   const fmtLong=d=>d.toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'});
   const access=(()=>{
     const{validUntil,expired}=getValidity(student);
-    if(student.completedAt) return{c:'ok',t:'Course complete — lifetime access',s:'Finished '+fmtLong(new Date(student.completedAt))+'. Revisit any lesson anytime.'};
-    if(!validUntil) return{c:'muted',t:'Active access',s:'Complete all lessons to keep everything unlocked for life.'};
+    // Completion and access are separate: finishing the course never extends access.
+    const done=student.completedAt?'Course completed '+fmtLong(new Date(student.completedAt))+'. ':'';
+    if(!validUntil) return{c:'muted',t:student.completedAt?'Course complete':'Active access',s:done+'Your course access has no end date.'};
     const days=Math.ceil((validUntil-today)/86400000);
-    if(expired) return{c:'bad',t:'Access expired',s:'Ended '+fmtLong(validUntil)+'. Contact your admin to renew.'};
-    if(days<=7) return{c:'bad',t:'Expires in '+days+' day'+(days===1?'':'s'),s:'Valid until '+fmtLong(validUntil)+'. Contact your admin to extend.'};
-    if(days<=30) return{c:'warn',t:days+' days remaining',s:'Valid until '+fmtLong(validUntil)+'. Finish the course to keep lifetime access.'};
-    return{c:'ok',t:'Active · '+days+' days left',s:'Valid until '+fmtLong(validUntil)+'. Finish the course to keep lifetime access.'};
+    if(expired) return{c:'bad',t:'Access expired',s:done+'Ended '+fmtLong(validUntil)+'. Contact your admin to renew.'};
+    const until='Valid until '+fmtLong(validUntil)+'. ';
+    if(days<=7) return{c:'bad',t:'Expires in '+days+' day'+(days===1?'':'s'),s:done+until+'Contact your admin to extend.'};
+    if(days<=30) return{c:'warn',t:days+' days remaining',s:done+until+'You can access all course videos until this date.'};
+    return{c:'ok',t:'Active · '+days+' days left',s:done+until+'You can access all course videos until this date.'};
   })();
   const pfStat=(label,val,of)=>`<div class="dsh-card dsh-stat">
     <div class="dsh-stat-top">${label}</div>

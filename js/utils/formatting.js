@@ -21,7 +21,8 @@ function formatDate(d){return d.toLocaleDateString(undefined,{weekday:"short",mo
 function getValidity(student){
   if(!student.validUntil)return{validUntil:null,expired:false};
   const d=new Date(student.validUntil); d.setHours(23,59,59,0);
-  if(student.completedAt)return{validUntil:d,expired:false};
+  // Access ends on the validity date for everyone — completing the course does not
+  // extend it (there is no lifetime access).
   return{validUntil:d,expired:today>d};
 }
 function validityBadge(student){
