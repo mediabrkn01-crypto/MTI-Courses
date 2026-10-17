@@ -13,7 +13,7 @@
 @media(max-width:1023px){.dashboard-layout{flex-direction:column}.lesson-panel-wrap{width:100%;border-left:none;border-top:1px solid rgba(255,255,255,.06)}}
 
 /* ══ STUDENT DASHBOARD (dsh-) & PROFILE (pf-) ══ */
-.dsh-wrap{padding:28px 32px 80px;max-width:1600px}
+.dsh-wrap{padding:28px 32px 80px;max-width:1880px;margin:0 auto;box-sizing:border-box;width:100%}
 .dsh-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:18px;position:relative}
 .dsh-h2{font-family:'Montserrat',sans-serif;font-weight:700;font-size:16px;color:#fff;margin:0}
 .dsh-link{font-size:12px;font-weight:600;color:var(--g1);cursor:pointer;background:none;border:none;padding:0}
@@ -62,7 +62,7 @@
 .dsh-wv-row::-webkit-scrollbar{height:0}
 
 /* Profile */
-.pf-wrap{padding:28px 32px 80px;max-width:1120px}
+.pf-wrap{padding:28px 32px 80px;max-width:1120px;margin:0 auto;box-sizing:border-box;width:100%}
 .pf-grid{display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px;align-items:start}
 .pf-id{padding:24px;text-align:center;display:flex;flex-direction:column;align-items:center}
 .pf-id .avatar-upload{margin-bottom:14px}
