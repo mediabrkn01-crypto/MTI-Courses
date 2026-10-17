@@ -6,7 +6,7 @@
    │ the Add Student / Set Password flow right after Supabase Auth accepted that password,  │
    │ and are never stored anywhere.                                                          │
    │                                                                                         │
-   │ Screenshots live in /assets/guide/. To refresh them, replace those files (same names)  │
+   │ Screenshots live in /assets/guide/. To refresh them, add new files with a new suffix (browsers cache old names)  │
    │ with new captures of the student app at 1280×800 (2× is fine).                          │
    └───────────────────────────────────────────────────────────────────────────────────────┘ */
 var GUIDE = {
@@ -14,6 +14,7 @@ var GUIDE = {
   siteLabel: 'academy.brokenenglish.in',
   supportEmail: 'mediabrkn01@gmail.com',       // same contact shown on the student sign-in page
   fileName: 'Broken-English-Student-Guide-{name}.pdf',
+  edition: 'Oct 2026',                          // shown as the "Updated" badge on the download card — bump when screenshots/text change
 
   cover: {
     title: 'WELCOME TO BROKEN ENGLISH',
@@ -36,7 +37,7 @@ var GUIDE = {
         'Click Sign In.',
         'You will be taken to your Student Dashboard.'
       ],
-      images: [{ src: 'assets/guide/01-login-v2.jpg', caption: 'Step 1 — Sign in using your email and password.' }],
+      images: [{ src: 'assets/guide/01-login-2610.jpg', caption: 'Step 1 — Sign in using your email and password.' }],
       tip: 'Forgot your password? Click "Forgot password?" just below the password box and we will email you a secure reset link.'
     },
     {
@@ -50,7 +51,7 @@ var GUIDE = {
         ['Your journey phases', 'The course is split into 5 phases of 4 days each.'],
         ['Left menu', 'Dashboard, The Course, Pronunciation Workshop, Live With Sreekanth and Achievements.']
       ],
-      images: [{ src: 'assets/guide/02-dashboard.jpg', caption: 'Your Student Dashboard.' }]
+      images: [{ src: 'assets/guide/02-dashboard-2610.jpg', caption: 'Your Student Dashboard.' }]
     },
     {
       title: 'How to access your classes',
@@ -63,8 +64,8 @@ var GUIDE = {
         'Your progress is saved automatically, on every device you use.'
       ],
       images: [
-        { src: 'assets/guide/03-course.jpg', caption: 'The Course — Completed, Up next and Locked classes.' },
-        { src: 'assets/guide/04-lesson.jpg', caption: 'A class page: the video, mission objectives and the Mission challenge.' }
+        { src: 'assets/guide/03-course-2610.jpg', caption: 'The Course — Completed, Up next and Locked classes.' },
+        { src: 'assets/guide/04-lesson-2610.jpg', caption: 'A class page: the video, mission objectives and the Mission challenge.' }
       ],
       tip: 'After you finish a class, its Mission challenge (a short quiz) unlocks — score 70% or more to pass. The next class opens as soon as you complete the current one, up to 4 classes per day.'
     },
@@ -77,7 +78,7 @@ var GUIDE = {
         'Click a lesson card to open it.',
         'Watch the lesson. Finished lessons show a green tick.'
       ],
-      images: [{ src: 'assets/guide/05-workshop.jpg', caption: 'Pronunciation Workshop.' }]
+      images: [{ src: 'assets/guide/05-workshop-2610.jpg', caption: 'Pronunciation Workshop.' }]
     },
     {
       title: 'Track your progress',
@@ -99,8 +100,8 @@ var GUIDE = {
         ['Profile', 'Click your initial at the top right to see your account details, how long your course access lasts, and to change your password.']
       ],
       images: [
-        { src: 'assets/guide/06-achievements.jpg', caption: 'Achievements.' },
-        { src: 'assets/guide/07-profile.jpg', caption: 'Your Profile — account details and password.' }
+        { src: 'assets/guide/06-achievements-2610.jpg', caption: 'Achievements.' },
+        { src: 'assets/guide/07-profile-2610.jpg', caption: 'Your Profile — account details and password.' }
       ]
     }
   ],
@@ -346,6 +347,18 @@ var GUIDE = {
 
   // Public: generate and download. student = {name, email, password} — password is the one
   // Supabase Auth has just accepted for this student; it is only held in memory by the caller.
+  // Download card used wherever the guide is offered (Add student success, Manage → Set password).
+  window.guideCardHtml=function(o){
+    return '<div class="gd-card">'
+      +'<span class="gd-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg><b>PDF</b></span>'
+      +'<div class="gd-txt"><p class="gd-k">Student Guide <span class="gd-badge">Updated '+escapeHtml(GUIDE.edition||'')+'</span></p>'
+      +'<p class="gd-t">Need help getting started?</p>'
+      +'<p class="gd-s">A step-by-step guide to the platform with '+(o.name?escapeHtml(o.name)+'\'s':'the student\'s')+' sign-in details. Send it to them after this step.</p></div>'
+      +'<button type="button" id="'+o.btnId+'" class="adm-btn adm-btn-primary gd-btn" onclick="'+o.onclick+'">'
+      +'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>Download Student Guide PDF</button>'
+      +'<p id="'+o.errId+'" class="gd-err" role="alert" style="display:none"></p>'
+    +'</div>';
+  };
   window.downloadStudentGuide=async function(student,btn){
     if(!student||!student.name||!student.email||!student.password) throw new Error('Student details are missing.');
     var label=btn?btn.innerHTML:'';

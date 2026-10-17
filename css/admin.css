@@ -562,3 +562,16 @@ tr.dm-dim td:last-child{opacity:1}
   .st-row{grid-template-columns:1fr;gap:10px}
 }
 @media(max-width:520px){.st-sec-head{padding:16px}.st-sec-body{padding:4px 16px 16px}.st-add-grid{grid-template-columns:1fr}}
+
+/* ── Student Guide download card (gd-*) ── */
+.gd-card{display:grid;grid-template-columns:auto 1fr;gap:12px 14px;align-items:start;text-align:left;margin:0 0 10px;padding:16px;border-radius:14px;
+  background:radial-gradient(circle at 0% 0%,rgba(255,107,6,.12),transparent 55%),rgba(255,255,255,.03);border:1px solid rgba(255,107,6,.22)}
+.gd-ic{width:48px;height:56px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:#fff;background:linear-gradient(135deg,#ff6b06,#f9182f 55%,#ff0552);box-shadow:0 8px 20px rgba(249,24,47,.3)}
+.gd-ic b{font-size:9px;font-weight:800;letter-spacing:.08em}
+.gd-txt{min-width:0}
+.gd-k{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 3px;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fdba74}
+.gd-badge{padding:2px 7px;border-radius:99px;font-size:9.5px;letter-spacing:.04em;text-transform:none;font-weight:700;color:#86efac;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3)}
+.gd-t{margin:0 0 3px;font-size:14px;font-weight:700;color:#fff}
+.gd-s{margin:0;font-size:12px;line-height:1.5;color:var(--muted2)}
+.gd-btn{grid-column:1/-1;width:100%;padding:12px 16px;font-size:13px;border-radius:12px;background:linear-gradient(135deg,#ff6b06 0%,#f9182f 50%,#ff0552 100%)}
+.gd-err{grid-column:1/-1;margin:0;font-size:12px;color:#fb7185}

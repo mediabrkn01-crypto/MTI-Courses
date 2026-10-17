@@ -302,11 +302,11 @@ async function renderAdminStudent(id){
       var _stu=loadStudents()[sid]||{};
       var _creds={name:_stu.name||'',email:_stu.email||'',password:pass};
       if(msg&&_creds.name&&_creds.email){
-        var gb=document.createElement('button');
-        gb.type='button'; gb.className='adm-btn adm-btn-primary'; gb.style.marginTop='10px';
-        gb.innerHTML='<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>Download Student Guide';
-        gb.onclick=function(){ downloadStudentGuide(_creds,gb).catch(function(e){ msg.appendChild(document.createTextNode(' — Could not create the PDF: '+(e.message||e))); }); };
-        msg.appendChild(document.createElement('br')); msg.appendChild(gb);
+        var holder=document.createElement('div'); holder.style.marginTop='12px';
+        holder.innerHTML=guideCardHtml({btnId:'sp-guide-btn',errId:'sp-guide-err',onclick:'',name:_creds.name});
+        msg.appendChild(holder);
+        var gb=holder.querySelector('#sp-guide-btn'), ge=holder.querySelector('#sp-guide-err');
+        gb.onclick=function(){ ge.style.display='none'; downloadStudentGuide(_creds,gb).catch(function(e){ ge.textContent='Could not create the PDF: '+(e.message||e); ge.style.display='block'; }); };
       }
     }else{
       if(msg){msg.textContent='Failed: '+(result.error||'unknown error');msg.style.color='#f87171';msg.style.display='block';}
