@@ -25,7 +25,7 @@ window.doStudentLogin=async()=>{
   errEl.style.display="none";
   errEl.textContent="";
   const loginBtn=document.getElementById("login-btn-main");
-  if(loginBtn){loginBtn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:inline-block"></span>Signing in...</span>';loginBtn.disabled=true;}
+  if(loginBtn){loginBtn.innerHTML='<span class="bl-spin"></span>Signing in…';loginBtn.disabled=true;}
 
   // Maintenance: read the current setting before signing in (cheap, readable by anyone).
   if(typeof maintFetchConfig==='function') await maintFetchConfig();
