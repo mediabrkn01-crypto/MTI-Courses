@@ -51,6 +51,10 @@ function renderLesson(lessonId){
   var completed=isCompleted(lesson.id);
   var section=SECTIONS.find(function(s){return s.id===lesson.sectionId;});
   var realQuiz=hasRealQuiz(lesson);
+  // Load this lesson's quiz in the background so it opens instantly. Data only (no answer
+  // key) — the quiz button keeps its own unlock rules (lesson completed / admin lock).
+  if(realQuiz&&currentSession?.role==="student"&&!getLockedQuizzes(currentSession.studentId).includes(lesson.order))
+    setTimeout(function(){ try{ QuizEngine.prefetch(lesson.order); }catch(e){} },800);
   if(!_viewGuardOk()){navigate("login");return;}
   var student=loadStudents()[currentSession.studentId];
   var videoMeta=loadVideos()[lesson.order]||{};

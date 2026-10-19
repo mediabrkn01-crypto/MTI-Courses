@@ -169,3 +169,82 @@ function parseQuizFromJSON(text){
     }).filter(function(q){return q.prompt&&q.options.length>=2;});
   }catch(e){ throw new Error('Invalid JSON: '+e.message); }
 }
+
+// ── Learner quiz engine (every MTI quiz uses this) ──────────────────────────────
+// One request per action, straight to Postgres (quiz_start / quiz_answer / quiz_finish
+// RPCs — 20261020_quiz_fast_rpc.sql). The learner payload never contains the answer key;
+// a question's correct option comes back only after that question is answered.
+// prefetch(order) is called from the lesson page so the quiz opens from memory.
+// Falls back to the `quiz` Edge Function if the RPCs are not installed yet.
+var QuizEngine=(function(){
+  var MAX_AGE=10*60*1000, TIMEOUT=12000;
+  var cache={};          // lessonOrder -> {p: Promise(startPayload), at: ms}
+  var useEdge=false;
+  var MSG={unauthorized:'Your session has expired. Please sign in again.',session_expired:'Your session has expired. Please sign in again.',
+    no_student:'This account is not linked to a student profile.',attempt_finished:'This quiz attempt is already finished.',
+    attempt_not_found:'This quiz attempt could not be found.',server_error:'Something went wrong on our side. Please try again.'};
+  function friendly(code){ code=String(code||''); if(/jwt/i.test(code)) return MSG.unauthorized; return MSG[code]||code; }
+  function perfOn(){ try{ return location.hostname==='localhost'||localStorage.getItem('be_quiz_perf')==='1'; }catch(e){ return false; } }
+  function perf(label,ms){
+    if(!perfOn()) return;
+    (window.__quizPerf=window.__quizPerf||[]).push({label:label,ms:Math.round(ms),at:Date.now()});
+    console.info('[quiz-perf] '+label+': '+Math.round(ms)+' ms');
+  }
+  async function edge(payload){
+    var r=await _sb.auth.getSession(); var sess=r&&r.data&&r.data.session;
+    if(!sess) throw new Error(MSG.unauthorized);
+    var ctl=new AbortController(), t=setTimeout(function(){ctl.abort();},TIMEOUT);
+    try{
+      var resp=await fetch(SUPABASE_URL.replace(/\/$/,'')+'/functions/v1/quiz',{method:'POST',signal:ctl.signal,
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+sess.access_token,'apikey':SUPABASE_KEY},body:JSON.stringify(payload)});
+      var data=null; try{ data=await resp.json(); }catch(e){}
+      if(!resp.ok) throw new Error(friendly((data&&data.error)||('HTTP '+resp.status)));
+      return data;
+    }catch(e){ if(e.name==='AbortError') throw new Error('timeout'); throw e; }
+    finally{ clearTimeout(t); }
+  }
+  async function call(fn,args,edgePayload){
+    if(!useEdge){
+      var ctl=new AbortController(), t=setTimeout(function(){ctl.abort();},TIMEOUT);
+      try{
+        var res=await _sb.rpc(fn,args).abortSignal(ctl.signal);
+        if(!res.error) return res.data;
+        var m=res.error.message||'';
+        if(res.error.code==='PGRST202'||/could not find the function/i.test(m)) useEdge=true;
+        else if(/abort/i.test(m)||res.error.name==='AbortError') throw new Error('timeout');
+        else throw new Error(friendly(m));
+      }finally{ clearTimeout(t); }
+    }
+    return edge(edgePayload);
+  }
+  function start(order){
+    var t0=performance.now();
+    return call('quiz_start',{p_lesson:order},{action:'start',lessonOrder:order})
+      .then(function(d){ perf('start request (lesson '+order+')',performance.now()-t0); return d; });
+  }
+  // Background load of one lesson's quiz (questions + this student's attempt state).
+  function prefetch(order){
+    if(!order||typeof _sb==="undefined"||currentSession?.role!=="student") return null;
+    var c=cache[order];
+    if(c&&Date.now()-c.at<MAX_AGE) return c.p;
+    var p=start(order); cache[order]={p:p,at:Date.now()};
+    p.catch(function(){ if(cache[order]&&cache[order].p===p) delete cache[order]; });
+    return p;
+  }
+  // Quiz screen: use the prefetched payload (or start now). Consumed once so the next
+  // visit reloads the attempt state from the server.
+  function take(order){
+    var c=cache[order], p=(c&&Date.now()-c.at<MAX_AGE)?c.p:start(order);
+    delete cache[order];
+    return p;
+  }
+  function answer(attemptId,q,oi){
+    var t0=performance.now();
+    return call('quiz_answer',{p_attempt:attemptId,p_question:q.id,p_option_index:oi,p_option_text:q.options[oi]},
+      {action:'answer',attemptId:attemptId,questionId:q.id,optionIndex:oi,optionText:q.options[oi]})
+      .then(function(d){ perf('answer request',performance.now()-t0); return d; });
+  }
+  function finish(attemptId){ return call('quiz_finish',{p_attempt:attemptId},{action:'finish',attemptId:attemptId}); }
+  function invalidate(order){ delete cache[order]; }
+  return {prefetch:prefetch,take:take,answer:answer,finish:finish,invalidate:invalidate,perf:perf};
+})();

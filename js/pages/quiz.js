@@ -44,6 +44,7 @@ function renderQuizzes(){
           const quizReady=unlocked&&lessonDone&&!qAdminLocked;
           const section=SECTIONS.find(s=>s.id===l.sectionId);
           return`<div class="quiz-row" style="display:flex;align-items:center;gap:14px;padding:16px 20px;${i>0?'border-top:1px solid rgba(255,255,255,0.08)':''};${quizReady?'cursor:pointer':'cursor:default'};${!quizReady?'opacity:0.55':''}"
+            ${quizReady?`onpointerenter="QuizEngine.prefetch(${l.order})" ontouchstart="QuizEngine.prefetch(${l.order})"`:''}
             onclick="${quizReady?`navigate('quiz',{lessonId:'${l.id}'})`:''}">
             <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;${quizReady?'background:linear-gradient(135deg,#E8341A,#FF7100);box-shadow:inset 0 2px 0 rgba(255,255,255,0.25),0 4px 12px rgba(232,52,26,0.4)':qAdminLocked&&lessonDone?'background:rgba(234,179,8,0.15);border:1px solid rgba(234,179,8,0.25)':'background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15)'}">
               <svg style="width:18px;height:18px;color:${quizReady?'#fff':qAdminLocked&&lessonDone?'#facc15':'rgba(255,255,255,0.4)'}" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -81,9 +82,11 @@ function renderQuiz(lessonId){
   }
   if(!_viewGuardOk()){navigate("login");return;}
   const student=loadStudents()[currentSession.studentId];
-  // Questions, grading and locking all come from the quiz Edge Function, which reads the
-  // single private answer key (quiz_answers). The browser never holds the answers: each
-  // answer is sent once, graded on the server, stored and locked (refresh-safe).
+  // Questions, grading and locking come from QuizEngine (services/quizzes.js): one small
+  // request per action to the private answer key. The browser never holds the answers;
+  // each answer is graded once on the server, stored and locked (refresh-safe). The
+  // question set is usually prefetched on the lesson page, so this screen opens from memory.
+  var tOpen=performance.now();
   let QUESTIONS=[], total=0, attemptId=null, ANSWERS={};
   let current=0, correct=0;
 
@@ -121,6 +124,11 @@ function renderQuiz(lessonId){
     .be-fb b{color:#fff}
     @media(max-width:480px){.be-quiz-body{padding:28px 14px 80px}.be-opt{padding:13px 14px;gap:11px;font-size:13.5px}.be-opt-tag{padding:2px 7px;font-size:10.5px}.be-q-prompt{font-size:16px}.be-quiz-title{font-size:23px}}
     .be-opt.dim{opacity:.4}
+    .be-fb.wait{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);color:var(--muted2);font-weight:500;align-items:center}
+    .be-spin{width:13px;height:13px;border-radius:50%;border:2px solid rgba(255,255,255,.15);border-top-color:rgba(255,255,255,.6);animation:beSpin .7s linear infinite;flex-shrink:0}
+    @keyframes beSpin{to{transform:rotate(360deg)}}
+    .be-skel{border-radius:8px;background:linear-gradient(90deg,rgba(255,255,255,.04),rgba(255,255,255,.08),rgba(255,255,255,.04));background-size:200% 100%;animation:beSkel 1.2s ease-in-out infinite}
+    @keyframes beSkel{0%{background-position:200% 0}100%{background-position:-200% 0}}
     .be-opt.selected{background:rgba(99,102,241,.12)!important;border-color:rgba(99,102,241,.5)!important}
     .be-opt.selected .be-opt-letter{border-color:rgba(99,102,241,.6);color:#a5b4fc;background:rgba(99,102,241,.15)}
     .be-opt-letter{display:flex;width:32px;height:32px;flex-shrink:0;align-items:center;justify-content:center;border-radius:50%;border:1.5px solid rgba(255,255,255,.2);font-family:'JetBrains Mono',monospace;font-weight:700;font-size:11px;color:rgba(255,255,255,.5);transition:all .15s}
@@ -170,23 +178,6 @@ function renderQuiz(lessonId){
   var IC_OK='<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
   var IC_X='<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
 
-  async function quizApi(payload){
-    var r=await _sb.auth.getSession(); var sess=r&&r.data&&r.data.session;
-    if(!sess) throw new Error('Your session has expired. Please sign in again.');
-    var resp=await fetch(SUPABASE_URL.replace(/\/$/,'')+'/functions/v1/quiz',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+sess.access_token,'apikey':SUPABASE_KEY},
-      body:JSON.stringify(payload)
-    });
-    var data=null; try{ data=await resp.json(); }catch(e){}
-    if(!resp.ok){
-      var code=(data&&data.error)||('HTTP '+resp.status);
-      var MSG={session_expired:'Your session has expired. Please sign in again.',unauthorized:'Your session has expired. Please sign in again.',no_student:'This account is not linked to a student profile.',attempt_finished:'This quiz attempt is already finished.',server_error:'Something went wrong on our side. Please try again.'};
-      throw new Error(MSG[code]||code);
-    }
-    return data;
-  }
-
   // Paint a question's locked state (used right after answering and when restoring).
   function paintResult(q,res){
     q.options.forEach(function(_,i){
@@ -233,28 +224,33 @@ function renderQuiz(lessonId){
     window.pickAnswer=async(oi)=>{
       if(busy||ANSWERS[q.id]) return;
       busy=true;
-      q.options.forEach((_,i)=>{ var b=document.getElementById("opt-"+i); b.disabled=true; if(i===oi) b.classList.add("checking"); else b.classList.add("dim"); });
+      // Register the pick instantly; colour only after the server has graded it.
+      q.options.forEach((_,i)=>{ var b=document.getElementById("opt-"+i); b.disabled=true; b.classList.remove("checking","dim"); if(i===oi) b.classList.add("selected","checking"); else b.classList.add("dim"); });
       var fb=document.getElementById("feedback-box");
-      fb.className="be-fb"; fb.style.display=""; fb.style.color="var(--muted2)"; fb.textContent="Checking your answer…";
+      fb.style.display="none"; fb.onclick=null;
+      var slow=setTimeout(function(){ if(busy){ fb.className="be-fb wait"; fb.style.display=""; fb.innerHTML='<span class="be-spin"></span><span>Checking…</span>'; } },250);
+      var t0=performance.now();
       try{
-        var res=await quizApi({action:'answer',attemptId:attemptId,questionId:q.id,optionIndex:oi,optionText:q.options[oi]});
-        fb.style.color="";
+        var res=await QuizEngine.answer(attemptId,q,oi);
+        clearTimeout(slow);
         ANSWERS[q.id]={selectedIndex:res.selectedIndex,isCorrect:res.isCorrect,correctIndex:res.correctIndex};
-        if(QUESTIONS[current]===q) paintResult(q,ANSWERS[q.id]);
+        if(QUESTIONS[current]===q){ var t1=performance.now(); paintResult(q,ANSWERS[q.id]); QuizEngine.perf('answer click -> feedback',performance.now()-t0); QuizEngine.perf('response -> feedback rendered',performance.now()-t1); }
+        busy=false;
       }catch(e){
-        // Not recorded — let the student try again.
-        q.options.forEach((_,i)=>{ var b=document.getElementById("opt-"+i); if(b){ b.disabled=false; b.classList.remove("checking","dim"); } });
-        fb.style.color=""; fb.className="be-fb err";
-        fb.textContent="Couldn't check your answer ("+e.message+"). Please try again.";
+        clearTimeout(slow);
+        // Not graded: keep the pick, show no colour, offer a retry of the same answer.
+        busy=false;
+        fb.className="be-fb err"; fb.style.display=""; fb.style.cursor="pointer";
+        fb.innerHTML='<span>'+(e.message==='timeout'||/fetch|network/i.test(e.message)?"Couldn't check the answer. Tap to retry.":escapeHtml(e.message)+' Tap to retry.')+'</span>';
+        fb.onclick=function(){ fb.onclick=null; fb.style.cursor=""; var b=document.getElementById("opt-"+oi); if(b) b.classList.remove("selected"); window.pickAnswer(oi); };
       }
-      busy=false;
     };
   }
 
   window.nextQuestion=()=>{
     var nxt=QUESTIONS.findIndex(function(q,i){return i>current&&!ANSWERS[q.id];});
     if(nxt<0) nxt=QUESTIONS.findIndex(function(q){return !ANSWERS[q.id];});
-    if(nxt>=0){showQuestion(nxt);document.querySelector(".be-quiz-body").scrollTo(0,0);}
+    if(nxt>=0){var t0=performance.now();showQuestion(nxt);document.querySelector(".be-quiz-body").scrollTo(0,0);QuizEngine.perf('next question rendered',performance.now()-t0);}
     else showResults();
   };
 
@@ -267,24 +263,34 @@ function renderQuiz(lessonId){
     var rb=document.getElementById("q-retry"); if(rb) rb.onclick=retry;
   }
 
-  // Score comes from the answers stored on the server for this attempt.
-  async function showResults(){
-    document.getElementById("progress-fill").style.width="100%";
-    document.getElementById("q-counter").textContent="Grading…";
-    document.getElementById("q-score").textContent="";
-    document.getElementById("question-slot").innerHTML='<div style="text-align:center;padding:40px 0"><div style="font-size:14px;color:var(--muted)">Calculating your score…</div></div>';
+  // Every answer was already graded by the server, so the result renders immediately from
+  // those graded answers; quiz_finish then records it (same numbers, computed server-side).
+  var finishing=null;
+  function showResults(){
     var _lesson=ALL_LESSONS.find(l=>l.id===lessonId);
-    var result;
-    try{ result=await quizApi({action:'finish',attemptId:attemptId}); }
-    catch(e){ showMessage("Couldn't calculate your score",e.message,showResults); return; }
-
-    var finalCorrect=result.score, finalTotal=result.total, finalScore=result.pct, passed=result.passed;
-    if(currentSession?.studentId&&_lesson){
-      saveAttemptedQuiz(currentSession.studentId,_lesson.order);
-      if(passed) savePassedQuiz(currentSession.studentId,_lesson.order);
-      // quiz_scores is written by the server for this attempt.
+    var finalCorrect=QUESTIONS.filter(function(q){return ANSWERS[q.id]&&ANSWERS[q.id].isCorrect;}).length;
+    var finalTotal=total, finalScore=finalTotal?Math.round(finalCorrect/finalTotal*100):0, passed=finalScore>=70;
+    function save(){
+      var st=document.getElementById("q-save-state"); if(st){ st.textContent=""; st.onclick=null; }
+      finishing=QuizEngine.finish(attemptId).then(function(r){
+        QuizEngine.invalidate(lesson.order);
+        if(currentSession?.studentId&&_lesson){
+          saveAttemptedQuiz(currentSession.studentId,_lesson.order);
+          if(r.passed) savePassedQuiz(currentSession.studentId,_lesson.order);
+        }
+        if(r.score!==finalCorrect||r.total!==finalTotal) renderResult(r.score,r.total,r.pct,r.passed);
+      }).catch(function(e){
+        finishing=null;
+        var st=document.getElementById("q-save-state");
+        if(st){ st.textContent="Couldn't save your score. Tap to retry."; st.onclick=save; }
+      });
     }
+    renderResult(finalCorrect,finalTotal,finalScore,passed);
+    save();
+  }
 
+  function renderResult(finalCorrect,finalTotal,finalScore,passed){
+    document.getElementById("progress-fill").style.width="100%";
     document.getElementById("q-counter").textContent="Complete";
     document.getElementById("q-score").textContent=finalCorrect+"/"+finalTotal+" correct";
     var col=passed?"#4ade80":"var(--g1)";
@@ -311,26 +317,35 @@ function renderQuiz(lessonId){
       +'<div style="display:flex;flex-direction:column;gap:10px">'
         +(!passed?'<button id="retake-btn" class="be-next-btn">Retake Quiz</button>':'')
         +'<button id="dash-btn" style="background:none;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:13px;font-size:13px;color:var(--muted);cursor:pointer;font-family:Inter,sans-serif;transition:all .15s" onmouseover="this.style.borderColor=\'rgba(255,45,120,.3)\';this.style.color=\'#fff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\';this.style.color=\'var(--muted)\'">Back to Dashboard</button>'
+      +'<div id="q-save-state" style="font-size:12px;color:#fdba74;cursor:pointer;min-height:16px"></div>'
       +'</div></div>';
     var rb=document.getElementById("retake-btn");
-    if(rb) rb.addEventListener("click",function(){navigate("quiz",{lessonId:lessonId});});
+    // Retake starts a new attempt once this one is recorded as finished.
+    if(rb) rb.addEventListener("click",function(){ rb.disabled=true; Promise.resolve(finishing).catch(function(){}).then(function(){navigate("quiz",{lessonId:lessonId});}); });
     var db=document.getElementById("dash-btn");
     if(db) db.addEventListener("click",function(){navigate("dashboard");});
   }
 
-  // Start or resume this lesson's attempt, then open the first unanswered question.
+  // Start or resume this lesson's attempt (usually already prefetched by the lesson page),
+  // then open the first unanswered question.
   async function begin(){
-    document.getElementById("question-slot").innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:14px">Loading quiz…</div>';
+    var slot=document.getElementById("question-slot"), ready=false;
+    // Placeholder only if the data is not in memory within a moment (never for a prefetched quiz).
+    setTimeout(function(){ if(!ready&&slot.isConnected) slot.innerHTML='<div class="be-skel" style="height:22px;width:85%;margin-bottom:10px"></div><div class="be-skel" style="height:22px;width:55%;margin-bottom:30px"></div>'+[0,1,2,3].map(function(){return '<div class="be-skel" style="height:58px;margin-bottom:10px;border-radius:14px"></div>';}).join(''); },120);
     try{
-      var st=await quizApi({action:'start',lessonOrder:lesson.order});
+      var st=await QuizEngine.take(lesson.order);
+      ready=true;
       attemptId=st.attemptId; QUESTIONS=st.questions||[]; total=QUESTIONS.length; ANSWERS=st.answers||{};
     }catch(e){
-      showMessage(e.message==='no_quiz'?'No quiz for this class yet':"Couldn't load the quiz", e.message==='no_quiz'?'Check back later.':e.message, e.message==='no_quiz'?null:begin);
+      ready=true;
+      if(/attempt_finished|already finished/i.test(e.message)) { QuizEngine.invalidate(lesson.order); return begin(); }
+      showMessage(e.message==='no_quiz'?'No quiz for this class yet':"Couldn't load the quiz", e.message==='no_quiz'?'Check back later.':(e.message==='timeout'?'The connection is slow. Please try again.':e.message), e.message==='no_quiz'?null:begin);
       return;
     }
     if(!total){ showMessage('No quiz for this class yet','Check back later.',null); return; }
     var first=QUESTIONS.findIndex(function(q){return !ANSWERS[q.id];});
     if(first<0) showResults(); else showQuestion(first);
+    QuizEngine.perf('quiz open -> first question rendered',performance.now()-tOpen);
   }
   begin();
 }
