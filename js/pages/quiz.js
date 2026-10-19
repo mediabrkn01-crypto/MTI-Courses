@@ -81,10 +81,11 @@ function renderQuiz(lessonId){
   }
   if(!_viewGuardOk()){navigate("login");return;}
   const student=loadStudents()[currentSession.studentId];
-  const QUESTIONS=getQuiz(lesson);
-  const total=QUESTIONS.length;
-  let current=0,correct=0,answered=false;
-  var userResponses={}; // { questionId: choiceIndex } — submitted to server at end
+  // Questions, grading and locking all come from the quiz Edge Function, which reads the
+  // single private answer key (quiz_answers). The browser never holds the answers: each
+  // answer is sent once, graded on the server, stored and locked (refresh-safe).
+  let QUESTIONS=[], total=0, attemptId=null, ANSWERS={};
+  let current=0, correct=0;
 
   document.body.style.overflow='hidden';
 
@@ -104,8 +105,21 @@ function renderQuiz(lessonId){
     .be-q-prompt{font-family:'Montserrat',sans-serif;font-weight:700;font-size:18px;color:#fff;line-height:1.5;margin-bottom:28px}
     .be-opt{display:flex;align-items:center;gap:14px;width:100%;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:14px;padding:16px 20px;cursor:pointer;text-align:left;color:#fff;font-size:14px;font-family:'Inter',sans-serif;transition:all .15s;margin-bottom:10px}
     .be-opt:hover:not(:disabled){background:rgba(255,255,255,.08);border-color:rgba(255,45,120,.4);transform:translateX(4px)}
-    .be-opt.correct{background:rgba(34,197,94,.1)!important;border-color:rgba(34,197,94,.5)!important}
-    .be-opt.wrong{background:rgba(239,68,68,.08)!important;border-color:rgba(239,68,68,.4)!important}
+    .be-opt.correct{background:rgba(34,197,94,.09)!important;border-color:rgba(34,197,94,.5)!important;opacity:1!important}
+    .be-opt.wrong{background:rgba(239,68,68,.08)!important;border-color:rgba(239,68,68,.45)!important;opacity:1!important}
+    .be-opt:disabled{cursor:default}
+    .be-opt-txt{flex:1;min-width:0;line-height:1.45}
+    .be-opt-tag{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap}
+    .be-opt.correct .be-opt-tag{color:#4ade80;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3)}
+    .be-opt.wrong .be-opt-tag{color:#f87171;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.3)}
+    .be-opt.checking{border-color:rgba(255,255,255,.35)!important}
+    .be-fb{display:flex;align-items:flex-start;gap:10px;border-radius:12px;padding:13px 16px;margin-top:16px;font-size:13px;font-weight:600;line-height:1.5}
+    .be-fb svg{flex-shrink:0;margin-top:1px}
+    .be-fb.ok{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.28);color:#86efac}
+    .be-fb.bad{background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.28);color:#fca5a5}
+    .be-fb.err{background:rgba(249,115,22,.08);border:1px solid rgba(249,115,22,.3);color:#fdba74}
+    .be-fb b{color:#fff}
+    @media(max-width:480px){.be-quiz-body{padding:28px 14px 80px}.be-opt{padding:13px 14px;gap:11px;font-size:13.5px}.be-opt-tag{padding:2px 7px;font-size:10.5px}.be-q-prompt{font-size:16px}.be-quiz-title{font-size:23px}}
     .be-opt.dim{opacity:.4}
     .be-opt.selected{background:rgba(99,102,241,.12)!important;border-color:rgba(99,102,241,.5)!important}
     .be-opt.selected .be-opt-letter{border-color:rgba(99,102,241,.6);color:#a5b4fc;background:rgba(99,102,241,.15)}
@@ -147,127 +161,155 @@ function renderQuiz(lessonId){
 
   function updateProgress(){
     document.getElementById("q-counter").textContent="Question "+(current+1)+" of "+total;
-    document.getElementById("q-score").textContent=current>0?correct+" correct":"";
-    document.getElementById("progress-fill").style.width=((current/total)*100)+"%";
+    correct=Object.values(ANSWERS).filter(function(x){return x.isCorrect;}).length;
+    var n=Object.keys(ANSWERS).length;
+    document.getElementById("q-score").textContent=n?correct+" of "+n+" correct":"";
+    document.getElementById("progress-fill").style.width=((n/total)*100)+"%";
+  }
+
+  var IC_OK='<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+  var IC_X='<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+
+  async function quizApi(payload){
+    var r=await _sb.auth.getSession(); var sess=r&&r.data&&r.data.session;
+    if(!sess) throw new Error('Your session has expired. Please sign in again.');
+    var resp=await fetch(SUPABASE_URL.replace(/\/$/,'')+'/functions/v1/quiz',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+sess.access_token,'apikey':SUPABASE_KEY},
+      body:JSON.stringify(payload)
+    });
+    var data=null; try{ data=await resp.json(); }catch(e){}
+    if(!resp.ok){
+      var code=(data&&data.error)||('HTTP '+resp.status);
+      var MSG={session_expired:'Your session has expired. Please sign in again.',unauthorized:'Your session has expired. Please sign in again.',no_student:'This account is not linked to a student profile.',attempt_finished:'This quiz attempt is already finished.',server_error:'Something went wrong on our side. Please try again.'};
+      throw new Error(MSG[code]||code);
+    }
+    return data;
+  }
+
+  // Paint a question's locked state (used right after answering and when restoring).
+  function paintResult(q,res){
+    q.options.forEach(function(_,i){
+      var btn=document.getElementById("opt-"+i); if(!btn) return;
+      btn.disabled=true; btn.classList.remove("checking","selected");
+      var tag=btn.querySelector(".be-opt-tag"); if(tag) tag.remove();
+      if(i===res.correctIndex){
+        btn.classList.add("correct");
+        btn.insertAdjacentHTML("beforeend",'<span class="be-opt-tag">'+IC_OK+(i===res.selectedIndex?'Correct':'Correct answer')+'</span>');
+      }else if(i===res.selectedIndex){
+        btn.classList.add("wrong");
+        btn.insertAdjacentHTML("beforeend",'<span class="be-opt-tag">'+IC_X+'Incorrect</span>');
+      }else btn.classList.add("dim");
+    });
+    var fb=document.getElementById("feedback-box");
+    fb.className="be-fb "+(res.isCorrect?"ok":"bad");
+    fb.style.display="";
+    fb.innerHTML=res.isCorrect
+      ?'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg><span>Correct — well done.</span>'
+      :'<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg><span>Incorrect. The correct answer is <b>'+String.fromCharCode(65+res.correctIndex)+'. '+escapeHtml(q.options[res.correctIndex]||'')+'</b></span>';
+    document.getElementById("next-wrap").style.display="block";
+    updateProgress();
   }
 
   function showQuestion(idx){
-    answered=false;
+    current=idx;
     const q=QUESTIONS[idx];
     const hasHint=!!q.hint;
     document.getElementById("question-slot").innerHTML=
-      (hasHint?'<button class="be-hint-btn" onclick="var hb=document.getElementById(\'hbox\');hb.style.display=hb.style.display===\'none\'?\'block\':\'none\'">Hint 💡</button><div id="hbox" class="be-hint-box">'+q.hint+'</div>':'')
-      +'<div class="be-q-prompt">'+q.prompt+'</div>'
+      (hasHint?'<button class="be-hint-btn" onclick="var hb=document.getElementById(\'hbox\');hb.style.display=hb.style.display===\'none\'?\'block\':\'none\'">Hint 💡</button><div id="hbox" class="be-hint-box">'+escapeHtml(q.hint)+'</div>':'')
+      +'<div class="be-q-prompt">'+escapeHtml(q.prompt)+'</div>'
       +'<div id="options-list">'
-      +q.options.map((opt,oi)=>'<button id="opt-'+oi+'" class="be-opt" onclick="pickAnswer('+oi+')">'
+      +q.options.map((opt,oi)=>'<button type="button" id="opt-'+oi+'" class="be-opt" onclick="pickAnswer('+oi+')">'
         +'<span class="be-opt-letter">'+String.fromCharCode(65+oi)+'</span>'
-        +'<span>'+opt+'</span>'
+        +'<span class="be-opt-txt">'+escapeHtml(opt)+'</span>'
         +'</button>').join("")
       +'</div>'
       +'<div id="feedback-box" style="display:none"></div>'
       +'<div id="next-wrap" style="display:none"><button class="be-next-btn" onclick="nextQuestion()">'+(idx<total-1?"Next Question →":"See Results")+'</button></div>';
     updateProgress();
+    if(ANSWERS[q.id]) paintResult(q,ANSWERS[q.id]); // already answered (e.g. after refresh) — locked
 
-    // SECURITY: q.answer is stripped from QUIZ_BANK — answers graded server-side only.
-    // Collect student responses; submit all at end via submit-quiz Edge Function.
-    window.pickAnswer=(oi)=>{
-      if(answered)return;answered=true;
-      // Record response (questionId = q.id if available, else positional index)
-      var qid=q.id||String(idx);
-      userResponses[qid]=oi;
-      // Disable all buttons and mark selected (no correct/incorrect reveal — server grades)
-      q.options.forEach((_,i)=>{
-        const btn=document.getElementById("opt-"+i);btn.disabled=true;
-        if(i===oi) btn.classList.add("selected");
-        else btn.classList.add("dim");
-      });
-      const fb=document.getElementById("feedback-box");
-      fb.style.cssText="display:flex;align-items:center;gap:10px;border-radius:12px;padding:14px 18px;margin-top:18px;font-size:13px;font-weight:600;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);color:#a5b4fc";
-      fb.innerHTML='<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><span>Answer recorded. Results shown at the end.</span>';
-      document.getElementById("next-wrap").style.display="block";
+    var busy=false;
+    window.pickAnswer=async(oi)=>{
+      if(busy||ANSWERS[q.id]) return;
+      busy=true;
+      q.options.forEach((_,i)=>{ var b=document.getElementById("opt-"+i); b.disabled=true; if(i===oi) b.classList.add("checking"); else b.classList.add("dim"); });
+      var fb=document.getElementById("feedback-box");
+      fb.className="be-fb"; fb.style.display=""; fb.style.color="var(--muted2)"; fb.textContent="Checking your answer…";
+      try{
+        var res=await quizApi({action:'answer',attemptId:attemptId,questionId:q.id,optionIndex:oi,optionText:q.options[oi]});
+        fb.style.color="";
+        ANSWERS[q.id]={selectedIndex:res.selectedIndex,isCorrect:res.isCorrect,correctIndex:res.correctIndex};
+        if(QUESTIONS[current]===q) paintResult(q,ANSWERS[q.id]);
+      }catch(e){
+        // Not recorded — let the student try again.
+        q.options.forEach((_,i)=>{ var b=document.getElementById("opt-"+i); if(b){ b.disabled=false; b.classList.remove("checking","dim"); } });
+        fb.style.color=""; fb.className="be-fb err";
+        fb.textContent="Couldn't check your answer ("+e.message+"). Please try again.";
+      }
+      busy=false;
     };
   }
 
   window.nextQuestion=()=>{
-    current++;
-    if(current<total){showQuestion(current);document.querySelector(".be-quiz-body").scrollTo(0,0);}
+    var nxt=QUESTIONS.findIndex(function(q,i){return i>current&&!ANSWERS[q.id];});
+    if(nxt<0) nxt=QUESTIONS.findIndex(function(q){return !ANSWERS[q.id];});
+    if(nxt>=0){showQuestion(nxt);document.querySelector(".be-quiz-body").scrollTo(0,0);}
     else showResults();
   };
 
-  // Submit all answers server-side and show results
+  function showMessage(title,text,retry){
+    document.getElementById("q-counter").textContent="";
+    document.getElementById("question-slot").innerHTML='<div style="text-align:center;padding:40px 0">'
+      +'<div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:6px">'+escapeHtml(title)+'</div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:18px">'+escapeHtml(text)+'</div>'
+      +(retry?'<button class="be-next-btn" style="max-width:260px" id="q-retry">Try again</button>':'')+'</div>';
+    var rb=document.getElementById("q-retry"); if(rb) rb.onclick=retry;
+  }
+
+  // Score comes from the answers stored on the server for this attempt.
   async function showResults(){
     document.getElementById("progress-fill").style.width="100%";
     document.getElementById("q-counter").textContent="Grading…";
     document.getElementById("q-score").textContent="";
-    document.getElementById("question-slot").innerHTML=
-      '<div style="text-align:center;padding:40px 0">'
-      +'<div style="font-size:14px;color:var(--muted)">Submitting answers…</div>'
-      +'</div>';
-
-    var lessonOrder=0;
+    document.getElementById("question-slot").innerHTML='<div style="text-align:center;padding:40px 0"><div style="font-size:14px;color:var(--muted)">Calculating your score…</div></div>';
     var _lesson=ALL_LESSONS.find(l=>l.id===lessonId);
-    if(_lesson) lessonOrder=_lesson.order||0;
+    var result;
+    try{ result=await quizApi({action:'finish',attemptId:attemptId}); }
+    catch(e){ showMessage("Couldn't calculate your score",e.message,showResults); return; }
 
-    var serverResult=null;
-    try{
-      var sess=null;
-      if(typeof _sb!=='undefined'){
-        var r=await _sb.auth.getSession();
-        sess=r?.data?.session;
-      }
-      if(sess){
-        var resp=await fetch(SUPABASE_URL.replace(/\/$/,'')+'/functions/v1/submit-quiz',{
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':'Bearer '+sess.access_token},
-          body:JSON.stringify({lessonOrder:lessonOrder,responses:userResponses})
-        });
-        if(resp.ok) serverResult=await resp.json();
-      }
-    }catch(e){console.warn('submit-quiz error:',e);}
-
-    // Fallback: if Edge Function unavailable, count how many answers match local total
-    var serverAvailable=serverResult&&!serverResult.legacy;
-    var finalCorrect=serverAvailable?Math.round((serverResult.score/100)*serverResult.total):0;
-    var finalTotal=serverAvailable?serverResult.total:total;
-    var finalScore=serverAvailable?serverResult.score:0;
-    var passed=serverAvailable?serverResult.passed:false;
-
-    // Update local progress
+    var finalCorrect=result.score, finalTotal=result.total, finalScore=result.pct, passed=result.passed;
     if(currentSession?.studentId&&_lesson){
-      saveAttemptedQuiz(currentSession.studentId, _lesson.order);
-      if(passed) savePassedQuiz(currentSession.studentId, _lesson.order);
-      if(typeof sbSaveQuizScore==='function'&&serverAvailable){
-        sbSaveQuizScore(currentSession.studentId,_lesson.id,finalCorrect,finalTotal).catch(function(){});
-      }
+      saveAttemptedQuiz(currentSession.studentId,_lesson.order);
+      if(passed) savePassedQuiz(currentSession.studentId,_lesson.order);
+      // quiz_scores is written by the server for this attempt.
     }
 
     document.getElementById("q-counter").textContent="Complete";
-    document.getElementById("q-score").textContent=serverAvailable?(finalCorrect+"/"+finalTotal+" correct"):"";
+    document.getElementById("q-score").textContent=finalCorrect+"/"+finalTotal+" correct";
     var col=passed?"#4ade80":"var(--g1)";
     var borderCol=passed?"rgba(34,197,94,.4)":"rgba(255,45,120,.4)";
     var bgCol=passed?"rgba(34,197,94,.08)":"rgba(255,45,120,.08)";
     document.getElementById("question-slot").innerHTML=
       '<div style="text-align:center;padding:16px 0 40px">'
       +'<div style="width:100px;height:100px;border-radius:50%;margin:0 auto 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:'+bgCol+';border:2px solid '+borderCol+';box-shadow:0 0 40px '+borderCol+'">'
-        +'<span style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:26px;color:'+col+'">'+(serverAvailable?finalScore+'%':'✓')+'</span>'
-        +'<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:'+col+';opacity:.7">'+(serverAvailable?(passed?"Passed":"Failed"):"Submitted")+'</span>'
+        +'<span style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:26px;color:'+col+'">'+finalScore+'%</span>'
+        +'<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:'+col+';opacity:.7">'+(passed?"Passed":"Not passed")+'</span>'
       +'</div>'
-      +'<h2 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:6px">'+(serverAvailable?(passed?"Great job! 🎉":"Keep practicing"):"Quiz Submitted")+'</h2>'
-      +'<p style="color:var(--muted);font-size:13px;margin-bottom:36px">'+(serverAvailable?(finalCorrect+' of '+finalTotal+' correct — pass mark 70%'):"Your answers have been recorded.")+'</p>'
-      +(serverAvailable?
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px">'
-          +'<div style="border-radius:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);padding:20px;text-align:center">'
-            +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#4ade80">'+finalCorrect+'</div>'
-            +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Correct</div>'
-          +'</div>'
-          +'<div style="border-radius:14px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);padding:20px;text-align:center">'
-            +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#f87171">'+(finalTotal-finalCorrect)+'</div>'
-            +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Wrong</div>'
-          +'</div>'
+      +'<h2 style="font-family:Montserrat,sans-serif;font-weight:800;font-size:26px;color:#fff;margin-bottom:6px">'+(passed?"Great job! 🎉":"Keep practicing")+'</h2>'
+      +'<p style="color:var(--muted);font-size:13px;margin-bottom:36px">'+finalCorrect+' of '+finalTotal+' correct — pass mark 70%</p>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:32px">'
+        +'<div style="border-radius:14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);padding:20px;text-align:center">'
+          +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#4ade80">'+finalCorrect+'</div>'
+          +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Correct</div>'
         +'</div>'
-      :'')
+        +'<div style="border-radius:14px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.2);padding:20px;text-align:center">'
+          +'<div style="font-family:JetBrains Mono,monospace;font-weight:800;font-size:28px;color:#f87171">'+(finalTotal-finalCorrect)+'</div>'
+          +'<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px">Wrong</div>'
+        +'</div>'
+      +'</div>'
       +'<div style="display:flex;flex-direction:column;gap:10px">'
-        +(!passed&&serverAvailable?'<button id="retake-btn" class="be-next-btn">Retake Quiz</button>':'')
+        +(!passed?'<button id="retake-btn" class="be-next-btn">Retake Quiz</button>':'')
         +'<button id="dash-btn" style="background:none;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:13px;font-size:13px;color:var(--muted);cursor:pointer;font-family:Inter,sans-serif;transition:all .15s" onmouseover="this.style.borderColor=\'rgba(255,45,120,.3)\';this.style.color=\'#fff\'" onmouseout="this.style.borderColor=\'rgba(255,255,255,.1)\';this.style.color=\'var(--muted)\'">Back to Dashboard</button>'
       +'</div></div>';
     var rb=document.getElementById("retake-btn");
@@ -276,5 +318,19 @@ function renderQuiz(lessonId){
     if(db) db.addEventListener("click",function(){navigate("dashboard");});
   }
 
-  showQuestion(0);
+  // Start or resume this lesson's attempt, then open the first unanswered question.
+  async function begin(){
+    document.getElementById("question-slot").innerHTML='<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:14px">Loading quiz…</div>';
+    try{
+      var st=await quizApi({action:'start',lessonOrder:lesson.order});
+      attemptId=st.attemptId; QUESTIONS=st.questions||[]; total=QUESTIONS.length; ANSWERS=st.answers||{};
+    }catch(e){
+      showMessage(e.message==='no_quiz'?'No quiz for this class yet':"Couldn't load the quiz", e.message==='no_quiz'?'Check back later.':e.message, e.message==='no_quiz'?null:begin);
+      return;
+    }
+    if(!total){ showMessage('No quiz for this class yet','Check back later.',null); return; }
+    var first=QUESTIONS.findIndex(function(q){return !ANSWERS[q.id];});
+    if(first<0) showResults(); else showQuestion(first);
+  }
+  begin();
 }

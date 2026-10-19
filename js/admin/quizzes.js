@@ -76,7 +76,7 @@ window.vmUploadQuiz=async function(){
 window.vmDeleteQuiz=async function(){
   var order=Number(document.getElementById('vm-order').value);
   if(!order||!(await uiConfirm('Remove the uploaded quiz for Day '+order+'? The built-in quiz will be used instead.',{title:'Remove quiz',danger:true,okText:'Remove'}))) return;
-  await sbDeleteQuiz(order);
+  try{ await sbDeleteQuiz(order); }catch(e){ uiAlert(e.message,{tone:'error'}); return; }
   var status=document.getElementById('vm-quiz-status');
   status.style.display='block';
   status.style.background='rgba(255,255,255,.07)';
@@ -199,28 +199,23 @@ window.adminQuizUploadDirect=async function(input,order){
 
 window.adminQuizDelete=async function(order){
   if(!(await uiConfirm('Delete the uploaded quiz for Day '+order+'? The built-in quiz will be used instead.',{title:'Delete quiz',danger:true,okText:'Delete'}))) return;
-  await sbDeleteQuiz(order);
+  try{ await sbDeleteQuiz(order); }catch(e){ uiAlert(e.message,{tone:'error'}); return; }
   renderAdminQuiz();
 };
 
-window.adminQuizEditHardcoded=function(order){
-  // Convert hardcoded quiz format (answer as index) to dynamic format (answer as string)
-  var raw=QUIZ_BANK[order];
-  if(!raw||!raw.length){uiAlert('No hardcoded quiz for Day '+order);return;}
-  // Deep copy and normalise
-  var qs=raw.map(function(q,i){
-    var opts=Array.isArray(q.options)?q.options.slice():[];
-    var ans=typeof q.answer==='number'?(opts[q.answer]||opts[0]):q.answer;
-    return {id:q.id||('q'+(i+1)),prompt:q.prompt||'',options:opts,answer:ans};
-  });
-  // Load into dynamic cache so adminQuizPreview can open it
-  _dynamicQuizCache[order]=qs;
-  adminQuizPreview(order);
-};
+// Built-in quizzes open in the same editor: the answer key is loaded from the server
+// (it is not in the browser). Saving creates an uploaded copy for that day.
+window.adminQuizEditHardcoded=function(order){ adminQuizPreview(order); };
 
-window.adminQuizPreview=function(order){
-  var qs=_dynamicQuizCache[order]?JSON.parse(JSON.stringify(_dynamicQuizCache[order])):[];
-  if(!qs.length){uiAlert('No dynamic quiz for Day '+order);return;}
+window.adminQuizPreview=async function(order){
+  // Load the quiz exactly as students get it, WITH the answer key (admin-only RPC).
+  var qs, keySource;
+  try{
+    var k=await sbLoadQuizKey(order);
+    keySource=k.source;
+    qs=(k.questions||[]).map(function(q){return {id:q.id,prompt:q.prompt||'',options:(q.options||[]).slice(),answer:q.answer==null?'':q.answer,hint:q.hint||undefined};});
+  }catch(e){ uiAlert('Could not load the quiz: '+e.message,{tone:'error'}); return; }
+  if(!qs.length){uiAlert('No quiz found for Day '+order+'.');return;}
 
   var overlay=document.createElement('div');
   overlay.className='qe-overlay';
@@ -236,7 +231,8 @@ window.adminQuizPreview=function(order){
         return '<div class="qe-opt'+(ok?' correct':'')+'" draggable="true" data-qi="'+qi+'" data-oi="'+oi+'">'
           +'<span class="qe-grip" title="Drag to reorder">⠿</span>'
           +'<button type="button" class="qe-radio" onclick="setAnswer('+qi+','+oi+')" title="'+(ok?'Correct answer':'Mark as correct answer')+'" aria-pressed="'+ok+'">'+(ok?'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>':'')+'</button>'
-          +'<input class="qe-in" data-opt="'+qi+'-'+oi+'" value="'+escapeAttr(o)+'" aria-label="Option '+(oi+1)+'"/>'
+          +'<input class="qe-in" data-opt="'+qi+'-'+oi+'" value="'+escapeAttr(o)+'" aria-label="Option '+(oi+1)+(ok?' (correct answer)':'')+'"/>'
+          +(ok?'<span class="qe-correct-tag">Correct answer</span>':'')
           +'<button type="button" class="qe-x" onclick="delOption('+qi+','+oi+')" aria-label="Remove option" title="Remove option">×</button>'
           +'</div>';
       }).join('');
@@ -299,7 +295,7 @@ window.adminQuizPreview=function(order){
   overlay.innerHTML='<div class="qe-panel" role="dialog" aria-modal="true" aria-label="Day '+order+' quiz editor">'
     +'<div class="qe-head">'
       +'<div><h3 class="adm-card-title" style="font-size:17px">Day '+order+' quiz</h3>'
-      +'<p class="adm-hint" style="margin:3px 0 0"><span id="qe-count"></span> · Click the circle to mark the correct answer · Drag ⠿ to reorder</p></div>'
+      +'<p class="adm-hint" style="margin:3px 0 0"><span id="qe-count"></span> · '+(keySource==='builtin'?'Built-in quiz — saving creates an edited copy · ':'')+'Click the circle to mark the correct answer · Drag ⠿ to reorder</p></div>'
       +'<button type="button" class="adm-btn adm-icon-btn" onclick="window._closeQuizPreview()" aria-label="Close">✕</button>'
     +'</div>'
     +'<div class="qe-body" id="qe-body"><div id="qeditor-wrap"></div>'
@@ -313,14 +309,28 @@ window.adminQuizPreview=function(order){
     +'</div>';
 
   window._closeQuizPreview=function(){try{overlay.remove();}catch(e){}};
+  // Same rules the server enforces — caught here first so the admin sees which question to fix.
+  function validateQuiz(){
+    if(!qs.length) return 'Add at least one question.';
+    for(var i=0;i<qs.length;i++){
+      var q=qs[i], n=i+1;
+      if(!q.prompt) return 'Question '+n+': the question text is empty.';
+      if(q.options.length<2) return 'Question '+n+': needs at least 2 options.';
+      if(q.options.some(function(o){return !o;})) return 'Question '+n+': an option is empty.';
+      var seen={}; for(var j=0;j<q.options.length;j++){ var k=q.options[j].toLowerCase().replace(/\s+/g,' '); if(seen[k]) return 'Question '+n+': two options have the same text.'; seen[k]=1; }
+      if(q.options.filter(function(o){return o===q.answer;}).length!==1) return 'Question '+n+': mark exactly one correct option.';
+    }
+    return '';
+  }
   window._saveQuizOrder=async function(ord){
     collectEdits();
     var st=document.getElementById('qpreview-save-status');
-    if(st) st.textContent='Saving...';
+    var bad=validateQuiz();
+    if(bad){ if(st){st.style.color='#fb7185';st.textContent=bad;} return; }
+    if(st){st.style.color='';st.textContent='Saving…';}
     try{
       await sbSaveQuiz(ord,qs);
-      _dynamicQuizCache[ord]=qs;
-      if(st){st.style.color='#4ade80';st.textContent='✓ Saved to Supabase!';}
+      if(st){st.style.color='#4ade80';st.textContent='✓ Saved — students get this quiz and answer key now.';}
       setTimeout(function(){renderAdminQuiz();},800);
     }catch(e){
       if(st){st.style.color='#f87171';st.textContent='Error: '+e.message;}

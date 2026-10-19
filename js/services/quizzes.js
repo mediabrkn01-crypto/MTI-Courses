@@ -1,13 +1,23 @@
 /* quizzes.js — extracted verbatim from the original single-file index.html.
    Source lines: 848-875, 959-971, 1811-1813, 2517-2540, 6982-7073
    NOT an ES module: every global stays on `window` so inline onclick= handlers keep working. */
+// Admin quiz writes go through admin_save_quiz (DB function, admin only). It validates every
+// question (text, ≥2 unique options, exactly one correct option) and writes the private answer
+// key (quiz_answers) plus the public display copy without answers, in one transaction.
+// Throws with the validation message so the editor can show it — nothing is saved on error.
 async function sbSaveQuiz(lessonOrder, questions){
-  try{
-    var key='quiz_'+lessonOrder;
-    const{error}=await _sb.from('course_config').upsert({id:key,data:questions},{onConflict:'id'});
-    if(error) console.warn('Quiz save error:',error.message);
-    else{ _dynamicQuizCache[lessonOrder]=questions; console.log('Quiz saved for Day',lessonOrder); }
-  }catch(e){console.warn('Quiz save error:',e);}
+  var clean=(questions||[]).map(function(q,i){
+    return {id:String(q.id||('q'+(i+1))),prompt:String(q.prompt||'').trim(),options:(q.options||[]).map(function(o){return String(o).trim();}),answer:String(q.answer==null?'':q.answer).trim(),hint:q.hint||undefined};
+  });
+  const{error}=await _sb.rpc('admin_save_quiz',{p_lesson:lessonOrder,p_questions:clean});
+  if(error) throw new Error(error.message||'Could not save the quiz');
+  _dynamicQuizCache[lessonOrder]=clean.map(function(q){return {id:q.id,prompt:q.prompt,options:q.options};});
+}
+// Admin only: the quiz students currently get for a day, WITH its answer key.
+async function sbLoadQuizKey(lessonOrder){
+  const{data,error}=await _sb.rpc('admin_get_quiz_key',{p_lesson:lessonOrder});
+  if(error) throw new Error(error.message||'Could not load the answer key');
+  return data||{source:'builtin',questions:[]};
 }
 
 async function sbLoadAllDynamicQuizzes(){
@@ -23,10 +33,9 @@ async function sbLoadAllDynamicQuizzes(){
 }
 
 async function sbDeleteQuiz(lessonOrder){
-  try{
-    await _sb.from('course_config').delete().eq('id','quiz_'+lessonOrder);
-    delete _dynamicQuizCache[lessonOrder];
-  }catch(e){}
+  const{error}=await _sb.rpc('admin_delete_quiz',{p_lesson:lessonOrder});
+  if(error) throw new Error(error.message||'Could not delete the quiz');
+  delete _dynamicQuizCache[lessonOrder];
 }
 
 async function sbSaveQuizScore(studentId, lessonId, score, total){

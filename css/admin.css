@@ -575,3 +575,4 @@ tr.dm-dim td:last-child{opacity:1}
 .gd-s{margin:0;font-size:12px;line-height:1.5;color:var(--muted2)}
 .gd-btn{grid-column:1/-1;width:100%;padding:12px 16px;font-size:13px;border-radius:12px;background:linear-gradient(135deg,#ff6b06 0%,#f9182f 50%,#ff0552 100%)}
 .gd-err{grid-column:1/-1;margin:0;font-size:12px;color:#fb7185}
+.qe-correct-tag{flex-shrink:0;font-size:10.5px;font-weight:700;color:#4ade80;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);padding:2px 8px;border-radius:99px;white-space:nowrap}
