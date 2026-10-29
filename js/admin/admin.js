@@ -353,14 +353,14 @@ function renderAdmin(tab){
     _smOpen();
   };
   window.closeModal=()=>{
-    _smGuideCreds=null; window._smCreds='';
+    _smGuideCreds=null; window._smCreds=''; StudentOnboarding.release();
     _smEl('student-modal').style.display='none';
     document.removeEventListener('keydown',_smEsc);
     var p=_smEl('s-pass'); if(p){p.value='';p.type='password';}
   };
   // Credentials for the guide exist only in this closure while the success screen is open.
   var _smGuideCreds=null;
-  function _smDone(name,email,pass,isNew){
+  function _smDone(name,email,pass,isNew,studentId){
     _smEl('sm-body').style.display='none'; _smEl('sm-foot').style.display='none';
     var d=_smEl('sm-done'); d.style.display='';
     _smGuideCreds=pass?{name:name,email:email,password:pass}:null;
@@ -368,10 +368,12 @@ function renderAdmin(tab){
       +'<h3>'+(isNew?'Student created successfully':(pass?'Password updated':'Changes saved'))+'</h3>'
       +'<p class="adm-hint" style="margin:4px 0 16px">'+escapeHtml(name)+(pass?' can now sign in with these details on any device.':'.')+'</p>'
       +(pass?'<div class="sm-cred"><div><span>Student</span><b style="font-family:inherit">'+escapeHtml(name)+'</b></div><div><span>Email</span><b>'+escapeHtml(email)+'</b></div><div><span>Password</span><b id="sm-cred-pass">'+escapeHtml(pass)+'</b></div></div>'
-        +guideCardHtml({btnId:'sm-guide-btn',errId:'sm-guide-err',onclick:'smDownloadGuide(this)',name:name})
+        +'<div id="sm-onboard"></div>'
         +'<button type="button" class="adm-btn" style="width:100%;margin-bottom:10px" onclick="smCopyCreds(this)">Copy sign-in details</button>':'')
       +'<button type="button" class="adm-btn'+(pass?'':' adm-btn-primary adm-btn-lg')+'" style="width:100%" onclick="closeModal();navigate(\'admin\',{tab:\'students\'})">Done</button></div>';
     window._smCreds=pass?('Email: '+email+'\nPassword: '+pass+'\nSign in at: '+new URL('./',location.href).href):'';
+    // Guide PDF + welcome email. New student → sent automatically once; new password → on request.
+    if(pass&&studentId) StudentOnboarding.mount(_smEl('sm-onboard'),{studentId:studentId,name:name,email:email,password:pass,kind:isNew?'welcome':'credentials',autoSend:!!isNew});
   }
   window.smDownloadGuide=async function(btn){
     var err=_smEl('sm-guide-err'); if(err) err.style.display='none';
@@ -427,7 +429,7 @@ function renderAdmin(tab){
         _smBusy(null);return;
       }
       _smBusy(null);
-      _smDone(name,email,pass,true);
+      _smDone(name,email,pass,true,id);
       return;
     }
 
@@ -450,7 +452,7 @@ function renderAdmin(tab){
     }
     _smCacheStudent(stu);
     _smBusy(null);
-    if(pass) _smDone(name,email,pass,false);
+    if(pass) _smDone(name,email,pass,false,id);
     else { closeModal(); navigate('admin',{tab:'students'}); if(typeof demoToast==='function') demoToast('Saved '+name); }
   };
   window.bulkUpdateBar=function(){

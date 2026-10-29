@@ -353,7 +353,7 @@ var GUIDE = {
       +'<span class="gd-ic"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg><b>PDF</b></span>'
       +'<div class="gd-txt"><p class="gd-k">Student Guide <span class="gd-badge">Updated '+escapeHtml(GUIDE.edition||'')+'</span></p>'
       +'<p class="gd-t">Need help getting started?</p>'
-      +'<p class="gd-s">A step-by-step guide to the platform with '+(o.name?escapeHtml(o.name)+'\'s':'the student\'s')+' sign-in details. Send it to them after this step.</p></div>'
+      +'<p class="gd-s">A step-by-step guide to the platform with '+(o.name?escapeHtml(o.name)+'\'s':'the student\'s')+' sign-in details — the same PDF that is emailed to them.</p></div>'
       +'<button type="button" id="'+o.btnId+'" class="adm-btn adm-btn-primary gd-btn" onclick="'+o.onclick+'">'
       +'<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 18v1a2 2 0 002 2h12a2 2 0 002-2v-1"/></svg>Download Student Guide PDF</button>'
       +'<p id="'+o.errId+'" class="gd-err" role="alert" style="display:none"></p>'
@@ -372,6 +372,25 @@ var GUIDE = {
       if(btn){btn.disabled=false;btn.innerHTML=label;}
       throw e;
     }
+  };
+  // Build the guide ONCE and keep the exact bytes, so the PDF the admin downloads and the
+  // PDF attached to the welcome email are the same document. Held in memory only by the
+  // caller (the success screen); never stored.
+  var MAX_GUIDE_BYTES=4*1024*1024;
+  window.prepareStudentGuide=async function(student){
+    if(!student||!student.name||!student.email||!student.password) throw new Error('Student details are missing.');
+    var out=await build(student);
+    var buf=out.doc.output('arraybuffer');
+    if(buf.byteLength>MAX_GUIDE_BYTES) throw new Error('The guide PDF is larger than 4 MB.');
+    var bytes=new Uint8Array(buf), bin='';
+    for(var i=0;i<bytes.length;i+=0x8000) bin+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));
+    return {fileName:out.fileName,blob:new Blob([buf],{type:'application/pdf'}),base64:btoa(bin),size:buf.byteLength};
+  };
+  // Save a prepared guide (no rebuild).
+  window.savePreparedGuide=function(g){
+    var url=URL.createObjectURL(g.blob), a=document.createElement('a');
+    a.href=url; a.download=g.fileName; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url);},4000);
   };
   window._buildStudentGuide=build; // used by tests
 })();

@@ -156,6 +156,7 @@ window._pdfConfirmImport=function(){
 };
 
 async function renderAdminStudent(id){
+  if(window.StudentOnboarding) StudentOnboarding.release(); // drop any previous sign-in details/PDF from memory
   const students=loadStudents();
   const s=students[id];
   if(!s){navigate('admin');return;}
@@ -303,10 +304,9 @@ async function renderAdminStudent(id){
       var _creds={name:_stu.name||'',email:_stu.email||'',password:pass};
       if(msg&&_creds.name&&_creds.email){
         var holder=document.createElement('div'); holder.style.marginTop='12px';
-        holder.innerHTML=guideCardHtml({btnId:'sp-guide-btn',errId:'sp-guide-err',onclick:'',name:_creds.name});
         msg.appendChild(holder);
-        var gb=holder.querySelector('#sp-guide-btn'), ge=holder.querySelector('#sp-guide-err');
-        gb.onclick=function(){ ge.style.display='none'; downloadStudentGuide(_creds,gb).catch(function(e){ ge.textContent='Could not create the PDF: '+(e.message||e); ge.style.display='block'; }); };
+        // Same guide card + "Send email" (not automatic: the admin chooses to email the new details).
+        StudentOnboarding.mount(holder,{studentId:sid,name:_creds.name,email:_creds.email,password:pass,kind:'credentials',autoSend:false});
       }
     }else{
       if(msg){msg.textContent='Failed: '+(result.error||'unknown error');msg.style.color='#f87171';msg.style.display='block';}
